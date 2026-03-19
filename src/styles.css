@@ -29,6 +29,12 @@ body {
 
 /* A4 打印时：只显示简历纸张，其他 UI 不可见。 */
 @media print {
+  /* 让浏览器在导出 PDF 时尽量保留颜色/透明度（不同浏览器支持程度不同）。 */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   body {
     background: #ffffff !important;
     padding: 0 !important;

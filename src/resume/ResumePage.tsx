@@ -1,104 +1,141 @@
 import type { ReactNode } from 'react'
-import { resumeContent } from './resumeContent'
+import type { ResumeBlock } from './resumeContent'
+import { resumeContents } from './resumeContent'
 
 function SectionTitle({ children }: { children: ReactNode }) {
-  return <div className="mb-[2mm] text-[10.5pt] font-semibold text-black">{children}</div>
+  return (
+    <div className="w-full">
+      <div className="text-[11pt] font-semibold text-black">{children}</div>
+      <div className="mt-[1.6mm] w-full border-t border-black/60" />
+    </div>
+  )
 }
 
 export default function ResumePage() {
-  const c = resumeContent
+  const blocks = resumeContents
 
   return (
-    <div className="resume-sheet bg-white px-[14mm] py-[14mm] text-[10.5pt] leading-[1.35]">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-[6mm]">
-        <div>
-          <div className="text-[16pt] font-semibold leading-[1.05]">{c.name}</div>
-          <div className="mt-[2mm] text-[12pt] font-medium text-gray-900">{c.title}</div>
-        </div>
+    <div className="resume-sheet bg-white px-[14mm] py-[14mm] font-serif text-[10.5pt] leading-[1.35] text-black">
+      {blocks.map((block, idx) => (
+        <BlockView key={`${block.type}-${'title' in block ? block.title : ''}-${idx}`} block={block} />
+      ))}
+    </div>
+  )
+}
 
-        <div className="text-right text-[9.5pt] text-gray-800">
-          {c.location ? <div>{c.location}</div> : null}
-          <div className="mt-[1.2mm]">{c.email}</div>
-          {c.phone ? <div>{c.phone}</div> : null}
-          {c.links?.length ? (
-            <div className="mt-[1.2mm] flex flex-col items-end gap-[1mm]">
-              {c.links.map((l) => (
-                <a key={l.url} href={l.url} className="underline" target="_blank" rel="noreferrer">
-                  {l.label}
-                </a>
+function BlockView({ block }: { block: ResumeBlock }) {
+  switch (block.type) {
+    case 'header': {
+      const h = block.data
+      return (
+        <div className="text-center">
+          <div className="text-[18pt] font-semibold leading-[1.05]">{h.name}</div>
+          {h.contacts?.length ? (
+            <div className="mt-[2mm] text-[10pt]">
+              {h.contacts.filter((x) => x.value).map((it, idx) => (
+                <span key={`${it.label}-${it.value}`}>
+                  {idx === 0 ? null : <span className="px-[3mm]"> </span>}
+                  <span>
+                    {it.label}：
+                    {it.href ? (
+                      <a
+                        href={it.href}
+                        className="underline decoration-black/70 underline-offset-2"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {it.display ?? it.value}
+                      </a>
+                    ) : (
+                      <span>{it.value}</span>
+                    )}
+                  </span>
+                </span>
               ))}
             </div>
           ) : null}
         </div>
-      </div>
-
-      {/* Summary */}
-      <div className="mt-[6mm] text-[10pt] text-gray-900">
-        <SectionTitle>个人简介</SectionTitle>
-        <div className="text-[10pt]">{c.summary}</div>
-      </div>
-
-      {/* Main grid */}
-      <div className="mt-[6mm] grid grid-cols-12 gap-x-[6mm]">
-        {/* Left */}
-        <aside className="col-span-3">
-          <SectionTitle>技能</SectionTitle>
-          <ul className="space-y-[1.4mm] text-[9.5pt] text-gray-900">
-            {c.skills.map((s) => (
-              <li key={s}>• {s}</li>
-            ))}
-          </ul>
-
-          {/* Education (optional) */}
-          {c.education?.length ? (
-            <div className="mt-[7mm]">
-              <SectionTitle>教育</SectionTitle>
-              <div className="space-y-[4mm]">
-                {c.education.map((e) => (
-                  <div key={e.school}>
-                    <div className="font-medium">{e.school}</div>
-                    <div className="text-gray-800">
-                      {e.degree ? `${e.degree} · ` : ''}
-                      <span>{e.period}</span>
-                    </div>
-                    {e.bullets?.length ? (
-                      <ul className="mt-[2mm] space-y-[1.2mm]">
-                        {e.bullets.map((b) => (
-                          <li key={b}>• {b}</li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </aside>
-
-        {/* Right */}
-        <section className="col-span-9">
-          <SectionTitle>工作经历</SectionTitle>
-          <div className="space-y-[6mm]">
-            {c.experiences.map((ex) => (
+      )
+    }
+    case 'experience': {
+      return (
+        <div className="mt-[8mm]">
+          <SectionTitle>{block.title}</SectionTitle>
+          <div className="mt-[3.5mm] space-y-[4.5mm]">
+            {block.data.items.map((ex) => (
               <div key={`${ex.company}-${ex.role}-${ex.period}`}>
-                <div className="flex items-baseline justify-between gap-[4mm]">
-                  <div className="font-medium">
-                    {ex.company} · {ex.role}
-                  </div>
-                  <div className="text-[9.5pt] text-gray-800">{ex.period}</div>
+                <div className="flex items-baseline justify-between gap-[6mm]">
+                  <div className="font-semibold">{ex.company}</div>
+                  <div className="text-[10pt]">{ex.period}</div>
                 </div>
-                <ul className="mt-[2mm] space-y-[1.4mm] text-[10pt]">
+                <div className="mt-[0.8mm] text-[10pt]">{ex.role}</div>
+                <ul className="mt-[2mm] space-y-[1.2mm] pl-[4mm] text-[10pt]">
                   {ex.bullets.map((b) => (
-                    <li key={b}>• {b}</li>
+                    <li key={b} className="list-disc">
+                      {b}
+                    </li>
                   ))}
                 </ul>
               </div>
             ))}
           </div>
-        </section>
-      </div>
-    </div>
-  )
+        </div>
+      )
+    }
+    case 'education': {
+      return (
+        <div className="mt-[6mm]">
+          <SectionTitle>{block.title}</SectionTitle>
+          <div className="mt-[3.5mm] space-y-[4.5mm]">
+            {block.data.items.map((e) => (
+              <div key={`${e.school}-${e.period}`}>
+                <div className="flex items-baseline justify-between gap-[6mm]">
+                  <div className="font-semibold">{e.school}</div>
+                  <div className="text-[10pt]">{e.period}</div>
+                </div>
+                {e.degree ? <div className="mt-[0.8mm] text-[10pt]">{e.degree}</div> : null}
+                {e.bullets?.length ? (
+                  <ul className="mt-[2mm] space-y-[1.2mm] pl-[4mm] text-[10pt]">
+                    {e.bullets.map((b) => (
+                      <li key={b} className="list-disc">
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+    case 'skills': {
+      const items = block.data.items
+      return (
+        <div className="mt-[6mm]">
+          <SectionTitle>{block.title}</SectionTitle>
+          <ul className="mt-[3mm] space-y-[1.4mm] pl-[4mm] text-[10pt]">
+            {items.map((s) => {
+              const [k, ...rest] = s.split('：')
+              const v = rest.join('：').trim()
+              const hasKv = rest.length > 0 && v.length > 0
+              return (
+                <li key={s} className="list-disc leading-[1.35]">
+                  {hasKv ? (
+                    <>
+                      <span className="font-semibold">{k}：</span>
+                      <span>{v}</span>
+                    </>
+                  ) : (
+                    <span>{s}</span>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )
+    }
+  }
 }
 
