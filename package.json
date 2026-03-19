@@ -4,10 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "dev": "npm run subset-font && vite",
+    "build": "npm run subset-font && tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview",
-    "build:gh-pages": "tsc -p tsconfig.json --noEmit && vite build"
+    "build:gh-pages": "tsc -p tsconfig.json --noEmit && vite build",
+    "subset-font": "npx tsx scripts/extract-resume-chars.ts > scripts/resume-chars.txt && npx tsx scripts/subset-font.ts"
   },
   "dependencies": {
     "react": "^19.0.0",
@@ -15,6 +16,7 @@
     "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.1",
@@ -22,6 +24,8 @@
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.10",
     "typescript": "^5.6.3",
-    "vite": "^5.4.2"
+    "vite": "^5.4.2",
+    "subset-font": "^2.4.0",
+    "tsx": "^4.19.0"
   }
 }

@@ -4,7 +4,7 @@
   font-style: normal;
   font-weight: 1 999;
   font-display: swap;
-  src: url('../fonts/SourceHanSerifSC-VF.woff2') format('woff2');
+  src: url('../fonts/SourceHanSerifSC-VF-subset.woff2') format('woff2');
 }
 
 @tailwind base;
@@ -34,7 +34,7 @@ body {
   width: 210mm;
   height: 297mm;
   box-sizing: border-box;
-  font-family: 'Source Han Serif SC', '思源宋体', serif;
+  font-family: 'Source Han Serif SC', 'PingFang SC', 'Microsoft YaHei', '微软雅黑', serif;
 }
 
 /* A4 打印时：只显示简历纸张，其他 UI 不可见。 */
