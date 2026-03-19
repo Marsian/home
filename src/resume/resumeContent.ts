@@ -46,11 +46,20 @@ export type ResumeSkillsBlock = {
   }
 }
 
+export type ResumeLicensesBlock = {
+  type: 'licenses'
+  title: string
+  data: {
+    items: string[]
+  }
+}
+
 export type ResumeBlock =
   | ResumeHeaderBlock
   | ResumeExperienceBlock
   | ResumeEducationBlock
   | ResumeSkillsBlock
+  | ResumeLicensesBlock
 
 export const resumeContents: ResumeBlock[] = [
   {
@@ -60,12 +69,6 @@ export const resumeContents: ResumeBlock[] = [
       contacts: [
         { label: '电话', value: '18501640042' },
         { label: '邮箱', value: 'yanxiwang91@163.com' },
-        {
-          label: '网站',
-          value: 'https://marswang.com',
-          href: 'https://marswang.com',
-          display: 'marswang.com'
-        },
         { label: '地点', value: '上海' }
       ]
     }
@@ -76,11 +79,9 @@ export const resumeContents: ResumeBlock[] = [
     data: {
       items: [
         '核心栈：JavaScript / TypeScript，HTML5，CSS3 / Sass',
-        '前端框架：AngularJS；具备组件化与复杂表单/权限/路由等业务开发经验',
-        '工程与工具：NodeJS，Git / SVN；熟悉模块化、构建与前端工程协作流程',
-        '后端与接口：ASP.NET（C#）/ RESTful；理解接口设计与联调、可扩展服务开发',
-        '云与数据：AWS（S3、DynamoDB、SQS），DynamoDB / MySQL / MongoDB',
-        '跨端与兼容：跨浏览器、跨终端 Web 应用开发与适配经验'
+        'AI Coding：Cursor，Claude Code，OpenCode；熟练使用AI工具进行全流程开发',
+        '前端框架：React，Angular，Vue；具备大型前端项目从0到100的开发与维护经验',
+        '研发管理：~20人团队管理经验，从零开始组建团队，并带领团队完成多个大型项目',
       ]
     }
   },
@@ -108,26 +109,34 @@ export const resumeContents: ResumeBlock[] = [
     data: {
       items: [
         {
+          company: '星环信息科技（上海）股份有限公司',
+          role: '前端负责人 · 数据平台部门',
+          period: '2017.07 至今',
+          bullets: [
+            '负责前端部门的技术管理和人事管理，负责数据平台部门所有产品线的前端工作的落地与改进，主要项目包括：',
+            'Astro - AI驱动的智能数据分析平台，提供多种领域相关智能体，提供自然语言交互、智能分析、数据洞察等能力。支持生成式UI、Human In Loop、数据可视化、在线Excel等能力。',
+            'Transwarp Data Studio - 大数据开发与治理一站式平台，包含大数据开发、治理、运营等10余个核心功能模块。提供多样化数据相关工具，支撑全流程的可视化数据开发、监控、运维和告警。',
+            'Transwarp Data Cloud - 数据云平台，基于容器、分布式、微服务等云原生技术，在一个统一的云平台上提供 DB PaaS、Analytics PaaS、Application PaaS 等服务。',
+          ]
+        },
+        {
           company: 'Compulink Management Center, Inc. (Laserfiche)',
           role: '软件工程师 II · Web Access 开发组',
           period: '2015.04 - 2017.06',
           bullets: [
-            '负责 Laserfiche Web Admin 移植及云部署，基于 AngularJS 和 .NET 4.5 移植全部功能，实现跨终端网页界面。',
-            '将本地用户数据迁移至 DynamoDB，并随产品部署于 AWS 云集群。',
-            '参与 Laserfiche Audit Trail 重构及云部署，使用 AngularJS 与 .NET 4.5 RESTful 服务重构前后端。',
-            '利用 AWS S3、DynamoDB 及 SQS 实现用户数据存储与服务通信，并支持产品实例按需部署与负载均衡。',
-            '参与 Laserfiche Web Access 开发，以 AngularJS 为核心架构构建跨浏览器、跨终端网页应用，并研发基于 .NET 的可扩展 RESTful 网络服务。'
-          ]
-        },
-        {
-          company: 'Arista Networks, Inc.',
-          role: '实习软件工程师 · BGP 开发组',
-          period: '2014.06 - 2014.09',
-          bullets: [
-            '将 Ixia 设备引入测试系统，实现 SDN 多设备大规模广度测试。',
-            '改进测试架构，支持多设备网络测试环境。'
+            '参与 Laserfiche Web Access 开发，以 AngularJS 为核心架构构建跨浏览器、跨终端网页应用，并研发基于 .NET 的可扩展 RESTful 网络服务。',
+            '负责产品部署迁移至 AWS 云集群，利用 AWS S3、DynamoDB 及 SQS 实现用户数据存储与服务通信，并支持产品实例按需部署与负载均衡。',
           ]
         }
+      ]
+    }
+  },
+  {
+    type: 'licenses',
+    title: '资质证书',
+    data: {
+      items: [
+        '计算机高级专业技术资格证书·系统架构设计师'
       ]
     }
   }

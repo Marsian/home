@@ -15,7 +15,7 @@ export default function ResumePage() {
   const blocks = resumeContents
 
   return (
-    <div className="resume-sheet bg-white px-[14mm] py-[14mm] font-serif text-[10.5pt] leading-[1.35] text-black">
+    <div className="resume-sheet bg-white px-[14mm] py-[14mm] text-[10.5pt] leading-[1.35] text-black">
       {blocks.map((block, idx) => (
         <BlockView key={`${block.type}-${'title' in block ? block.title : ''}-${idx}`} block={block} />
       ))}
@@ -31,7 +31,7 @@ function BlockView({ block }: { block: ResumeBlock }) {
         <div className="text-center">
           <div className="text-[18pt] font-semibold leading-[1.05]">{h.name}</div>
           {h.contacts?.length ? (
-            <div className="mt-[2mm] text-[10pt]">
+            <div className="mt-[4mm] text-[10pt]">
               {h.contacts.filter((x) => x.value).map((it, idx) => (
                 <span key={`${it.label}-${it.value}`}>
                   {idx === 0 ? null : <span className="px-[3mm]"> </span>}
@@ -132,6 +132,21 @@ function BlockView({ block }: { block: ResumeBlock }) {
                 </li>
               )
             })}
+          </ul>
+        </div>
+      )
+    }
+    case 'licenses': {
+      const items = block.data.items
+      return (
+        <div className="mt-[6mm]">
+          <SectionTitle>{block.title}</SectionTitle>
+          <ul className="mt-[3mm] space-y-[1.4mm] pl-[4mm] text-[10pt]">
+            {items.map((s) => (
+              <li key={s} className="list-disc leading-[1.35]">
+                {s}
+              </li>
+            ))}
           </ul>
         </div>
       )

@@ -1,3 +1,6 @@
+@import '@fontsource/noto-serif-sc/chinese-simplified-400.css';
+@import '@fontsource/noto-serif-sc/chinese-simplified-600.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -20,11 +23,12 @@ body {
   /* 用于屏幕上的操作栏；打印时隐藏（见下方 @media print）。 */
 }
 
-/* 屏幕展示：居中单页简历。 */
+/* 屏幕展示：居中单页简历。思源宋体统一中英文与数字的呈现。 */
 .resume-sheet {
   width: 210mm;
   height: 297mm;
   box-sizing: border-box;
+  font-family: 'Noto Serif SC', 'Source Han Serif SC', serif;
 }
 
 /* A4 打印时：只显示简历纸张，其他 UI 不可见。 */
