@@ -1,14 +1,14 @@
-# Resume Site (React + Vite + Tailwind)
+# Home Site (React + Vite + Tailwind)
 
-一个“单页 A4 简历”的静态站点：内容就是你的简历排版，同时支持：
+一个个人主页站点，包含简历等子应用内容，同时支持：
 
 - 在浏览器里打开查看
 - 直接用浏览器 `print` 导出 PDF（不需要额外的 PDF 生成逻辑）
 - 部署到 GitHub Pages
 
-## 替换简历内容
+## 简历子应用
 
-把文件 `src/resume/resumeContent.ts` 里的 `resumeContent` 换成你的真实信息即可。
+简历功能位于 `/resume` 路径，修改 `src/resume/resumeContent.ts` 里的 `resumeContents` 即可更新简历内容。
 
 ## 本地预览
 
