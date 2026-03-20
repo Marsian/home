@@ -11,6 +11,8 @@
     "subset-font": "npx tsx scripts/extract-resume-chars.ts > scripts/resume-chars.txt && npx tsx scripts/subset-font.ts"
   },
   "dependencies": {
+    "@fontsource/open-sans": "^5.2.7",
+    "lucide-react": "^0.577.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.13.1"
@@ -22,10 +24,10 @@
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.3",
-    "tailwindcss": "^3.4.10",
-    "typescript": "^5.6.3",
-    "vite": "^5.4.2",
     "subset-font": "^2.4.0",
-    "tsx": "^4.19.0"
+    "tailwindcss": "^3.4.10",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.2"
   }
 }
