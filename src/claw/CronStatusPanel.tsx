@@ -54,7 +54,7 @@ function TaskCard({ task }: { task: CronTask }) {
   return (
     <article
       className={cn(
-        'flex w-full min-w-0 shrink-0 flex-col gap-4 rounded-xl border border-black/10 bg-white/80 p-4 shadow-sm backdrop-blur',
+        'flex w-full min-w-0 shrink-0 flex-col gap-4 rounded-xl border border-black/10 bg-white/80 p-4 shadow-xs backdrop-blur-sm',
         'sm:flex-row sm:items-start sm:gap-6',
         'dark:border-dark-border-primary dark:bg-dark-bg-tertiary/80',
         'transition-shadow hover:shadow-md dark:hover:border-dark-border-secondary',
@@ -161,7 +161,7 @@ export function CronStatusPanel({ loading, error, fetchedAt, rowId, payload, has
   return (
     <section
       className={cn(
-        'rounded-xl border border-black/10 bg-white/70 p-5 backdrop-blur dark:border-dark-border-primary dark:bg-dark-bg-secondary',
+        'rounded-xl border border-black/10 bg-white/70 p-5 backdrop-blur-sm dark:border-dark-border-primary dark:bg-dark-bg-secondary',
       )}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -195,8 +195,8 @@ export function CronStatusPanel({ loading, error, fetchedAt, rowId, payload, has
           disabled={loading}
           onClick={onRefresh}
           className={cn(
-            'shrink-0 rounded-lg border border-black/10 bg-white px-3 py-2 text-sm font-medium shadow-sm',
-            'hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-black/10 disabled:opacity-50',
+            'shrink-0 rounded-lg border border-black/10 bg-white px-3 py-2 text-sm font-medium shadow-xs',
+            'hover:bg-gray-50 focus:outline-hidden focus:ring-2 focus:ring-black/10 disabled:opacity-50',
             'dark:border-dark-border-primary dark:bg-dark-bg-tertiary dark:hover:bg-dark-bg-secondary dark:focus:ring-white/20',
           )}
         >

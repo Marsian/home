@@ -49,7 +49,7 @@ export function AppMenu() {
     <div className="no-print fixed left-[18px] top-1/2 -translate-y-1/2 z-[60]">
       <div
         className={cn(
-          'rounded-[18px] backdrop-blur border shadow-xl px-[10px] py-[10px]',
+          'rounded-[18px] backdrop-blur-sm border shadow-xl px-[10px] py-[10px]',
           isDark
             ? 'bg-[#0f172a]/85 border-white/10'
             : 'bg-white/85 border-black/5',
@@ -64,7 +64,7 @@ export function AppMenu() {
               isDark
                 ? 'text-[#8ab4ff] hover:text-[#c3dcff] hover:bg-[#8ab4ff]/10 focus-visible:ring-[#8ab4ff]/40'
                 : 'text-[#4679bd] hover:text-[#2e5fa0] hover:bg-[#4679bd]/10 focus-visible:ring-[#4679bd]/40',
-              'focus-visible:outline-none focus-visible:ring-2',
+              'focus-visible:outline-hidden focus-visible:ring-2',
               'transition-colors',
             )}
             aria-label="Claw"
@@ -81,7 +81,7 @@ export function AppMenu() {
               isDark
                 ? 'text-[#8ab4ff] hover:text-[#c3dcff] hover:bg-[#8ab4ff]/10 focus-visible:ring-[#8ab4ff]/40'
                 : 'text-[#4679bd] hover:text-[#2e5fa0] hover:bg-[#4679bd]/10 focus-visible:ring-[#4679bd]/40',
-              'focus-visible:outline-none focus-visible:ring-2',
+              'focus-visible:outline-hidden focus-visible:ring-2',
               'transition-colors',
             )}
             aria-label="Resume"
@@ -98,7 +98,7 @@ export function AppMenu() {
               isDark
                 ? 'text-[#8ab4ff] hover:text-[#c3dcff] hover:bg-[#8ab4ff]/10 focus-visible:ring-[#8ab4ff]/40'
                 : 'text-[#4679bd] hover:text-[#2e5fa0] hover:bg-[#4679bd]/10 focus-visible:ring-[#4679bd]/40',
-              'focus-visible:outline-none focus-visible:ring-2',
+              'focus-visible:outline-hidden focus-visible:ring-2',
               'transition-colors',
             )}
             aria-label="Theme"

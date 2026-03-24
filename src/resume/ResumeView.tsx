@@ -10,7 +10,7 @@ export default function ResumeView() {
       <div className="no-print pointer-events-none fixed left-4 top-4 z-50">
         <button
           type="button"
-          className="pointer-events-auto rounded-md border border-gray-300 bg-white/70 px-3 py-1.5 text-sm text-gray-900 shadow-sm backdrop-blur transition-opacity hover:bg-white hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-black/20 opacity-60 dark:border-dark-border-primary dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-tertiary dark:focus:ring-dark-border-primary"
+          className="pointer-events-auto rounded-md border border-gray-300 bg-white/70 px-3 py-1.5 text-sm text-gray-900 shadow-xs backdrop-blur-sm transition-opacity hover:bg-white hover:opacity-100 focus:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-black/20 opacity-60 dark:border-dark-border-primary dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-tertiary dark:focus:ring-dark-border-primary"
           onClick={() => navigate('/')}
         >
           返回
@@ -20,7 +20,7 @@ export default function ResumeView() {
       <div className="no-print pointer-events-none fixed right-4 top-4 z-50">
         <button
           type="button"
-          className="pointer-events-auto rounded-md border border-gray-300 bg-white/70 px-3 py-1.5 text-sm text-gray-900 shadow-sm backdrop-blur transition-opacity hover:bg-white hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-black/20 opacity-60 dark:border-dark-border-primary dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-tertiary dark:focus:ring-dark-border-primary"
+          className="pointer-events-auto rounded-md border border-gray-300 bg-white/70 px-3 py-1.5 text-sm text-gray-900 shadow-xs backdrop-blur-sm transition-opacity hover:bg-white hover:opacity-100 focus:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-black/20 opacity-60 dark:border-dark-border-primary dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-tertiary dark:focus:ring-dark-border-primary"
           onClick={() => window.print()}
         >
           打印/导出 PDF
