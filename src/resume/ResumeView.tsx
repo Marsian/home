@@ -5,6 +5,8 @@ import ResumePage from './ResumePage'
 
 export default function ResumeView() {
   const navigate = useNavigate()
+  const floatingButtonClass =
+    'pointer-events-auto bg-white/70 backdrop-blur-sm opacity-60 hover:opacity-100 focus-visible:opacity-100 dark:bg-card'
 
   return (
     <div className="app-shell min-h-screen bg-background text-foreground transition-colors">
@@ -13,7 +15,7 @@ export default function ResumeView() {
           type="button"
           variant="outline"
           size="sm"
-          className="pointer-events-auto bg-white/70 text-foreground shadow-xs backdrop-blur-sm transition-opacity hover:bg-white hover:opacity-100 focus-visible:opacity-100 opacity-60 dark:border-border dark:bg-card dark:text-card-foreground dark:hover:bg-muted"
+          className={floatingButtonClass}
           onClick={() => navigate('/')}
         >
           返回
@@ -25,7 +27,7 @@ export default function ResumeView() {
           type="button"
           variant="outline"
           size="sm"
-          className="pointer-events-auto bg-white/70 text-foreground shadow-xs backdrop-blur-sm transition-opacity hover:bg-white hover:opacity-100 focus-visible:opacity-100 opacity-60 dark:border-border dark:bg-card dark:text-card-foreground dark:hover:bg-muted"
+          className={floatingButtonClass}
           onClick={() => window.print()}
         >
           打印/导出 PDF

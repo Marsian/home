@@ -196,7 +196,7 @@ export function CronStatusPanel({ loading, error, fetchedAt, rowId, payload, has
           variant="outline"
           disabled={loading}
           onClick={onRefresh}
-          className="shrink-0 shadow-xs dark:border-border dark:bg-muted dark:hover:bg-card"
+          className="shrink-0"
         >
           {loading ? '拉取中…' : '手动刷新'}
         </Button>

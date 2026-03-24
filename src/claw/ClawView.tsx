@@ -97,7 +97,7 @@ export default function ClawView() {
             type="button"
             variant="outline"
             onClick={() => navigate('/')}
-            className="bg-white/70 shadow-xs backdrop-blur-sm hover:bg-white dark:border-border dark:bg-muted dark:hover:bg-card"
+            className="bg-white/70 backdrop-blur-sm dark:bg-muted"
           >
             返回
           </Button>

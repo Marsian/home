@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { FileText, Moon, Sun } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,7 @@ function LobsterIcon({ className }: { className?: string }) {
 
 export function AppMenu() {
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const stored =
@@ -46,6 +47,25 @@ export function AppMenu() {
   }
 
   const isDark = theme === 'dark'
+  const routeButtonClass = (active: boolean) =>
+    cn(
+      'size-10 rounded-[14px] [&_svg]:size-5',
+      isDark
+        ? 'text-[#8ab4ff] hover:bg-[#8ab4ff]/10 hover:text-[#c3dcff] focus-visible:ring-[#8ab4ff]/40'
+        : 'text-[#4679bd] hover:bg-[#4679bd]/10 hover:text-[#2e5fa0] focus-visible:ring-[#4679bd]/40',
+      active &&
+        (isDark
+          ? 'bg-[#8ab4ff]/15 text-[#d8e8ff] ring-1 ring-inset ring-[#8ab4ff]/35'
+          : 'bg-[#4679bd]/12 text-[#1f4f8d] ring-1 ring-inset ring-[#4679bd]/30'),
+    )
+  const routeButtonProps = (path: string) => {
+    const active = location.pathname.startsWith(path)
+    return {
+      className: routeButtonClass(active),
+      'aria-current': active ? ('page' as const) : undefined,
+    }
+  }
+  const menuButtonClass = routeButtonClass(false)
 
   return (
     <div className="no-print fixed left-[18px] top-1/2 -translate-y-1/2 z-[60]">
@@ -63,14 +83,7 @@ export function AppMenu() {
             variant="ghost"
             size="icon"
             onClick={() => navigate('/claw')}
-            className={cn(
-              'size-10 rounded-[14px] [&_svg]:size-5',
-              isDark
-                ? 'text-[#8ab4ff] hover:bg-[#8ab4ff]/10 hover:text-[#c3dcff] focus-visible:ring-[#8ab4ff]/40'
-                : 'text-[#4679bd] hover:bg-[#4679bd]/10 hover:text-[#2e5fa0] focus-visible:ring-[#4679bd]/40',
-              'focus-visible:ring-2',
-              'transition-colors',
-            )}
+            {...routeButtonProps('/claw')}
             aria-label="Claw"
             title="Claw"
           >
@@ -82,14 +95,7 @@ export function AppMenu() {
             variant="ghost"
             size="icon"
             onClick={() => navigate('/resume')}
-            className={cn(
-              'size-10 rounded-[14px] [&_svg]:size-5',
-              isDark
-                ? 'text-[#8ab4ff] hover:bg-[#8ab4ff]/10 hover:text-[#c3dcff] focus-visible:ring-[#8ab4ff]/40'
-                : 'text-[#4679bd] hover:bg-[#4679bd]/10 hover:text-[#2e5fa0] focus-visible:ring-[#4679bd]/40',
-              'focus-visible:ring-2',
-              'transition-colors',
-            )}
+            {...routeButtonProps('/resume')}
             aria-label="Resume"
             title="Resume"
           >
@@ -101,14 +107,7 @@ export function AppMenu() {
             variant="ghost"
             size="icon"
             onClick={toggleTheme}
-            className={cn(
-              'size-10 rounded-[14px] [&_svg]:size-5',
-              isDark
-                ? 'text-[#8ab4ff] hover:bg-[#8ab4ff]/10 hover:text-[#c3dcff] focus-visible:ring-[#8ab4ff]/40'
-                : 'text-[#4679bd] hover:bg-[#4679bd]/10 hover:text-[#2e5fa0] focus-visible:ring-[#4679bd]/40',
-              'focus-visible:ring-2',
-              'transition-colors',
-            )}
+            className={menuButtonClass}
             aria-label="Theme"
             title="Theme"
           >
