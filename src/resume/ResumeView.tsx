@@ -7,13 +7,13 @@ export default function ResumeView() {
   const navigate = useNavigate()
 
   return (
-    <div className="app-shell min-h-screen bg-white text-black dark:bg-dark-bg-primary dark:text-dark-text-primary transition-colors">
+    <div className="app-shell min-h-screen bg-background text-foreground transition-colors">
       <div className="no-print pointer-events-none fixed left-4 top-4 z-50">
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="pointer-events-auto bg-white/70 text-gray-900 shadow-xs backdrop-blur-sm transition-opacity hover:bg-white hover:opacity-100 focus-visible:opacity-100 opacity-60 dark:border-dark-border-primary dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-tertiary"
+          className="pointer-events-auto bg-white/70 text-foreground shadow-xs backdrop-blur-sm transition-opacity hover:bg-white hover:opacity-100 focus-visible:opacity-100 opacity-60 dark:border-border dark:bg-card dark:text-card-foreground dark:hover:bg-muted"
           onClick={() => navigate('/')}
         >
           返回
@@ -25,7 +25,7 @@ export default function ResumeView() {
           type="button"
           variant="outline"
           size="sm"
-          className="pointer-events-auto bg-white/70 text-gray-900 shadow-xs backdrop-blur-sm transition-opacity hover:bg-white hover:opacity-100 focus-visible:opacity-100 opacity-60 dark:border-dark-border-primary dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-tertiary"
+          className="pointer-events-auto bg-white/70 text-foreground shadow-xs backdrop-blur-sm transition-opacity hover:bg-white hover:opacity-100 focus-visible:opacity-100 opacity-60 dark:border-border dark:bg-card dark:text-card-foreground dark:hover:bg-muted"
           onClick={() => window.print()}
         >
           打印/导出 PDF

@@ -18,7 +18,7 @@ function StatusPill({ label, variant }: { label: string; variant: 'ok' | 'warn' 
     ok: 'bg-emerald-500/15 text-emerald-800 ring-emerald-500/25 dark:text-emerald-200 dark:ring-emerald-400/20',
     warn: 'bg-amber-500/15 text-amber-900 ring-amber-500/25 dark:text-amber-200 dark:ring-amber-400/20',
     bad: 'bg-red-500/15 text-red-800 ring-red-500/25 dark:text-red-200 dark:ring-red-400/20',
-    muted: 'bg-black/5 text-gray-700 ring-black/10 dark:bg-white/10 dark:text-dark-text-secondary dark:ring-white/10',
+    muted: 'bg-black/5 text-gray-700 ring-black/10 dark:bg-white/10 dark:text-muted-foreground dark:ring-white/10',
   } as const
   return (
     <span
@@ -57,8 +57,8 @@ function TaskCard({ task }: { task: CronTask }) {
       className={cn(
         'flex w-full min-w-0 shrink-0 flex-col gap-4 rounded-xl border border-black/10 bg-white/80 p-4 shadow-xs backdrop-blur-sm',
         'sm:flex-row sm:items-start sm:gap-6',
-        'dark:border-dark-border-primary dark:bg-dark-bg-tertiary/80',
-        'transition-shadow hover:shadow-md dark:hover:border-dark-border-secondary',
+        'dark:border-border dark:bg-muted/80',
+        'transition-shadow hover:shadow-md dark:hover:border-border',
       )}
     >
       <div className="min-w-0 flex-1">
@@ -67,7 +67,7 @@ function TaskCard({ task }: { task: CronTask }) {
           <StatusPill label={task.status || 'unknown'} variant={sv} />
         </div>
         <p
-          className="mt-1 truncate font-mono text-[11px] text-gray-500 dark:text-dark-text-tertiary"
+          className="mt-1 truncate font-mono text-[11px] text-muted-foreground"
           title={task.task_id || undefined}
         >
           {displayId || '—'}
@@ -82,26 +82,26 @@ function TaskCard({ task }: { task: CronTask }) {
         )}
       >
         <div className="min-w-0">
-          <dt className="text-gray-500 dark:text-dark-text-tertiary">上次运行</dt>
-          <dd className="mt-0.5 break-words font-medium text-gray-900 dark:text-dark-text-primary">
+          <dt className="text-muted-foreground">上次运行</dt>
+          <dd className="mt-0.5 break-words font-medium text-foreground">
             {task.last_run || '—'}
           </dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-gray-500 dark:text-dark-text-tertiary">下次运行</dt>
-          <dd className="mt-0.5 break-words font-medium text-gray-900 dark:text-dark-text-primary">
+          <dt className="text-muted-foreground">下次运行</dt>
+          <dd className="mt-0.5 break-words font-medium text-foreground">
             {task.next_run || '—'}
           </dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-gray-500 dark:text-dark-text-tertiary">结果</dt>
+          <dt className="text-muted-foreground">结果</dt>
           <dd className="mt-0.5">
             <StatusPill label={task.last_result || '—'} variant={rv} />
           </dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-gray-500 dark:text-dark-text-tertiary">模型</dt>
-          <dd className="mt-0.5 break-words font-medium text-gray-900 dark:text-dark-text-primary">
+          <dt className="text-muted-foreground">模型</dt>
+          <dd className="mt-0.5 break-words font-medium text-foreground">
             {task.model || '—'}
           </dd>
         </div>
@@ -130,15 +130,15 @@ function StatTile({
   return (
     <div
       className={cn(
-        'rounded-xl border border-black/10 bg-gradient-to-br from-white to-gray-50/90 px-4 py-3 dark:border-dark-border-primary dark:from-dark-bg-tertiary dark:to-dark-bg-secondary',
+        'rounded-xl border border-black/10 bg-gradient-to-br from-white to-gray-50/90 px-4 py-3 dark:border-border dark:from-muted dark:to-card',
         'ring-1 ring-inset',
         ring,
       )}
     >
-      <div className="text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-dark-text-tertiary">
+      <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </div>
-      <div className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-gray-900 dark:text-dark-text-primary">
+      <div className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-foreground">
         {value}
       </div>
     </div>
@@ -162,7 +162,7 @@ export function CronStatusPanel({ loading, error, fetchedAt, rowId, payload, has
   return (
     <section
       className={cn(
-        'rounded-xl border border-black/10 bg-white/70 p-5 backdrop-blur-sm dark:border-dark-border-primary dark:bg-dark-bg-secondary',
+        'rounded-xl border border-black/10 bg-white/70 p-5 backdrop-blur-sm dark:border-border dark:bg-card',
       )}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -174,7 +174,7 @@ export function CronStatusPanel({ loading, error, fetchedAt, rowId, payload, has
               <Skeleton className="h-3 w-40 max-w-full" />
             </div>
           ) : (
-            <p className="mt-1 text-xs text-gray-600 dark:text-dark-text-secondary">
+            <p className="mt-1 text-xs text-muted-foreground">
               数据源：<code className="rounded bg-black/5 px-1 dark:bg-white/10">cron_task_status</code>
               {rowId != null ? (
                 <>
@@ -196,7 +196,7 @@ export function CronStatusPanel({ loading, error, fetchedAt, rowId, payload, has
           variant="outline"
           disabled={loading}
           onClick={onRefresh}
-          className="shrink-0 shadow-xs dark:border-dark-border-primary dark:bg-dark-bg-tertiary dark:hover:bg-dark-bg-secondary"
+          className="shrink-0 shadow-xs dark:border-border dark:bg-muted dark:hover:bg-card"
         >
           {loading ? '拉取中…' : '手动刷新'}
         </Button>
@@ -214,7 +214,7 @@ export function CronStatusPanel({ loading, error, fetchedAt, rowId, payload, has
       {loading && !payload && !error ? <CronStatusPanelSkeleton /> : null}
 
       {!loading && !payload && !error && !hasRow ? (
-        <div className="mt-6 rounded-lg border border-dashed border-black/15 bg-white/50 py-12 text-center text-sm text-gray-600 dark:border-dark-border-primary dark:bg-dark-bg-tertiary/50 dark:text-dark-text-secondary">
+        <div className="mt-6 rounded-lg border border-dashed border-black/15 bg-white/50 py-12 text-center text-sm text-muted-foreground dark:border-border dark:bg-muted/50">
           暂无数据行。OpenClaw 写入后此处将展示概览与任务卡片。
         </div>
       ) : null}
@@ -232,8 +232,8 @@ export function CronStatusPanel({ loading, error, fetchedAt, rowId, payload, has
               className={cn(
                 'flex flex-1 flex-col justify-center rounded-xl border px-4 py-4 lg:max-w-md',
                 healthy
-                  ? 'border-emerald-200/80 bg-gradient-to-br from-emerald-50/90 to-white dark:border-emerald-900/40 dark:from-emerald-950/35 dark:to-dark-bg-tertiary'
-                  : 'border-rose-200/80 bg-gradient-to-br from-rose-50/90 to-white dark:border-rose-900/40 dark:from-rose-950/35 dark:to-dark-bg-tertiary',
+                  ? 'border-emerald-200/80 bg-gradient-to-br from-emerald-50/90 to-white dark:border-emerald-900/40 dark:from-emerald-950/35 dark:to-muted'
+                  : 'border-rose-200/80 bg-gradient-to-br from-rose-50/90 to-white dark:border-rose-900/40 dark:from-rose-950/35 dark:to-muted',
               )}
             >
               <div className="flex items-center gap-2">
@@ -245,7 +245,7 @@ export function CronStatusPanel({ loading, error, fetchedAt, rowId, payload, has
                 />
                 <span className="text-sm font-semibold">{healthy ? '总体健康' : '需要关注'}</span>
               </div>
-              <p className="mt-2 text-xs text-gray-600 dark:text-dark-text-secondary">
+              <p className="mt-2 text-xs text-muted-foreground">
                 检测时间 {formatCheckTime(payload.check_time)}
               </p>
               {issues.length > 0 ? (
@@ -257,7 +257,7 @@ export function CronStatusPanel({ loading, error, fetchedAt, rowId, payload, has
                   ))}
                 </ul>
               ) : (
-                <p className="mt-3 text-xs text-gray-600 dark:text-dark-text-secondary">
+                <p className="mt-3 text-xs text-muted-foreground">
                   {healthy ? '未发现 summary 中的 issues。' : 'summary 标记为不健康，但未提供 issues 列表。'}
                 </p>
               )}
@@ -271,11 +271,11 @@ export function CronStatusPanel({ loading, error, fetchedAt, rowId, payload, has
           </div>
 
           <div className="w-full min-w-0">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-dark-text-tertiary">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               任务列表
             </h3>
             {payload.tasks.length === 0 ? (
-              <p className="mt-3 text-sm text-gray-600 dark:text-dark-text-secondary">tasks 数组为空。</p>
+              <p className="mt-3 text-sm text-muted-foreground">tasks 数组为空。</p>
             ) : (
               <div
                 className={cn(

@@ -21,7 +21,7 @@ export default function HomeView() {
   return (
     <div
       className={cn(
-        'relative h-screen bg-white text-black dark:bg-dark-bg-primary dark:text-dark-text-primary transition-colors overflow-hidden',
+        'relative h-screen bg-background text-foreground transition-colors overflow-hidden',
       )}
     >
       {/* Main */}

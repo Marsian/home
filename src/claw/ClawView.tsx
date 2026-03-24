@@ -90,20 +90,20 @@ export default function ClawView() {
   }, [pullLatest])
 
   return (
-    <div className="min-h-screen bg-white text-black dark:bg-dark-bg-primary dark:text-dark-text-primary transition-colors">
-      <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-sm border-b border-black/5 dark:bg-dark-bg-secondary dark:border-dark-border-primary">
+    <div className="min-h-screen bg-background text-foreground transition-colors">
+      <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-sm border-b border-black/5 dark:bg-card dark:border-border">
         <div className="mx-auto flex max-w-6xl items-center gap-3 pl-[88px] pr-4 py-3">
           <Button
             type="button"
             variant="outline"
             onClick={() => navigate('/')}
-            className="bg-white/70 shadow-xs backdrop-blur-sm hover:bg-white dark:border-dark-border-primary dark:bg-dark-bg-tertiary dark:hover:bg-dark-bg-secondary"
+            className="bg-white/70 shadow-xs backdrop-blur-sm hover:bg-white dark:border-border dark:bg-muted dark:hover:bg-card"
           >
             返回
           </Button>
           <div className="flex flex-col leading-tight">
             <div className="text-base font-semibold">Claw</div>
-            <div className="text-xs text-gray-600 dark:text-dark-text-secondary">OpenClaw 状态</div>
+            <div className="text-xs text-muted-foreground">OpenClaw 状态</div>
           </div>
         </div>
       </header>

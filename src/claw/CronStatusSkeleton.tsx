@@ -8,7 +8,7 @@ function TaskCardSkeleton() {
   return (
     <div
       className={cn(
-        'flex w-full shrink-0 flex-col gap-4 rounded-xl border border-black/10 bg-white/50 p-4 dark:border-dark-border-primary dark:bg-dark-bg-tertiary/50',
+        'flex w-full shrink-0 flex-col gap-4 rounded-xl border border-black/10 bg-white/50 p-4 dark:border-border dark:bg-muted/50',
         'sm:flex-row sm:items-start sm:gap-6',
       )}
     >
@@ -42,7 +42,7 @@ export function CronStatusPanelSkeleton() {
         <div
           className={cn(
             'flex flex-1 flex-col rounded-xl border border-black/10 px-4 py-4 lg:max-w-md',
-            'dark:border-dark-border-primary',
+            'dark:border-border',
           )}
         >
           <div className="flex items-center gap-2">
@@ -60,7 +60,7 @@ export function CronStatusPanelSkeleton() {
               key={i}
               className={cn(
                 'rounded-xl border border-black/10 px-4 py-3 ring-1 ring-inset ring-black/5',
-                'dark:border-dark-border-primary dark:ring-white/5',
+                'dark:border-border dark:ring-white/5',
               )}
             >
               <Skeleton className="h-2.5 w-12" />
