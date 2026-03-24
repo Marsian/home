@@ -34,7 +34,6 @@ export default function ClawView() {
 
     setLoading(true)
     setError(null)
-
     const { data, error: qErr } = await supabase
       .from('cron_task_status')
       .select('id, created_at, status')

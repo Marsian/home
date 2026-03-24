@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Skeleton } from './skeleton-block'
+import { Skeleton } from '@/components/ui/skeleton'
 import type { CronStatusPayload, CronTask } from './cronStatus'
 import { CronStatusPanelSkeleton } from './CronStatusSkeleton'
 
@@ -174,7 +174,7 @@ export function CronStatusPanel({ loading, error, fetchedAt, rowId, payload, has
               <Skeleton className="h-3 w-40 max-w-full" />
             </div>
           ) : (
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-xs leading-[1.1rem] text-muted-foreground">
               数据源：<code className="rounded bg-black/5 px-1 dark:bg-white/10">cron_task_status</code>
               {rowId != null ? (
                 <>
