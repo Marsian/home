@@ -1,3 +1,4 @@
+@import "tw-animate-css";
 /* 思源宋体 · Adobe Source Han Serif SC（https://github.com/adobe-fonts/source-han-serif） */
 @font-face {
   font-family: 'Source Han Serif SC';
@@ -13,29 +14,42 @@
 
 /* ===== Light Theme (Default) ===== */
 :root {
+  /* Tailwind 语义色（hsl(var(--token))）— HSL 分量，无 hsl() 包裹 */
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --border: 214.3 31.8% 91.4%;
+
   /* Dark theme colors (default to light values, overridden when dark mode is active) */
   --dark-bg-primary: #ffffff;
   --dark-bg-secondary: #f8fafc;
   --dark-bg-tertiary: #f1f5f9;
-  
+
   --dark-text-primary: #0f172a;
   --dark-text-secondary: #475569;
   --dark-text-tertiary: #64748b;
-  
+
   --dark-border-primary: rgba(0, 0, 0, 0.1);
   --dark-border-secondary: rgba(0, 0, 0, 0.05);
 }
 
 /* ===== Dark Theme ===== */
 html.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --border: 217.2 32.6% 17.5%;
+
   --dark-bg-primary: #050A12;
   --dark-bg-secondary: #0f172a;
   --dark-bg-tertiary: #1e293b;
-  
+
   --dark-text-primary: #ffffff;
   --dark-text-secondary: #cbd5e1;
   --dark-text-tertiary: #94a3b8;
-  
+
   --dark-border-primary: rgba(255, 255, 255, 0.1);
   --dark-border-secondary: rgba(255, 255, 255, 0.05);
 }
@@ -46,6 +60,7 @@ body {
   padding: 0;
   background: #ffffff;
   color: #000000;
+  font-family: 'PingFang SC', 'Microsoft YaHei', '微软雅黑', system-ui, sans-serif;
 }
 
 /* Enable dark background when html.dark is toggled */
@@ -125,4 +140,3 @@ html.dark body {
     margin: 0 auto !important;
   }
 }
-

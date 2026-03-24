@@ -12,7 +12,11 @@
     "jsx": "react-jsx",
     "strict": true,
     "types": ["vite/client"],
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["src"]
 }
