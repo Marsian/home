@@ -1,93 +1,140 @@
 /**
- * Shape of `cron_task_status.status` written by OpenClaw (observed from live data).
- * Fields are optional where we still want partial rendering.
+ * `cron_task_status.status` JSON — fixed shape from OpenClaw.
  */
-export type CronTask = {
-  task_id: string
-  task_name: string
-  status: string
-  last_run: string
-  next_run: string
-  last_result: string
-  model: string
-}
 
-export type CronSummary = {
-  healthy: boolean
-  issues: unknown[]
-}
-
-export type CronStatusPayload = {
-  check_time?: string
-  total_tasks: number
-  active_tasks: number
-  failed_tasks: number
-  tasks: CronTask[]
-  summary?: CronSummary
-}
-
-function normalizeTask(raw: unknown): CronTask | null {
-  if (!raw || typeof raw !== 'object') return null
-  const x = raw as Record<string, unknown>
-  return {
-    task_id: String(x.task_id ?? ''),
-    task_name: String(x.task_name ?? ''),
-    status: String(x.status ?? ''),
-    last_run: String(x.last_run ?? ''),
-    next_run: String(x.next_run ?? ''),
-    last_result: String(x.last_result ?? ''),
-    model: String(x.model ?? ''),
+function unwrapJson(raw: unknown): unknown {
+  if (typeof raw !== 'string') return raw
+  try {
+    return JSON.parse(raw) as unknown
+  } catch {
+    return null
   }
 }
 
-function normalizeSummary(raw: unknown): CronSummary | undefined {
-  if (!raw || typeof raw !== 'object') return undefined
-  const x = raw as Record<string, unknown>
-  const issues = Array.isArray(x.issues) ? x.issues : []
-  return {
-    healthy: typeof x.healthy === 'boolean' ? x.healthy : issues.length === 0,
-    issues,
+function isRecord(x: unknown): x is Record<string, unknown> {
+  return x !== null && typeof x === 'object' && !Array.isArray(x)
+}
+
+function str(v: unknown): string {
+  if (v === null || v === undefined) return ''
+  return String(v)
+}
+
+function num(v: unknown): number | undefined {
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  if (typeof v === 'string' && v.trim() !== '' && !Number.isNaN(Number(v))) return Number(v)
+  return undefined
+}
+
+export class CronSummary {
+  constructor(
+    readonly healthy: boolean,
+    readonly issues: unknown[],
+  ) {}
+
+  static fromJSON(raw: unknown): CronSummary | undefined {
+    if (!isRecord(raw)) return undefined
+    const issues = Array.isArray(raw.issues) ? raw.issues : []
+    const healthy = typeof raw.healthy === 'boolean' ? raw.healthy : issues.length === 0
+    return new CronSummary(healthy, issues)
   }
 }
 
-/** Derive counts from tasks when top-level counters are missing. */
-function deriveCounts(tasks: CronTask[], o: Record<string, unknown>) {
-  const failedGuess = tasks.filter(
-    (t) =>
-      /fail|error|stopped/i.test(t.status) ||
-      /fail|error/i.test(t.last_result),
-  ).length
-  const activeGuess = tasks.filter((t) => /active|running/i.test(t.status)).length
+export class CronTask {
+  constructor(
+    readonly job_name: string,
+    readonly status: string,
+    readonly task_id: string,
+    readonly task_name: string,
+    readonly last_run: string,
+    readonly next_run: string,
+    readonly last_result: string,
+    readonly time: string,
+    readonly duration_ms: string,
+    readonly model: string,
+    readonly agent_id: string,
+    readonly session_id: string,
+    readonly input_tokens: number | undefined,
+    readonly output_tokens: number | undefined,
+  ) {}
 
-  const total_tasks =
-    typeof o.total_tasks === 'number' ? o.total_tasks : tasks.length
-  const active_tasks =
-    typeof o.active_tasks === 'number' ? o.active_tasks : activeGuess
-  const failed_tasks =
-    typeof o.failed_tasks === 'number' ? o.failed_tasks : failedGuess
+  /** 卡片标题：优先 job_name，否则 task_name */
+  get displayTitle(): string {
+    return this.job_name.trim() || this.task_name.trim() || '未命名任务'
+  }
 
-  return { total_tasks, active_tasks, failed_tasks }
+  static fromJSON(raw: unknown): CronTask | null {
+    if (!isRecord(raw)) return null
+    return new CronTask(
+      str(raw.job_name),
+      str(raw.status),
+      str(raw.task_id),
+      str(raw.task_name),
+      str(raw.last_run),
+      str(raw.next_run),
+      str(raw.last_result),
+      str(raw.time),
+      str(raw.duration_ms),
+      str(raw.model),
+      str(raw.agent_id),
+      str(raw.session_id),
+      num(raw.input_tokens),
+      num(raw.output_tokens),
+    )
+  }
 }
 
-/**
- * Parse Supabase `status` JSON. Returns null only when `raw` is not a non-null object.
- */
+export class CronStatusPayload {
+  constructor(
+    readonly check_time: string,
+    readonly total_tasks: number,
+    readonly active_tasks: number,
+    readonly failed_tasks: number,
+    readonly tasks: CronTask[],
+    readonly summary: CronSummary | undefined,
+  ) {}
+
+  static parse(raw: unknown): CronStatusPayload | null {
+    const data = unwrapJson(raw)
+    if (!isRecord(data)) return null
+    const tasksRaw = data.tasks
+    if (!Array.isArray(tasksRaw)) return null
+
+    const tasks: CronTask[] = []
+    for (const item of tasksRaw) {
+      const t = CronTask.fromJSON(item)
+      if (t) tasks.push(t)
+    }
+
+    const failedGuess = tasks.filter(
+      (t) => /fail|error|stopped/i.test(t.status) || /fail|error/i.test(t.last_result),
+    ).length
+    const activeGuess = tasks.filter((t) => /active|running/i.test(t.status)).length
+
+    const total_tasks = num(data.total_tasks) ?? tasks.length
+    const active_tasks = num(data.active_tasks) ?? activeGuess
+    const failed_tasks = num(data.failed_tasks) ?? failedGuess
+
+    const summary =
+      CronSummary.fromJSON(data.summary) ??
+      (Array.isArray(data.issues)
+        ? new CronSummary(
+            typeof data.healthy === 'boolean' ? data.healthy : data.issues.length === 0,
+            data.issues,
+          )
+        : undefined)
+
+    return new CronStatusPayload(
+      str(data.check_time),
+      total_tasks,
+      active_tasks,
+      failed_tasks,
+      tasks,
+      summary,
+    )
+  }
+}
+
 export function parseCronStatus(raw: unknown): CronStatusPayload | null {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
-  const o = raw as Record<string, unknown>
-  const tasksRaw = o.tasks
-  const tasks: CronTask[] = Array.isArray(tasksRaw)
-    ? (tasksRaw.map(normalizeTask).filter(Boolean) as CronTask[])
-    : []
-
-  const { total_tasks, active_tasks, failed_tasks } = deriveCounts(tasks, o)
-
-  return {
-    check_time: typeof o.check_time === 'string' ? o.check_time : undefined,
-    total_tasks,
-    active_tasks,
-    failed_tasks,
-    tasks,
-    summary: normalizeSummary(o.summary),
-  }
+  return CronStatusPayload.parse(raw)
 }

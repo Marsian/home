@@ -15,7 +15,7 @@ function formatCheckTime(iso?: string) {
 
 function StatusPill({ label, variant }: { label: string; variant: 'ok' | 'warn' | 'bad' | 'muted' }) {
   const styles = {
-    ok: 'bg-emerald-500/15 text-emerald-800 ring-emerald-500/25 dark:text-emerald-200 dark:ring-emerald-400/20',
+    ok: 'bg-green-500/15 text-green-800 ring-green-500/30 dark:text-green-200 dark:ring-green-400/25',
     warn: 'bg-amber-500/15 text-amber-900 ring-amber-500/25 dark:text-amber-200 dark:ring-amber-400/20',
     bad: 'bg-red-500/15 text-red-800 ring-red-500/25 dark:text-red-200 dark:ring-red-400/20',
     muted: 'bg-black/5 text-gray-700 ring-black/10 dark:bg-white/10 dark:text-muted-foreground dark:ring-white/10',
@@ -34,76 +34,97 @@ function StatusPill({ label, variant }: { label: string; variant: 'ok' | 'warn' 
 
 function taskStatusVariant(status: string, lastResult: string): 'ok' | 'warn' | 'bad' | 'muted' {
   if (/fail|error|stopped/i.test(status) || /fail|error/i.test(lastResult)) return 'bad'
-  if (/active|running/i.test(status) && /ok|success/i.test(lastResult)) return 'ok'
+  if (/\b(ok|success)\b/i.test(status) || /\b(ok|success)\b/i.test(lastResult)) return 'ok'
   if (/active|running/i.test(status)) return 'muted'
   return 'warn'
 }
 
-function resultVariant(result: string): 'ok' | 'warn' | 'bad' | 'muted' {
-  const r = result.toLowerCase()
-  if (!r) return 'muted'
-  if (/ok|success|pass/.test(r)) return 'ok'
-  if (/fail|error/.test(r)) return 'bad'
-  return 'warn'
+function formatToken(n: number | undefined): string {
+  return n !== undefined ? String(n) : ''
 }
 
 function TaskCard({ task }: { task: CronTask }) {
   const sv = taskStatusVariant(task.status, task.last_result)
-  const rv = resultVariant(task.last_result)
-  const displayId = task.task_id.length > 56 ? `${task.task_id.slice(0, 28)}…${task.task_id.slice(-16)}` : task.task_id
+  const subtitle = task.task_id.trim()
+  const displayId =
+    subtitle.length > 56 ? `${subtitle.slice(0, 28)}…${subtitle.slice(-16)}` : subtitle
 
   return (
     <article
       className={cn(
         'flex w-full min-w-0 shrink-0 flex-col gap-4 rounded-xl border border-black/10 bg-white/80 p-4 shadow-xs backdrop-blur-sm',
-        'sm:flex-row sm:items-start sm:gap-6',
         'dark:border-border dark:bg-muted/80',
         'transition-shadow hover:shadow-md dark:hover:border-border',
       )}
     >
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 w-full">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <h3 className="text-sm font-semibold tracking-tight">{task.task_name || '未命名任务'}</h3>
+          <h3 className="text-sm font-semibold tracking-tight">{task.displayTitle}</h3>
           <StatusPill label={task.status || 'unknown'} variant={sv} />
         </div>
-        <p
-          className="mt-1 truncate font-mono text-[11px] text-muted-foreground"
-          title={task.task_id || undefined}
-        >
-          {displayId || '—'}
-        </p>
+        {subtitle ? (
+          <p
+            className="mt-1 truncate font-mono text-[11px] text-muted-foreground"
+            title={subtitle || undefined}
+          >
+            {displayId}
+          </p>
+        ) : null}
       </div>
 
       <dl
         className={cn(
-          'grid w-full shrink-0 grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-4',
-          /* 固定元数据区宽度，避免每张卡随内容变宽导致列与左侧标题区不对齐 */
-          'sm:w-96 sm:flex-none sm:shrink-0',
+          'grid w-full min-w-0 grid-cols-1 gap-x-6 gap-y-2 text-xs sm:grid-cols-2 lg:grid-cols-3',
         )}
       >
         <div className="min-w-0">
-          <dt className="text-muted-foreground">上次运行</dt>
-          <dd className="mt-0.5 break-words font-medium text-foreground">
-            {task.last_run || '—'}
+          <dt className="font-mono text-[10px] text-muted-foreground">time</dt>
+          <dd className="mt-0.5 break-words font-mono text-[11px] text-foreground">
+            {task.time.trim() ? task.time : <span className="text-muted-foreground">—</span>}
           </dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-muted-foreground">下次运行</dt>
-          <dd className="mt-0.5 break-words font-medium text-foreground">
-            {task.next_run || '—'}
+          <dt className="font-mono text-[10px] text-muted-foreground">duration_ms</dt>
+          <dd className="mt-0.5 break-words font-mono text-[11px] tabular-nums text-foreground">
+            {task.duration_ms.trim() ? task.duration_ms : <span className="text-muted-foreground">—</span>}
           </dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-muted-foreground">结果</dt>
-          <dd className="mt-0.5">
-            <StatusPill label={task.last_result || '—'} variant={rv} />
+          <dt className="font-mono text-[10px] text-muted-foreground">model</dt>
+          <dd className="mt-0.5 break-words font-medium text-foreground">
+            {task.model || <span className="text-muted-foreground">—</span>}
           </dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-muted-foreground">模型</dt>
-          <dd className="mt-0.5 break-words font-medium text-foreground">
-            {task.model || '—'}
+          <dt className="font-mono text-[10px] text-muted-foreground">agent_id</dt>
+          <dd className="mt-0.5 break-words font-mono text-[11px] text-foreground">
+            {task.agent_id || <span className="text-muted-foreground">—</span>}
           </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="font-mono text-[10px] text-muted-foreground">session_id</dt>
+          <dd className="mt-0.5 break-words font-mono text-[11px] text-foreground">
+            {task.session_id || <span className="text-muted-foreground">—</span>}
+          </dd>
+        </div>
+
+        <div
+          className={cn(
+            'col-span-full grid w-full min-w-0 grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3',
+          )}
+        >
+          <div className="min-w-0">
+            <dt className="font-mono text-[10px] text-muted-foreground">input_tokens</dt>
+            <dd className="mt-0.5 tabular-nums font-medium text-foreground">
+              {formatToken(task.input_tokens) || <span className="text-muted-foreground">—</span>}
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="font-mono text-[10px] text-muted-foreground">output_tokens</dt>
+            <dd className="mt-0.5 tabular-nums font-medium text-foreground">
+              {formatToken(task.output_tokens) || <span className="text-muted-foreground">—</span>}
+            </dd>
+          </div>
         </div>
       </dl>
     </article>
@@ -271,19 +292,15 @@ export function CronStatusPanel({ loading, error, fetchedAt, rowId, payload, has
           </div>
 
           <div className="w-full min-w-0">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              任务列表
-            </h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">任务列表</h3>
             {payload.tasks.length === 0 ? (
-              <p className="mt-3 text-sm text-muted-foreground">tasks 数组为空。</p>
+              <p className="mt-3 text-sm text-muted-foreground">暂无任务项。</p>
             ) : (
               <div
-                className={cn(
-                  'mt-3 flex w-full min-w-0 max-h-[calc(5*10.5rem+4*0.75rem)] flex-col gap-3 overflow-y-auto overscroll-y-contain',
-                )}
+                className={cn('mt-3 flex w-full min-w-0 flex-col gap-3')}
               >
                 {payload.tasks.map((task, i) => (
-                  <TaskCard key={task.task_id || `task-${i}`} task={task} />
+                  <TaskCard key={task.task_id ? `${task.task_id}-${i}` : `task-${i}`} task={task} />
                 ))}
               </div>
             )}

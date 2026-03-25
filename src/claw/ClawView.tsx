@@ -28,7 +28,6 @@ export default function ClawView() {
     if (!supabase) {
       const msg = '无法初始化 Supabase 客户端（URL 或 Publishable Key 为空）'
       setError(msg)
-      console.error('[OpenClaw]', msg)
       return
     }
 
@@ -47,41 +46,19 @@ export default function ClawView() {
     if (qErr) {
       setRow(null)
       setError(qErr.message)
-      console.error('[OpenClaw] Supabase 查询失败:', qErr)
       return
     }
 
     if (!data) {
       setRow(null)
-      console.log('[OpenClaw] cron_task_status: 暂无数据（0 行）')
       return
     }
 
-    const parsedRow: CronRow = {
+    setRow({
       id: Number(data.id),
       created_at: String(data.created_at),
       status: data.status as unknown,
-    }
-    setRow(parsedRow)
-
-    const parsed = parseCronStatus(parsedRow.status)
-    console.log('[OpenClaw] latest row meta:', {
-      id: parsedRow.id,
-      created_at: parsedRow.created_at,
     })
-    console.log('[OpenClaw] raw status JSON:', parsedRow.status)
-    console.log('[OpenClaw] parsed status (for UI):', parsed)
-    if (parsed) {
-      console.log('[OpenClaw] structure:', {
-        check_time: parsed.check_time,
-        total_tasks: parsed.total_tasks,
-        active_tasks: parsed.active_tasks,
-        failed_tasks: parsed.failed_tasks,
-        taskCount: parsed.tasks.length,
-        summary: parsed.summary,
-        sampleTask: parsed.tasks[0] ?? null,
-      })
-    }
   }, [])
 
   useEffect(() => {
