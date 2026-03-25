@@ -4,7 +4,7 @@ function cn(...parts: Array<string | false | undefined | null>) {
   return parts.filter(Boolean).join(' ')
 }
 
-/** 与 CronStatusPanel TaskCard：标题区 + dl 三列网格 + 底部 token 并排 */
+/** 与 CronExecutionPanel TaskCard：标题区 + dl 三列网格 + 底部 token 并排 */
 function TaskCardSkeleton() {
   return (
     <div
@@ -66,41 +66,25 @@ function TaskCardSkeleton() {
   )
 }
 
-export function CronStatusPanelSkeleton() {
+export function CronExecutionPanelSkeleton() {
   return (
-    <div className="mt-6 w-full min-w-0 space-y-8" aria-busy="true" aria-label="加载任务状态">
-      <div className="flex w-full min-w-0 flex-col gap-4 lg:flex-row lg:items-stretch">
-        <div
-          className={cn(
-            'flex min-h-[6.625rem] flex-1 flex-col justify-center rounded-xl border border-black/10 px-4 py-4 lg:max-w-md',
-            'dark:border-border',
-          )}
-        >
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-2.5 w-2.5 rounded-full" />
-            <Skeleton className="h-4 w-24" />
+    <div className="mt-3 w-full min-w-0 space-y-4" aria-busy="true" aria-label="加载执行记录">
+      <div className="grid min-w-0 grid-cols-3 gap-3">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className={cn(
+              'min-h-[6.625rem] rounded-xl border border-black/10 px-4 py-3 ring-1 ring-inset ring-black/5',
+              'dark:border-border dark:ring-white/5',
+            )}
+          >
+            <Skeleton className="h-3 w-12" />
+            <Skeleton className="mt-1 h-8 w-10" />
           </div>
-          <Skeleton className="mt-2 h-3 w-48" />
-          <Skeleton className="mt-3 h-3 w-full max-w-xs" />
-        </div>
-
-        <div className="grid min-w-0 flex-1 grid-cols-3 gap-3">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className={cn(
-                'min-h-[6.625rem] rounded-xl border border-black/10 px-4 py-3 ring-1 ring-inset ring-black/5',
-                'dark:border-border dark:ring-white/5',
-              )}
-            >
-              <Skeleton className="h-3 w-12" />
-              <Skeleton className="mt-1 h-8 w-10" />
-            </div>
-          ))}
-        </div>
+        ))}
       </div>
 
-      <div className="w-full min-w-0">
+      <div className="w-full min-w-0 pt-2">
         <Skeleton className="h-3 w-20" />
         <div className="mt-3 flex w-full min-w-0 flex-col gap-3">
           {[0, 1, 2].map((i) => (

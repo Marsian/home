@@ -1,7 +1,8 @@
+import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { CronStatusPayload, CronTask } from './cronStatus'
-import { CronStatusPanelSkeleton } from './CronStatusSkeleton'
+import { CronExecutionPanelSkeleton } from './CronExecutionSkeleton'
 
 function cn(...parts: Array<string | false | undefined | null>) {
   return parts.filter(Boolean).join(' ')
@@ -176,8 +177,7 @@ type Props = {
   onRefresh: () => void
 }
 
-export function CronStatusPanel({ loading, error, fetchedAt, rowId, payload, hasRow, onRefresh }: Props) {
-  const healthy = payload?.summary?.healthy ?? (payload?.summary?.issues?.length ?? 0) === 0
+export function CronExecutionPanel({ loading, error, fetchedAt, rowId, payload, hasRow, onRefresh }: Props) {
   const issues = payload?.summary?.issues ?? []
 
   return (
@@ -188,38 +188,54 @@ export function CronStatusPanel({ loading, error, fetchedAt, rowId, payload, has
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold">Cron 任务状态</h2>
+          <h2 className="text-sm font-semibold">Cron 执行记录</h2>
           {loading && !payload && !error ? (
-            <div className="mt-2 space-y-2" aria-hidden>
+            <div className="mt-4 space-y-1" aria-hidden>
               <Skeleton className="h-3 w-56 max-w-full" />
-              <Skeleton className="h-3 w-40 max-w-full" />
+              <Skeleton className="h-3 w-64 max-w-full" />
             </div>
           ) : (
-            <p className="mt-1 text-xs leading-[1.1rem] text-muted-foreground">
-              数据源：<code className="rounded bg-black/5 px-1 dark:bg-white/10">cron_task_status</code>
-              {rowId != null ? (
-                <>
-                  {' '}
-                  · 行 <span className="tabular-nums">#{rowId}</span>
-                </>
+            <div className="mt-4 min-w-0 space-y-1 text-xs leading-[1.1rem] text-muted-foreground">
+              <p className="flex flex-wrap items-center gap-x-1">
+                <span>
+                  数据源：<code className="rounded bg-black/5 px-1 dark:bg-white/10">cron_task_status</code>
+                </span>
+                {rowId != null ? (
+                  <span>
+                    · 行 <span className="tabular-nums">#{rowId}</span>
+                  </span>
+                ) : null}
+                {fetchedAt && !payload ? (
+                  <span>
+                    · 上次同步 {new Date(fetchedAt).toLocaleString()}
+                  </span>
+                ) : null}
+              </p>
+              {payload ? (
+                <p className="flex flex-wrap items-baseline gap-x-1.5">
+                  <span>检测时间 {formatCheckTime(payload.check_time)}</span>
+                  <span className="text-muted-foreground/40" aria-hidden>
+                    ·
+                  </span>
+                  <span>
+                    上次同步 {fetchedAt ? new Date(fetchedAt).toLocaleString() : '—'}
+                  </span>
+                </p>
               ) : null}
-              {fetchedAt ? (
-                <>
-                  <br />
-                  上次同步 {new Date(fetchedAt).toLocaleString()}
-                </>
-              ) : null}
-            </p>
+            </div>
           )}
         </div>
         <Button
           type="button"
           variant="outline"
+          size="icon-sm"
           disabled={loading}
           onClick={onRefresh}
           className="shrink-0"
+          aria-label={loading ? '拉取中' : '刷新'}
+          title="刷新"
         >
-          {loading ? '拉取中…' : '手动刷新'}
+          <RefreshCw className={cn('size-3.5', loading && 'animate-spin')} aria-hidden />
         </Button>
       </div>
 
@@ -232,11 +248,11 @@ export function CronStatusPanel({ loading, error, fetchedAt, rowId, payload, has
         </div>
       ) : null}
 
-      {loading && !payload && !error ? <CronStatusPanelSkeleton /> : null}
+      {loading && !payload && !error ? <CronExecutionPanelSkeleton /> : null}
 
       {!loading && !payload && !error && !hasRow ? (
         <div className="mt-6 rounded-lg border border-dashed border-black/15 bg-white/50 py-12 text-center text-sm text-muted-foreground dark:border-border dark:bg-muted/50">
-          暂无数据行。OpenClaw 写入后此处将展示概览与任务卡片。
+          暂无数据行。OpenClaw 写入后此处将展示统计与任务卡片。
         </div>
       ) : null}
 
@@ -247,58 +263,29 @@ export function CronStatusPanel({ loading, error, fetchedAt, rowId, payload, has
       ) : null}
 
       {payload ? (
-        <div className="mt-6 w-full min-w-0 space-y-8">
-          <div className="flex w-full min-w-0 flex-col gap-4 lg:flex-row lg:items-stretch">
-            <div
-              className={cn(
-                'flex flex-1 flex-col justify-center rounded-xl border px-4 py-4 lg:max-w-md',
-                healthy
-                  ? 'border-emerald-200/80 bg-gradient-to-br from-emerald-50/90 to-white dark:border-emerald-900/40 dark:from-emerald-950/35 dark:to-muted'
-                  : 'border-rose-200/80 bg-gradient-to-br from-rose-50/90 to-white dark:border-rose-900/40 dark:from-rose-950/35 dark:to-muted',
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    'h-2.5 w-2.5 shrink-0 rounded-full',
-                    healthy ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.45)]',
-                  )}
-                />
-                <span className="text-sm font-semibold">{healthy ? '总体健康' : '需要关注'}</span>
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                检测时间 {formatCheckTime(payload.check_time)}
-              </p>
-              {issues.length > 0 ? (
-                <ul className="mt-3 list-inside list-disc text-xs text-rose-800 dark:text-rose-200">
-                  {issues.map((issue, i) => (
-                    <li key={i} className="break-words">
-                      {typeof issue === 'string' ? issue : JSON.stringify(issue)}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-3 text-xs text-muted-foreground">
-                  {healthy ? '未发现 summary 中的 issues。' : 'summary 标记为不健康，但未提供 issues 列表。'}
-                </p>
-              )}
-            </div>
-
-            <div className="grid min-w-0 flex-1 grid-cols-3 gap-3">
-              <StatTile label="总任务" value={payload.total_tasks} accent="slate" />
-              <StatTile label="活跃" value={payload.active_tasks} accent="emerald" />
-              <StatTile label="失败" value={payload.failed_tasks} accent="rose" />
-            </div>
+        <div className="mt-3 w-full min-w-0 space-y-4">
+          <div className="grid min-w-0 grid-cols-3 gap-3">
+            <StatTile label="总任务" value={payload.total_tasks} accent="slate" />
+            <StatTile label="活跃" value={payload.active_tasks} accent="emerald" />
+            <StatTile label="失败" value={payload.failed_tasks} accent="rose" />
           </div>
 
-          <div className="w-full min-w-0">
+          {issues.length > 0 ? (
+            <ul className="list-inside list-disc text-xs text-rose-800 dark:text-rose-200">
+              {issues.map((issue, i) => (
+                <li key={i} className="break-words">
+                  {typeof issue === 'string' ? issue : JSON.stringify(issue)}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          <div className="w-full min-w-0 pt-2">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">任务列表</h3>
             {payload.tasks.length === 0 ? (
               <p className="mt-3 text-sm text-muted-foreground">暂无任务项。</p>
             ) : (
-              <div
-                className={cn('mt-3 flex w-full min-w-0 flex-col gap-3')}
-              >
+              <div className={cn('mt-3 flex w-full min-w-0 flex-col gap-3')}>
                 {payload.tasks.map((task, i) => (
                   <TaskCard key={task.task_id ? `${task.task_id}-${i}` : `task-${i}`} task={task} />
                 ))}

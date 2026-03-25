@@ -2,7 +2,7 @@
  * `cron_task_status.status` JSON — fixed shape from OpenClaw.
  */
 
-function unwrapJson(raw: unknown): unknown {
+export function unwrapJson(raw: unknown): unknown {
   if (typeof raw !== 'string') return raw
   try {
     return JSON.parse(raw) as unknown
@@ -11,16 +11,16 @@ function unwrapJson(raw: unknown): unknown {
   }
 }
 
-function isRecord(x: unknown): x is Record<string, unknown> {
+export function isRecord(x: unknown): x is Record<string, unknown> {
   return x !== null && typeof x === 'object' && !Array.isArray(x)
 }
 
-function str(v: unknown): string {
+export function str(v: unknown): string {
   if (v === null || v === undefined) return ''
   return String(v)
 }
 
-function num(v: unknown): number | undefined {
+export function num(v: unknown): number | undefined {
   if (typeof v === 'number' && Number.isFinite(v)) return v
   if (typeof v === 'string' && v.trim() !== '' && !Number.isNaN(Number(v))) return Number(v)
   return undefined
