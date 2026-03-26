@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { FileText, Moon, Sun } from 'lucide-react'
+import { FileText, Moon, Sun, Gamepad2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 
@@ -37,6 +37,10 @@ export function AppMenu() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
+
+  // Only expose resume entry in local dev server.
+  // In production build we hide this menu item.
+  const showResume = import.meta.env.DEV
 
   function toggleTheme() {
     setTheme((t) => {
@@ -102,13 +106,27 @@ export function AppMenu() {
             type="button"
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/resume')}
-            {...routeButtonProps('/resume')}
-            aria-label="Resume"
-            title="Resume"
+            onClick={() => navigate('/tank90')}
+            {...routeButtonProps('/tank90')}
+            aria-label="90 Tank Battle"
+            title="90 Tank Battle"
           >
-            <FileText aria-hidden="true" />
+            <Gamepad2 aria-hidden="true" />
           </Button>
+
+          {showResume ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/resume')}
+              {...routeButtonProps('/resume')}
+              aria-label="Resume"
+              title="Resume"
+            >
+              <FileText aria-hidden="true" />
+            </Button>
+          ) : null}
 
           <Button
             type="button"

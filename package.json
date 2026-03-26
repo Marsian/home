@@ -8,7 +8,8 @@
     "build": "npm run subset-font && tsc -p tsconfig.json --noEmit && vite build && cp dist/index.html dist/404.html",
     "preview": "vite preview",
     "build:gh-pages": "tsc -p tsconfig.json --noEmit && vite build && cp dist/index.html dist/404.html",
-    "subset-font": "npx tsx scripts/extract-resume-chars.ts > scripts/resume-chars.txt && npx tsx scripts/subset-font.ts"
+    "subset-font": "npx tsx scripts/extract-resume-chars.ts > scripts/resume-chars.txt && npx tsx scripts/subset-font.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@fontsource/open-sans": "^5.2.7",
@@ -30,6 +31,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "@playwright/test": "^1.55.0",
     "subset-font": "^2.4.0",
     "tailwindcss": "^4.2.2",
     "tsx": "^4.19.0",
