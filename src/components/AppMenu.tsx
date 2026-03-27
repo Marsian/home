@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { FileText, Moon, Sun, Gamepad2 } from 'lucide-react'
 
@@ -23,6 +23,9 @@ function LobsterIcon({ className }: { className?: string }) {
 export function AppMenu() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [isDevMode, setIsDevMode] = useState(import.meta.env.DEV)
+  const dUnlockCountRef = useRef(0)
+  const dUnlockWindowStartRef = useRef(0)
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const stored =
@@ -38,9 +41,40 @@ export function AppMenu() {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
 
-  // Only expose resume entry in local dev server.
-  // In production build we hide this menu item.
-  const showResume = import.meta.env.DEV
+  // Dev: always enabled. Prod: press D three times in a row to unlock.
+  const showResume = isDevMode
+
+  useEffect(() => {
+    if (import.meta.env.DEV) return
+    if (typeof window === 'undefined') return
+
+    const UNLOCK_WINDOW_MS = 1200
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isDevMode) return
+      if (event.code !== 'KeyD') {
+        dUnlockCountRef.current = 0
+        dUnlockWindowStartRef.current = 0
+        return
+      }
+
+      const now = Date.now()
+      const windowStart = dUnlockWindowStartRef.current
+      const isInWindow = windowStart > 0 && now - windowStart <= UNLOCK_WINDOW_MS
+      if (!isInWindow) {
+        dUnlockWindowStartRef.current = now
+        dUnlockCountRef.current = 1
+      } else {
+        dUnlockCountRef.current += 1
+      }
+
+      if (dUnlockCountRef.current >= 3) {
+        setIsDevMode(true)
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isDevMode])
 
   function toggleTheme() {
     setTheme((t) => {
