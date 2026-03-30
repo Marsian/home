@@ -50,13 +50,13 @@ export function TouchControls({
 
   return (
     <div
-      className={`mt-4 rounded-xl border border-[#5f5434]/80 bg-[#0b0d13]/85 px-3 pt-3 pb-2 shadow-[0_0_0_1px_#00000080] sm:px-4 ${className ?? ''}`}
+      className={`mt-4 rounded-xl border border-border bg-card px-3 pt-3 pb-2 shadow-sm sm:px-4 ${className ?? ''}`}
       style={{ touchAction: 'none', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 10px)' }}
       aria-label="Touch controls"
     >
       <div className="flex items-end justify-between gap-4">
         <div
-          className="relative shrink-0 rounded-full border border-[#5f5434] bg-[#1a1d27]/85"
+          className="relative shrink-0 rounded-full border border-border bg-muted/50"
           style={{ width: JOY_SIZE, height: JOY_SIZE, touchAction: 'none' }}
           onPointerDown={(event) => {
             const el = event.currentTarget
@@ -84,7 +84,7 @@ export function TouchControls({
           aria-label="Virtual joystick"
         >
           <div
-            className="absolute rounded-full border border-[#8f7e4f] bg-[#2b3247]/90"
+            className="absolute rounded-full border border-border bg-muted"
             style={{
               width: KNOB_SIZE,
               height: KNOB_SIZE,
@@ -97,7 +97,7 @@ export function TouchControls({
           {onPauseToggle ? (
             <button
               type="button"
-              className="h-11 min-w-20 rounded-full border border-[#5f5434] bg-[#2d2534] px-4 font-mono text-[11px] tracking-[0.06em] text-[#f0dca2]"
+              className="h-11 min-w-20 rounded-full border border-border bg-secondary px-4 font-mono text-[11px] tracking-[0.06em] text-secondary-foreground"
               onClick={onPauseToggle}
               aria-label="Pause game"
             >
@@ -106,7 +106,7 @@ export function TouchControls({
           ) : null}
           <button
             type="button"
-            className="h-20 min-w-20 rounded-full border border-[#5f5434] bg-[#5c2a2a] px-4 font-mono text-xs tracking-[0.08em] text-[#f8e8b8]"
+            className="h-20 min-w-20 rounded-full border border-border bg-primary px-4 font-mono text-xs tracking-[0.08em] text-primary-foreground"
             onPointerDown={(event) => {
               onFireChange(true)
             }}
