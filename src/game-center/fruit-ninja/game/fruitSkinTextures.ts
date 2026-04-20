@@ -1638,21 +1638,48 @@ export function kiwiSkinTexture(): THREE.CanvasTexture {
   const g = c.getContext('2d')!
   const img = g.createImageData(s, s)
   const data = img.data
+  const wrapStroke = (x: number, y: number, dx: number, dy: number) => {
+    g.beginPath()
+    g.moveTo(x, y)
+    g.lineTo(x + dx, y + dy)
+    g.stroke()
+    if (x + dx < 0 || x < 0) {
+      g.beginPath()
+      g.moveTo(x + s, y)
+      g.lineTo(x + dx + s, y + dy)
+      g.stroke()
+    }
+    if (x + dx > s || x > s) {
+      g.beginPath()
+      g.moveTo(x - s, y)
+      g.lineTo(x + dx - s, y + dy)
+      g.stroke()
+    }
+  }
+  const periodicFbm = (
+    az: number,
+    tv: number,
+    radialFreq: number,
+    verticalFreq: number,
+    offsetX: number,
+    offsetY: number,
+  ) => fbm(
+    Math.cos(az) * radialFreq + offsetX,
+    Math.sin(az) * radialFreq + tv * verticalFreq + offsetY,
+  )
 
-  // Palette sampled from wiki kiwi reference:
-  // - brown body:            #8A6A22 (warm medium brown — the dominant color)
-  // - dark brown:            #6A4F1A (shadow/depth areas)
-  // - light tan:             #AA8A42 (highlight areas)
-  // - top stem area:         #7A5A1A (slightly darker near stem)
-  // - bottom:                #7A5A1C (slightly darker at bottom)
-  const bodyR = 0x8A, bodyG = 0x6A, bodyB = 0x22
-  const deepR = 0x6A, deepG = 0x4F, deepB = 0x1A
-  const lightR = 0xAA, lightG = 0x8A, lightB = 0x42
-  const topR = 0x7A, topG = 0x5A, topB = 0x1A
-  const bottomR = 0x7A, bottomG = 0x5A, bottomB = 0x1C
+  // Repainted kiwi skin:
+  // balanced warm-brown body, subtle olive undertones, fine vertical fiber breakup,
+  // and darker stem/blossom ends without the previous harsh patchiness.
+  const bodyR = 0x82, bodyG = 0x67, bodyB = 0x32
+  const deepR = 0x5c, deepG = 0x46, deepB = 0x22
+  const lightR = 0xa0, lightG = 0x82, lightB = 0x4c
+  const oliveR = 0x7f, oliveG = 0x74, oliveB = 0x3d
+  const topR = 0x6b, topG = 0x51, topB = 0x27
+  const bottomR = 0x66, bottomG = 0x4d, bottomB = 0x28
 
   // Wiki-style lighting: top-front light source
-  const lx = 0.15, ly = 0.85, lz = 0.50
+  const lx = 0.12, ly = 0.84, lz = 0.52
   const llen = Math.hypot(lx, ly, lz)
   const Lx = lx / llen, Ly = ly / llen, Lz = lz / llen
 
@@ -1660,56 +1687,60 @@ export function kiwiSkinTexture(): THREE.CanvasTexture {
     const tv = py / (s - 1) // 0 = top (stem), 1 = bottom
     for (let px = 0; px < s; px++) {
       const tu = px / (s - 1) // 0–1 around azimuth
+      const az = tu * Math.PI * 2
+      const equatorWeight = Math.pow(Math.sin(tv * Math.PI), 0.72)
+      const broad = periodicFbm(az, tv, 1.8, 5.1, 1.2, 2.7) * equatorWeight
+        + fbm(tv * 5.1 + 1.2, 2.7) * (1 - equatorWeight)
+      const mottle = periodicFbm(az, tv, 5.2, 13.2, 4.1, 1.8) * equatorWeight
+        + fbm(tv * 13.2 + 4.1, 1.8) * (1 - equatorWeight)
+      const grain = periodicFbm(az, tv, 10.5, 35, 7.3, 6.4) * equatorWeight
+        + fbm(tv * 35 + 7.3, 6.4) * (1 - equatorWeight)
+      const pores = periodicFbm(az, tv, 8.2, 24, 6.1, 9.8) * equatorWeight
+        + fbm(tv * 24 + 6.1, 9.8) * (1 - equatorWeight)
+      const speckle = periodicFbm(az, tv, 14.5, 48, 2.4, 5.7) * equatorWeight
+        + fbm(tv * 48 + 2.4, 5.7) * (1 - equatorWeight)
+      const sideShade = 0.5 + 0.5 * Math.cos(az - 0.35) * equatorWeight
 
-      // --- FBM noise for organic color variation ---
-      const n1 = fbm(tu * 8 + 1.7, tv * 10 + 2.4)
-      const n2 = fbm(tu * 16 + 5.3, tv * 18 + 7.8)
-      const n3 = fbm(tu * 24 + 9.1, tv * 28 + 11.6)
+      let r = bodyR + (lightR - bodyR) * broad * 0.26 + (deepR - bodyR) * (1 - broad) * 0.18
+      let gg = bodyG + (lightG - bodyG) * broad * 0.22 + (deepG - bodyG) * (1 - broad) * 0.16
+      let b = bodyB + (lightB - bodyB) * broad * 0.18 + (deepB - bodyB) * (1 - broad) * 0.12
 
-      // --- Base color with noise variation ---
-      let r = bodyR + (lightR - bodyR) * n1 * 0.35 + (deepR - bodyR) * (1 - n1) * 0.15
-      let gg = bodyG + (lightG - bodyG) * n1 * 0.35 + (deepG - bodyG) * (1 - n1) * 0.15
-      let b = bodyB + (lightB - bodyB) * n1 * 0.35 + (deepB - bodyB) * (1 - n1) * 0.15
+      r = r * 0.82 + oliveR * 0.18
+      gg = gg * 0.82 + oliveG * 0.18
+      b = b * 0.82 + oliveB * 0.18
 
-      // --- Subtle mottling (kiwi skin has slight tonal variation) ---
-      const mottle = fbm(tu * 20 + 3.2, tv * 22 + 5.8)
-      r += (mottle - 0.5) * 8
-      gg += (mottle - 0.5) * 6
-      b += (mottle - 0.5) * 3
+      r += (mottle - 0.5) * 11
+      gg += (mottle - 0.5) * 8
+      b += (mottle - 0.5) * 5
 
-      // --- Fuzz fiber pattern ---
-      // Kiwi has short, fine hairs covering the entire surface
-      // Create a pattern of tiny hair-like strokes
-      const fuzzNoise1 = fbm(tu * 60 + 7.1, tv * 65 + 9.3)
-      const fuzzNoise2 = fbm(tu * 45 + 11.4, tv * 50 + 13.7)
+      const sideLift = (sideShade - 0.5) * 7
+      r += sideLift
+      gg += sideLift * 0.85
+      b += sideLift * 0.45
 
-      // Hair brightness variation — some hairs catch light, creating lighter specks
-      const fuzzHighlight = Math.max(0, fuzzNoise1 - 0.55) * 5.0
-      const fuzzShadow = Math.max(0, 0.45 - fuzzNoise2) * 3.0
+      const poreLight = Math.max(0, pores - 0.58) * 10
+      const poreDark = Math.max(0, 0.42 - pores) * 8
+      const speckleLift = Math.max(0, speckle - 0.62) * 5
+      r += poreLight + speckleLift - poreDark
+      gg += poreLight * 0.82 + speckleLift * 0.7 - poreDark * 0.88
+      b += poreLight * 0.5 + speckleLift * 0.35 - poreDark * 0.6
 
-      r += fuzzHighlight * 18 - fuzzShadow * 6
-      gg += fuzzHighlight * 14 - fuzzShadow * 5
-      b += fuzzHighlight * 8 - fuzzShadow * 3
+      r += (grain - 0.5) * 5
+      gg += (grain - 0.5) * 4
+      b += (grain - 0.5) * 2.5
 
-      // --- Fine grain noise for skin texture ---
-      const grainNoise = fbm(tu * 50 + 15.2, tv * 55 + 17.9)
-      r += (grainNoise - 0.5) * 6
-      gg += (grainNoise - 0.5) * 5
-      b += (grainNoise - 0.5) * 3
+      const topMix = smoothstep(0.13, 0.02, tv)
+      const topRing = smoothstep(0.02, 0.06, tv) * (1 - smoothstep(0.06, 0.11, tv))
+      const bottomMix = smoothstep(0.87, 0.98, tv)
+      const bottomRing = smoothstep(0.90, 0.95, tv) * (1 - smoothstep(0.95, 0.995, tv))
+      const endNoise = periodicFbm(az, tv, 3.9, 14.5, 1.1, 2.4)
 
-      // --- Top area blending (slightly darker near stem attachment) ---
-      const topMix = smoothstep(0.12, 0.0, tv)
-      const topEdgeNoise = fbm(tu * 6 + 2.1, tv * 8 + 3.3) * 0.04
-      const topBlend = Math.min(1, Math.max(0, topMix + topEdgeNoise))
+      const topBlend = Math.min(1, topMix + topRing * (0.45 + endNoise * 0.25))
+      const bottomBlend = Math.min(1, bottomMix + bottomRing * (0.35 + endNoise * 0.22))
 
       r = r * (1 - topBlend) + topR * topBlend
       gg = gg * (1 - topBlend) + topG * topBlend
       b = b * (1 - topBlend) + topB * topBlend
-
-      // --- Bottom area blending (slightly darker) ---
-      const bottomMix = smoothstep(0.92, 1.0, tv)
-      const bottomEdgeNoise = fbm(tu * 5 + 3.7, tv * 7 + 4.2) * 0.06
-      const bottomBlend = Math.min(1, Math.max(0, bottomMix + bottomEdgeNoise))
 
       r = r * (1 - bottomBlend) + bottomR * bottomBlend
       gg = gg * (1 - bottomBlend) + bottomG * bottomBlend
@@ -1724,24 +1755,21 @@ export function kiwiSkinTexture(): THREE.CanvasTexture {
       let ndotl = nlx * Lx + nly * Ly + nlz * Lz
       ndotl = Math.max(0, ndotl)
 
-      // Broad diffuse fill — kiwi is matte, no strong specular
-      const diffBoost = Math.pow(ndotl, 1.0) * 0.35
-      // Very subtle specular — kiwi fuzz diffuses light strongly
-      const specRaw = Math.pow(ndotl, 3) * 0.06
+      const diffBoost = Math.pow(ndotl, 0.9) * 0.22
+      const rim = Math.pow(1 - Math.max(0, ndotl), 2.2) * 0.06
+      const specRaw = Math.pow(ndotl, 4) * 0.025
 
-      const lighting = 1.0 + diffBoost
+      const lighting = 0.98 + diffBoost - rim
       r *= lighting
       gg *= lighting
       b *= lighting
 
-      // Specular: very faint warm highlight (matte fuzzy surface)
-      r += 255 * specRaw * 0.30
-      gg += 255 * specRaw * 0.25
-      b += 255 * specRaw * 0.15
+      r += 255 * specRaw * 0.18
+      gg += 255 * specRaw * 0.15
+      b += 255 * specRaw * 0.08
 
-      // Pole smoothing
       const sinV = Math.sin(tv * Math.PI)
-      const poleFactor = 0.988 + 0.012 * sinV
+      const poleFactor = 0.992 + 0.008 * sinV
       r *= poleFactor
       gg *= poleFactor
       b *= poleFactor
@@ -1755,39 +1783,33 @@ export function kiwiSkinTexture(): THREE.CanvasTexture {
   }
   g.putImageData(img, 0, 0)
 
-  // Draw individual fuzz hair strokes on top of the pixel-based texture
-  // Wiki kiwi has very visible fine hairs covering the surface
-  // Layer 1: dense base fuzz — short, subtle hairs
-  for (let i = 0; i < 6000; i++) {
-    const x = Math.random() * s
-    const y = Math.random() * s
-    const angle = Math.random() * Math.PI * 2
-    const len = 1.5 + Math.random() * 3
-    const bright = Math.random() > 0.5
-    if (bright) {
-      g.strokeStyle = `rgba(150,120,55,${0.10 + Math.random() * 0.12})`
-    } else {
-      g.strokeStyle = `rgba(80,58,20,${0.06 + Math.random() * 0.08})`
-    }
-    g.lineWidth = 0.4 + Math.random() * 0.4
-    g.beginPath()
-    g.moveTo(x, y)
-    g.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len)
-    g.stroke()
+  // Deterministic fuzz strokes so the kiwi looks stable between reloads.
+  for (let i = 0; i < 5400; i++) {
+    const x = hash21(i, 13) * s
+    const y = hash21(i, 37) * s
+    const tv = y / (s - 1)
+    const poleMask = Math.sin(tv * Math.PI)
+    const angle = -Math.PI / 2 + (hash21(i, 71) - 0.5) * 0.9
+    const len = (1.0 + hash21(i, 97) * 3.2) * (0.45 + poleMask * 0.9)
+    const alpha = 0.035 + hash21(i, 131) * 0.065
+    const bright = hash21(i, 151) > 0.45
+    g.strokeStyle = bright
+      ? `rgba(174,144,82,${alpha})`
+      : `rgba(82,62,30,${alpha * 0.92})`
+    g.lineWidth = 0.35 + hash21(i, 191) * 0.45
+    wrapStroke(x, y, Math.cos(angle) * len, Math.sin(angle) * len)
   }
-  // Layer 2: longer standout hairs — these are the ones that catch light and are clearly visible
-  for (let i = 0; i < 2500; i++) {
-    const x = Math.random() * s
-    const y = Math.random() * s
-    const angle = Math.random() * Math.PI * 2
-    const len = 3 + Math.random() * 6
-    // These standout hairs are lighter and more visible
-    g.strokeStyle = `rgba(170,140,70,${0.15 + Math.random() * 0.20})`
-    g.lineWidth = 0.5 + Math.random() * 0.6
-    g.beginPath()
-    g.moveTo(x, y)
-    g.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len)
-    g.stroke()
+  for (let i = 0; i < 1800; i++) {
+    const x = hash21(i, 223) * s
+    const y = hash21(i, 257) * s
+    const tv = y / (s - 1)
+    const poleMask = Math.sin(tv * Math.PI)
+    const angle = -Math.PI / 2 + (hash21(i, 283) - 0.5) * 0.55
+    const len = (2.2 + hash21(i, 307) * 4.8) * (0.35 + poleMask)
+    const alpha = 0.05 + hash21(i, 331) * 0.08
+    g.strokeStyle = `rgba(182,152,90,${alpha})`
+    g.lineWidth = 0.4 + hash21(i, 353) * 0.45
+    wrapStroke(x, y, Math.cos(angle) * len, Math.sin(angle) * len)
   }
 
   const tex = new THREE.CanvasTexture(c)
@@ -1798,7 +1820,7 @@ export function kiwiSkinTexture(): THREE.CanvasTexture {
   tex.generateMipmaps = false
   tex.minFilter = THREE.LinearFilter
   tex.magFilter = THREE.LinearFilter
-  tex.anisotropy = 2
+  tex.anisotropy = 6
   tex.needsUpdate = true
   kiwiSkinTex = tex
   return tex

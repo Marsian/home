@@ -16,6 +16,10 @@ import {
   createStrawberryReferenceCapGeometry,
   createStrawberryReferenceHalfMesh,
 } from './strawberryReferenceModel'
+import {
+  createKiwiReferenceCapGeometry,
+  createKiwiReferenceHalfMesh,
+} from './kiwiReferenceModel'
 import type { FruitArchetype } from './spawn'
 import { getAppleBodyMaterial } from './appleSkin'
 import { getAppleSlicedHalfPolyGeometry, APPLE_MAX_XZ, APPLE_TOP_POLE_Y_RATIO } from './applePolyGeometry'
@@ -1137,12 +1141,21 @@ export function createFruitHalfMesh(
       capScale = radius * APPLE_MAX_XZ * 1.01
     }
   } else if (fruitType === 'kiwi') {
-    curved = new THREE.Mesh(
-      getKiwiSlicedHalfPolyGeometry(radius, sideSign < 0 ? 'top' : 'bottom'),
-      getSkinMatForFruit(fruitType, skinColor),
-    )
-    // Tune down cap scale to keep the cut face just inside the shell silhouette.
-    capScale = radius * KIWI_MAX_XZ * 0.97
+    const referenceHalf = createKiwiReferenceHalfMesh(radius, sideSign < 0 ? 'top' : 'bottom')
+    if (referenceHalf) {
+      curved = referenceHalf.mesh
+      capScale = referenceHalf.capRadius
+      capInsetOverride = Math.max(0.0025, radius * 0.012)
+      capGeometryOverride = createKiwiReferenceCapGeometry(radius)
+      ;(g as any).__kiwiReferenceHalf = true
+    } else {
+      curved = new THREE.Mesh(
+        getKiwiSlicedHalfPolyGeometry(radius, sideSign < 0 ? 'top' : 'bottom'),
+        getSkinMatForFruit(fruitType, skinColor),
+      )
+      // Tune down cap scale to keep the cut face just inside the shell silhouette.
+      capScale = radius * KIWI_MAX_XZ * 0.97
+    }
   } else if (fruitType === 'plum') {
     curved = new THREE.Mesh(
       getPlumSlicedHalfPolyGeometry(radius, sideSign < 0 ? 'top' : 'bottom'),

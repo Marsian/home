@@ -6,6 +6,7 @@ import { BOMB_RADIUS, FRUIT_RADIUS, fruitMassFromRadius } from './game/entityPar
 import { GAME, SLICE } from './game/constants'
 import { primeAppleReferenceModel } from './game/appleReferenceModel'
 import { primeLemonReferenceModel } from './game/lemonReferenceModel'
+import { primeKiwiReferenceModel } from './game/kiwiReferenceModel'
 import { primePearReferenceModel } from './game/pearReferenceModel'
 import { createBombMesh, createFruitMesh, disposeObject3D } from './game/meshes'
 import { primePineappleReferenceModel } from './game/pineappleReferenceModel'
@@ -218,6 +219,7 @@ export class FruitNinjaGame {
       const scene = createScene()
       this.scene = scene
       primeAppleReferenceModel()
+      primeKiwiReferenceModel()
       primeLemonReferenceModel()
       primePearReferenceModel()
       primePineappleReferenceModel()

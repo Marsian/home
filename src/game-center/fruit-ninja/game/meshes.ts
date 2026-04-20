@@ -31,6 +31,7 @@ import { getWatermelonBodyMaterial } from './watermelonSkin'
 import { getWatermelonBodyPolyGeometry, WATERMELON_AY } from './watermelonPolyGeometry'
 import { getKiwiBodyMaterial } from './kiwiSkin'
 import { getKiwiBodyPolyGeometry, KIWI_TOP_POLE_Y_RATIO } from './kiwiPolyGeometry'
+import { createKiwiReferenceMesh } from './kiwiReferenceModel'
 import { getPassionfruitBodyMaterial } from './passionfruitSkin'
 import { getPassionfruitBodyPolyGeometry } from './passionfruitPolyGeometry'
 import { getPlumBodyMaterial } from './plumSkin'
@@ -520,15 +521,17 @@ function createStrawberryMesh(radius: number, _skinHex: number): THREE.Group {
 }
 
 function createKiwiMesh(radius: number): THREE.Group {
-  const g = new THREE.Group()
-  const body = new THREE.Mesh(
-    getKiwiBodyPolyGeometry(radius),
-    getKiwiBodyMaterial(),
-  )
-  body.castShadow = true
-  body.receiveShadow = true
-  body.userData.sharedMaterial = true
-  g.add(body)
+  const g = createKiwiReferenceMesh(radius) ?? new THREE.Group()
+  if (g.children.length === 0) {
+    const body = new THREE.Mesh(
+      getKiwiBodyPolyGeometry(radius),
+      getKiwiBodyMaterial(),
+    )
+    body.castShadow = true
+    body.receiveShadow = true
+    body.userData.sharedMaterial = true
+    g.add(body)
+  }
 
   // Wiki kiwi has a small stem remnant with a slightly raised ring around it
   const topY = radius * KIWI_TOP_POLE_Y_RATIO
