@@ -2,6 +2,8 @@ import * as THREE from 'three'
 
 import { createAppleReferenceMesh } from './appleReferenceModel'
 import { createLemonReferenceMesh } from './lemonReferenceModel'
+import { createPearReferenceMesh } from './pearReferenceModel'
+import { createStrawberryReferenceMesh } from './strawberryReferenceModel'
 import { getAppleBodyMaterial } from './appleSkin'
 import { getAppleBodyPolyGeometry, APPLE_TOP_POLE_Y_RATIO } from './applePolyGeometry'
 import { getLemonBodyMaterial } from './lemonSkin'
@@ -449,6 +451,9 @@ function createCoconutMesh(radius: number, _skinHex: number): THREE.Group {
 }
 
 function createStrawberryMesh(radius: number, _skinHex: number): THREE.Group {
+  const imported = createStrawberryReferenceMesh(radius)
+  if (imported) return imported
+
   const g = new THREE.Group()
   const body = new THREE.Mesh(
     getStrawberryBodyPolyGeometry(radius),
@@ -595,6 +600,9 @@ function createPlumMesh(radius: number): THREE.Group {
 }
 
 function createPearMesh(radius: number): THREE.Group {
+  const imported = createPearReferenceMesh(radius)
+  if (imported) return imported
+
   const g = new THREE.Group()
   const bodyGeo = getPearBodyPolyGeometry(radius)
   const body = new THREE.Mesh(

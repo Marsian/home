@@ -8,6 +8,14 @@ import {
   createLemonReferenceCapGeometry,
   createLemonReferenceHalfMesh,
 } from './lemonReferenceModel'
+import {
+  createPearReferenceCapGeometry,
+  createPearReferenceHalfMesh,
+} from './pearReferenceModel'
+import {
+  createStrawberryReferenceCapGeometry,
+  createStrawberryReferenceHalfMesh,
+} from './strawberryReferenceModel'
 import type { FruitArchetype } from './spawn'
 import { getAppleBodyMaterial } from './appleSkin'
 import { getAppleSlicedHalfPolyGeometry, APPLE_MAX_XZ, APPLE_TOP_POLE_Y_RATIO } from './applePolyGeometry'
@@ -261,13 +269,48 @@ function fleshTextureForFruit(fruitType: FruitArchetype, flesh: THREE.Color): TH
       g.fill()
     }
   } else if (fruitType === 'strawberry') {
-    // Pink/red flesh with seed cavities
-    for (let i = 0; i < 30; i++) {
-      const a = Math.random() * Math.PI * 2
-      const r = 6 + Math.random() * 48
-      g.fillStyle = 'rgba(255,200,200,0.15)'
+    const cx = s / 2
+    const cy = s / 2
+    const fleshR = s * 0.46
+    const coreR = s * 0.12
+    const fleshGrad = g.createRadialGradient(cx, cy, coreR * 0.5, cx, cy, fleshR)
+    fleshGrad.addColorStop(0, '#ffd7dc')
+    fleshGrad.addColorStop(0.45, '#ffb0bd')
+    fleshGrad.addColorStop(1, '#f06b82')
+    g.fillStyle = fleshGrad
+    g.beginPath()
+    g.arc(cx, cy, fleshR, 0, Math.PI * 2)
+    g.fill()
+
+    g.fillStyle = 'rgba(255,245,245,0.48)'
+    g.beginPath()
+    g.arc(cx, cy, coreR, 0, Math.PI * 2)
+    g.fill()
+
+    g.strokeStyle = 'rgba(255,228,236,0.18)'
+    g.lineWidth = 1
+    for (let i = 0; i < 18; i++) {
+      const a = (i / 18) * Math.PI * 2
       g.beginPath()
-      g.arc(s / 2 + Math.cos(a) * r, s / 2 + Math.sin(a) * r, 2 + Math.random() * 2, 0, Math.PI * 2)
+      g.moveTo(cx + Math.cos(a) * coreR, cy + Math.sin(a) * coreR)
+      g.lineTo(cx + Math.cos(a) * fleshR * 0.92, cy + Math.sin(a) * fleshR * 0.92)
+      g.stroke()
+    }
+
+    for (let i = 0; i < 34; i++) {
+      const a = (i / 34) * Math.PI * 2 + ((i % 2) * 0.08)
+      const r = fleshR * (0.45 + (i % 7) * 0.06)
+      g.fillStyle = 'rgba(255,232,188,0.24)'
+      g.beginPath()
+      g.ellipse(
+        cx + Math.cos(a) * r,
+        cy + Math.sin(a) * r,
+        1.8,
+        2.8,
+        a,
+        0,
+        Math.PI * 2,
+      )
       g.fill()
     }
   } else if (fruitType === 'lemon') {
@@ -1119,11 +1162,20 @@ export function createFruitHalfMesh(
     )
     capScale = radius * PEACH_MAX_XZ * 0.995
   } else if (fruitType === 'pear') {
-    curved = new THREE.Mesh(
-      getPearSlicedHalfPolyGeometry(radius, sideSign < 0 ? 'top' : 'bottom'),
-      getSkinMatForFruit(fruitType, skinColor),
-    )
-    capScale = radius * PEAR_MAX_XZ * 0.885
+    const referenceHalf = createPearReferenceHalfMesh(radius, sideSign < 0 ? 'top' : 'bottom')
+    if (referenceHalf) {
+      curved = referenceHalf.mesh
+      capScale = referenceHalf.capRadius
+      capInsetOverride = Math.max(0.0025, radius * 0.012)
+      capGeometryOverride = createPearReferenceCapGeometry(radius)
+      ;(g as any).__pearReferenceHalf = true
+    } else {
+      curved = new THREE.Mesh(
+        getPearSlicedHalfPolyGeometry(radius, sideSign < 0 ? 'top' : 'bottom'),
+        getSkinMatForFruit(fruitType, skinColor),
+      )
+      capScale = radius * PEAR_MAX_XZ * 0.885
+    }
   } else if (fruitType === 'lemon') {
     const referenceHalf = createLemonReferenceHalfMesh(radius, sideSign < 0 ? 'top' : 'bottom')
     if (referenceHalf) {
@@ -1178,11 +1230,20 @@ export function createFruitHalfMesh(
     )
     capScale = radius * COCONUT_MAX_XZ * 1.01
   } else if (fruitType === 'strawberry') {
-    curved = new THREE.Mesh(
-      getStrawberrySlicedHalfPolyGeometry(radius, sideSign < 0 ? 'top' : 'bottom'),
-      getSkinMatForFruit(fruitType, skinColor),
-    )
-    capScale = radius * STRAWBERRY_MAX_XZ * 1.01
+    const referenceHalf = createStrawberryReferenceHalfMesh(radius, sideSign < 0 ? 'top' : 'bottom')
+    if (referenceHalf) {
+      curved = referenceHalf.mesh
+      capScale = referenceHalf.capRadius
+      capInsetOverride = Math.max(0.0025, radius * 0.012)
+      capGeometryOverride = createStrawberryReferenceCapGeometry(radius)
+      ;(g as any).__strawberryReferenceHalf = true
+    } else {
+      curved = new THREE.Mesh(
+        getStrawberrySlicedHalfPolyGeometry(radius, sideSign < 0 ? 'top' : 'bottom'),
+        getSkinMatForFruit(fruitType, skinColor),
+      )
+      capScale = radius * STRAWBERRY_MAX_XZ * 1.01
+    }
   } else if (fruitType === 'passionfruit') {
     curved = new THREE.Mesh(
       getPassionfruitSlicedHalfPolyGeometry(radius, sideSign < 0 ? 'top' : 'bottom'),
@@ -1313,7 +1374,13 @@ export function createFruitHalfMesh(
     stem.userData.sharedPool = true
     g.add(stem)
   }
-  if (fruitType !== 'apple' && n.y > 0.5 && !(fruitType === 'pineapple' && (g as any).__pineappleReferenceHalf)) {
+  if (
+    fruitType !== 'apple' &&
+    n.y > 0.5 &&
+    !(fruitType === 'pineapple' && (g as any).__pineappleReferenceHalf) &&
+    !(fruitType === 'strawberry' && (g as any).__strawberryReferenceHalf) &&
+    !(fruitType === 'pear' && (g as any).__pearReferenceHalf)
+  ) {
     addSlicedTopAccessories(g, fruitType, radius)
   }
 

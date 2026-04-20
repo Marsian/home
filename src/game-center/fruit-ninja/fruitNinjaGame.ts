@@ -6,8 +6,10 @@ import { BOMB_RADIUS, FRUIT_RADIUS, fruitMassFromRadius } from './game/entityPar
 import { GAME, SLICE } from './game/constants'
 import { primeAppleReferenceModel } from './game/appleReferenceModel'
 import { primeLemonReferenceModel } from './game/lemonReferenceModel'
+import { primePearReferenceModel } from './game/pearReferenceModel'
 import { createBombMesh, createFruitMesh, disposeObject3D } from './game/meshes'
 import { primePineappleReferenceModel } from './game/pineappleReferenceModel'
+import { primeStrawberryReferenceModel } from './game/strawberryReferenceModel'
 import { pickFruitKind, randomAngularImpulse, sampleBurstSpawnCount, SPAWN, type FruitArchetype } from './game/spawn'
 import { fillPlayPlaneBasis, sampleSpawnKinematics } from './game/spawnPlane'
 import { createFruitHalfMesh, disposeFruitHalfRoot } from './game/fruitHalfMesh'
@@ -217,7 +219,9 @@ export class FruitNinjaGame {
       this.scene = scene
       primeAppleReferenceModel()
       primeLemonReferenceModel()
+      primePearReferenceModel()
       primePineappleReferenceModel()
+      primeStrawberryReferenceModel()
       addDojoBackdrop(scene)
       addDefaultLights(scene)
 
