@@ -13,9 +13,9 @@ export const FRUIT_RADIUS: Record<FruitArchetype, number> = {
   orange: 0.54,
   plum: 0.36,
   passionfruit: 0.5,
-  lemon: 0.44,
+  lemon: 0.612,
   lime: 0.48,
-  kiwi: 0.47,
+  kiwi: 0.36,
   strawberry: 0.30,
   banana: 0.53,
   cherry: 0.43,
@@ -26,4 +26,3 @@ export const BOMB_RADIUS = 0.5
 export function fruitMassFromRadius(r: number) {
   return Math.max(0.4, r * r * r * 5.5)
 }
-
