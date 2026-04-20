@@ -35,6 +35,7 @@ type BuiltHalfGeometry = {
 
 let preparedReference: PreparedPearReference | null = null
 let loadStarted = false
+let loadPromise: Promise<void> | null = null
 
 function extractColorMap(material: THREE.Material | THREE.Material[]): THREE.Texture | null {
   const candidate = Array.isArray(material) ? material[0] : material
@@ -260,32 +261,40 @@ function prepareReferenceMesh(sourceMesh: THREE.Mesh): PreparedPearReference | n
 }
 
 export function primePearReferenceModel() {
-  if (preparedReference || loadStarted) return
+  if (preparedReference) return Promise.resolve()
+  if (loadPromise) return loadPromise
   loadStarted = true
 
-  loader.load(
-    pearReferenceUrl,
-    (gltf) => {
-      let sourceMesh: THREE.Mesh | null = null
-      gltf.scene.traverse((child) => {
-        if (!sourceMesh && child instanceof THREE.Mesh) sourceMesh = child
-      })
+  loadPromise = new Promise((resolve) => {
+    loader.load(
+      pearReferenceUrl,
+      (gltf) => {
+        let sourceMesh: THREE.Mesh | null = null
+        gltf.scene.traverse((child) => {
+          if (!sourceMesh && child instanceof THREE.Mesh) sourceMesh = child
+        })
 
-      if (!sourceMesh) {
-        console.warn('[fruit-ninja] pear reference GLB had no mesh')
-        return
-      }
+        if (!sourceMesh) {
+          console.warn('[fruit-ninja] pear reference GLB had no mesh')
+          resolve()
+          return
+        }
 
-      preparedReference = prepareReferenceMesh(sourceMesh)
-      if (!preparedReference) {
-        console.warn('[fruit-ninja] failed to prepare pear reference mesh')
-      }
-    },
-    undefined,
-    (error) => {
-      console.warn('[fruit-ninja] failed to load pear reference GLB', error)
-    },
-  )
+        preparedReference = prepareReferenceMesh(sourceMesh)
+        if (!preparedReference) {
+          console.warn('[fruit-ninja] failed to prepare pear reference mesh')
+        }
+        resolve()
+      },
+      undefined,
+      (error) => {
+        console.warn('[fruit-ninja] failed to load pear reference GLB', error)
+        resolve()
+      },
+    )
+  })
+
+  return loadPromise
 }
 
 export function createPearReferenceMesh(radius: number): THREE.Group | null {

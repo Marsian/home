@@ -35,6 +35,7 @@ type BuiltHalfGeometry = {
 
 let preparedReference: PreparedLemonReference | null = null
 let loadStarted = false
+let loadPromise: Promise<void> | null = null
 
 function computeWaistCutY(geometry: THREE.BufferGeometry, sourceHeight: number): number {
   const pos = geometry.getAttribute('position') as THREE.BufferAttribute | undefined
@@ -303,32 +304,40 @@ function prepareReferenceMesh(sourceMesh: THREE.Mesh): PreparedLemonReference | 
 }
 
 export function primeLemonReferenceModel() {
-  if (preparedReference || loadStarted) return
+  if (preparedReference) return Promise.resolve()
+  if (loadPromise) return loadPromise
   loadStarted = true
 
-  loader.load(
-    lemonReferenceUrl,
-    (gltf) => {
-      let sourceMesh: THREE.Mesh | null = null
-      gltf.scene.traverse((child) => {
-        if (!sourceMesh && child instanceof THREE.Mesh) sourceMesh = child
-      })
+  loadPromise = new Promise((resolve) => {
+    loader.load(
+      lemonReferenceUrl,
+      (gltf) => {
+        let sourceMesh: THREE.Mesh | null = null
+        gltf.scene.traverse((child) => {
+          if (!sourceMesh && child instanceof THREE.Mesh) sourceMesh = child
+        })
 
-      if (!sourceMesh) {
-        console.warn('[fruit-ninja] lemon reference GLB had no mesh')
-        return
-      }
+        if (!sourceMesh) {
+          console.warn('[fruit-ninja] lemon reference GLB had no mesh')
+          resolve()
+          return
+        }
 
-      preparedReference = prepareReferenceMesh(sourceMesh)
-      if (!preparedReference) {
-        console.warn('[fruit-ninja] failed to prepare lemon reference mesh')
-      }
-    },
-    undefined,
-    (error) => {
-      console.warn('[fruit-ninja] failed to load lemon reference GLB', error)
-    },
-  )
+        preparedReference = prepareReferenceMesh(sourceMesh)
+        if (!preparedReference) {
+          console.warn('[fruit-ninja] failed to prepare lemon reference mesh')
+        }
+        resolve()
+      },
+      undefined,
+      (error) => {
+        console.warn('[fruit-ninja] failed to load lemon reference GLB', error)
+        resolve()
+      },
+    )
+  })
+
+  return loadPromise
 }
 
 export function createLemonReferenceMesh(radius: number): THREE.Group | null {

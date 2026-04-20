@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 import { GAME } from './game/constants'
+import { preloadFruitNinjaAssets, type FruitNinjaPreloadProgress } from './game/preload'
 import { type GameUiState, FruitNinjaGame } from './fruitNinjaGame'
 import {
   computeGameOverLayout,
@@ -34,6 +35,13 @@ export default function FruitNinjaView() {
   const hostRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<FruitNinjaGame | null>(null)
   const [ui, setUi] = useState<GameUiState>(initialUi)
+  const [preload, setPreload] = useState<FruitNinjaPreloadProgress>({
+    loaded: 0,
+    total: 1,
+    ratio: 0,
+    label: 'Preparing dojo',
+  })
+  const [preloadDone, setPreloadDone] = useState(false)
   const [homeRingLayout, setHomeRingLayout] = useState<HomeRingLayout>(() => computeHomeRingLayout(720, 450))
   const [gameOverLayout, setGameOverLayout] = useState<GameOverLayout>(() => computeGameOverLayout(720, 450))
 
@@ -70,6 +78,7 @@ export default function FruitNinjaView() {
   useEffect(() => {
     const el = hostRef.current
     if (!el) return
+    let cancelled = false
     let debugZenDurationMs: number | undefined
     try {
       const qs = new URLSearchParams(window.location.search)
@@ -82,25 +91,36 @@ export default function FruitNinjaView() {
       /* ignore */
     }
 
-    const game = new FruitNinjaGame(el, { onUi, reducedMotion, debugZenDurationMs })
-    gameRef.current = game
-    game.bootstrap()
-    // Debug helper for responsive sweeps.
-    try {
-      const qs = new URLSearchParams(window.location.search)
-      if (qs.get('debugGameOver') === '1') {
-        requestAnimationFrame(() => game.debugForceGameOver())
+    void preloadFruitNinjaAssets((progress) => {
+      if (!cancelled) setPreload(progress)
+    }).then(() => {
+      if (cancelled) return
+      setPreloadDone(true)
+
+      const game = new FruitNinjaGame(el, { onUi, reducedMotion, debugZenDurationMs })
+      gameRef.current = game
+      game.bootstrap()
+
+      // Debug helper for responsive sweeps.
+      try {
+        const qs = new URLSearchParams(window.location.search)
+        if (qs.get('debugGameOver') === '1') {
+          requestAnimationFrame(() => game.debugForceGameOver())
+        }
+      } catch {
+        /* ignore */
       }
-    } catch {
-      /* ignore */
-    }
+    })
+
     return () => {
-      game.dispose()
+      cancelled = true
+      gameRef.current?.dispose()
       gameRef.current = null
     }
   }, [onUi, reducedMotion])
 
   useEffect(() => {
+    if (!preloadDone) return
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
       if (e.code === 'KeyP') {
@@ -114,10 +134,12 @@ export default function FruitNinjaView() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [ui.paused, ui.gameOver, ui.phase])
+  }, [preloadDone, ui.paused, ui.gameOver, ui.phase])
 
   const { score, paused, misses, mode, zenTimeLeftMs, gameOver, phase, error } = ui
   const showHud = phase === 'playing' && !gameOver
+  const showPreload = !preloadDone
+  const preloadPercent = Math.round(preload.ratio * 100)
 
   return (
     <main
@@ -221,7 +243,27 @@ export default function FruitNinjaView() {
               </>
             ) : null}
 
-            {phase === 'home' && !gameOver ? <HomeOverlay layout={homeRingLayout} /> : null}
+            {showPreload ? (
+              <div className="absolute inset-0 z-[30] flex items-center justify-center bg-black/72 backdrop-blur-[2px]">
+                <div className="w-[min(78vw,360px)] px-5 text-center">
+                  <div className="font-serif text-xl font-semibold tracking-[0.04em] text-emerald-50 sm:text-2xl">
+                    Loading Fruit Ninja
+                  </div>
+                  <div className="mt-2 text-sm text-emerald-100/78">{preload.label}</div>
+                  <div className="mt-5 h-3 overflow-hidden rounded-sm border border-emerald-200/20 bg-white/10">
+                    <div
+                      className="h-full bg-gradient-to-r from-emerald-400 via-lime-300 to-amber-300 transition-[width] duration-150 ease-out"
+                      style={{ width: `${preloadPercent}%` }}
+                    />
+                  </div>
+                  <div className="mt-2 font-mono text-sm tabular-nums text-emerald-50/90">
+                    {preloadPercent}%
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {phase === 'home' && !gameOver && !showPreload ? <HomeOverlay layout={homeRingLayout} /> : null}
 
             {paused && !gameOver ? (
               <div

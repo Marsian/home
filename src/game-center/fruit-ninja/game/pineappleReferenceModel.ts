@@ -35,6 +35,7 @@ type BuiltHalfGeometry = {
 
 let preparedReference: PreparedPineappleReference | null = null
 let loadStarted = false
+let loadPromise: Promise<void> | null = null
 
 function extractColorMap(material: THREE.Material | THREE.Material[]): THREE.Texture | null {
   const candidate = Array.isArray(material) ? material[0] : material
@@ -261,34 +262,42 @@ function buildSlicedHalfGeometry(
 }
 
 export function primePineappleReferenceModel() {
-  if (preparedReference || loadStarted) return
+  if (preparedReference) return Promise.resolve()
+  if (loadPromise) return loadPromise
   loadStarted = true
 
-  loader.load(
-    pineappleReferenceUrl,
-    (gltf) => {
-      let sourceMesh: THREE.Mesh | null = null
-      gltf.scene.traverse((child) => {
-        if (!sourceMesh && child instanceof THREE.Mesh) {
-          sourceMesh = child
+  loadPromise = new Promise((resolve) => {
+    loader.load(
+      pineappleReferenceUrl,
+      (gltf) => {
+        let sourceMesh: THREE.Mesh | null = null
+        gltf.scene.traverse((child) => {
+          if (!sourceMesh && child instanceof THREE.Mesh) {
+            sourceMesh = child
+          }
+        })
+
+        if (!sourceMesh) {
+          console.warn('[fruit-ninja] pineapple reference GLB had no mesh')
+          resolve()
+          return
         }
-      })
 
-      if (!sourceMesh) {
-        console.warn('[fruit-ninja] pineapple reference GLB had no mesh')
-        return
-      }
+        preparedReference = prepareReferenceMesh(sourceMesh)
+        if (!preparedReference) {
+          console.warn('[fruit-ninja] failed to prepare pineapple reference mesh')
+        }
+        resolve()
+      },
+      undefined,
+      (error) => {
+        console.warn('[fruit-ninja] failed to load pineapple reference GLB', error)
+        resolve()
+      },
+    )
+  })
 
-      preparedReference = prepareReferenceMesh(sourceMesh)
-      if (!preparedReference) {
-        console.warn('[fruit-ninja] failed to prepare pineapple reference mesh')
-      }
-    },
-    undefined,
-    (error) => {
-      console.warn('[fruit-ninja] failed to load pineapple reference GLB', error)
-    },
-  )
+  return loadPromise
 }
 
 export function createPineappleReferenceMesh(radius: number): THREE.Group | null {

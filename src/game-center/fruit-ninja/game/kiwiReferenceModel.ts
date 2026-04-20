@@ -38,6 +38,7 @@ type BuiltHalfGeometry = {
 
 let preparedReference: PreparedKiwiReference | null = null
 let loadStarted = false
+let loadPromise: Promise<void> | null = null
 
 function edgeKey(a: number, b: number): string {
   return a < b ? `${a}:${b}` : `${b}:${a}`
@@ -437,32 +438,40 @@ function getReferenceScale(radius: number, sourceHeight: number): number {
 }
 
 export function primeKiwiReferenceModel() {
-  if (preparedReference || loadStarted) return
+  if (preparedReference) return Promise.resolve()
+  if (loadPromise) return loadPromise
   loadStarted = true
 
-  loader.load(
-    kiwiReferenceUrl,
-    (gltf) => {
-      let sourceMesh: THREE.Mesh | null = null
-      gltf.scene.traverse((child) => {
-        if (!sourceMesh && child instanceof THREE.Mesh) sourceMesh = child
-      })
+  loadPromise = new Promise((resolve) => {
+    loader.load(
+      kiwiReferenceUrl,
+      (gltf) => {
+        let sourceMesh: THREE.Mesh | null = null
+        gltf.scene.traverse((child) => {
+          if (!sourceMesh && child instanceof THREE.Mesh) sourceMesh = child
+        })
 
-      if (!sourceMesh) {
-        console.warn('[fruit-ninja] kiwi reference GLB had no mesh')
-        return
-      }
+        if (!sourceMesh) {
+          console.warn('[fruit-ninja] kiwi reference GLB had no mesh')
+          resolve()
+          return
+        }
 
-      preparedReference = prepareReferenceMesh(sourceMesh)
-      if (!preparedReference) {
-        console.warn('[fruit-ninja] failed to prepare kiwi reference mesh')
-      }
-    },
-    undefined,
-    (error) => {
-      console.warn('[fruit-ninja] failed to load kiwi reference GLB', error)
-    },
-  )
+        preparedReference = prepareReferenceMesh(sourceMesh)
+        if (!preparedReference) {
+          console.warn('[fruit-ninja] failed to prepare kiwi reference mesh')
+        }
+        resolve()
+      },
+      undefined,
+      (error) => {
+        console.warn('[fruit-ninja] failed to load kiwi reference GLB', error)
+        resolve()
+      },
+    )
+  })
+
+  return loadPromise
 }
 
 export function createKiwiReferenceMesh(radius: number): THREE.Group | null {
