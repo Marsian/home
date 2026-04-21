@@ -94,10 +94,6 @@ export default function PixelKnightView() {
   const [lastResult, setLastResult] = useState<RunResult | null>(null)
 
   useEffect(() => {
-    document.title = '像素骑士 | Pixel Knight'
-  }, [])
-
-  useEffect(() => {
     savePixelKnightProfile(profile)
   }, [profile])
 
