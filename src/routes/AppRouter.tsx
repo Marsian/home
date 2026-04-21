@@ -8,6 +8,8 @@ import AppLayout from './AppLayout'
 
 const TankBattle90View = lazy(() => import('../game-center/tank90/TankBattle90View'))
 const FruitNinjaView = lazy(() => import('../game-center/fruit-ninja/FruitNinjaView'))
+const PixelKnightView = lazy(() => import('../game-center/pixel-knight/PixelKnightView'))
+const PixelKnightDataView = lazy(() => import('../game-center/pixel-knight/PixelKnightDataView'))
 const FruitNinjaBladeLabView = lazy(() => import('../game-center/fruit-ninja/FruitNinjaBladeLabView'))
 const FruitGalleryView = lazy(() => import('../game-center/fruit-ninja/FruitGalleryView'))
 const FruitGallerySlicedView = lazy(() => import('../game-center/fruit-ninja/FruitGallerySlicedView'))
@@ -34,6 +36,8 @@ export default function AppRouter() {
           <Route path="/games" element={<GameCenterView />} />
           <Route path="/games/tank90" element={<TankBattle90View />} />
           <Route path="/games/fruit-ninja" element={<FruitNinjaView />} />
+          <Route path="/games/pixel-knight" element={<PixelKnightView />} />
+          <Route path="/games/pixel-knight/data" element={<PixelKnightDataView />} />
           {/* Back-compat: old direct entry */}
           <Route path="/tank90" element={<Navigate to="/games/tank90" replace />} />
         </Route>

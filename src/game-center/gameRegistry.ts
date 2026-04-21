@@ -1,10 +1,11 @@
 import { createElement, type ReactNode } from 'react'
 
 import { FruitNinjaThumbnail } from './thumbnails/FruitNinjaThumbnail'
+import { PixelKnightThumbnail } from './thumbnails/PixelKnightThumbnail'
 import { Tank90Thumbnail } from './thumbnails/Tank90Thumbnail'
 
 export type GameDescriptor = {
-  id: 'tank90' | 'fruit-ninja'
+  id: 'tank90' | 'fruit-ninja' | 'pixel-knight'
   title: string
   cardLabel: string
   route: string
@@ -29,5 +30,12 @@ export const games: GameDescriptor[] = [
     description: 'Dojo slicing — fruit, combos, bombs & lives',
     thumbnail: createElement(FruitNinjaThumbnail, { className: 'h-full w-full' }),
   },
+  {
+    id: 'pixel-knight',
+    title: 'PIXEL KNIGHT',
+    cardLabel: 'Pixel Knight',
+    route: '/games/pixel-knight',
+    description: 'Bright dungeon runs, difficulty tiers, knight loot builds',
+    thumbnail: createElement(PixelKnightThumbnail, { className: 'h-full w-full' }),
+  },
 ]
-
