@@ -1,7 +1,9 @@
 import { difficultyConfigs, generateLootItems, getDungeonById, skills } from './content/data'
+import { getPixelKnightHeroSpriteAsset } from './game/preload'
 import type {
   DifficultyTier,
   DungeonId,
+  FacingDirection,
   PixelKnightGameCallbacks,
   PixelKnightHudState,
   PlayerDerivedStats,
@@ -763,6 +765,37 @@ export class PixelKnightGame {
     }
   }
 
+  private getFacingDirection(camera: Vector2): FacingDirection {
+    if (!this.player) return 'right'
+    const worldMouseX = this.mouse.x + camera.x
+    return worldMouseX < this.player.x - 4 ? 'left' : 'right'
+  }
+
+  private renderHeroSprite(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    facing: FacingDirection,
+    scale = 1,
+  ) {
+    const asset = getPixelKnightHeroSpriteAsset()
+    if (!asset) return false
+
+    const { image, meta } = asset
+    const drawWidth = meta.frameWidth * scale
+    const drawHeight = meta.frameHeight * scale
+    const pivotX = meta.pivot.x * scale
+    const pivotY = meta.pivot.y * scale
+
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+    ctx.translate(Math.round(x), Math.round(y))
+    if (facing === 'left') ctx.scale(-1, 1)
+    ctx.drawImage(image, 0, 0, meta.frameWidth, meta.frameHeight, -pivotX, -pivotY, drawWidth, drawHeight)
+    ctx.restore()
+    return true
+  }
+
   private emitHud() {
     const playerCell = this.player
       ? { x: Math.floor(this.player.x / TILE), y: Math.floor(this.player.y / TILE) }
@@ -884,12 +917,16 @@ export class PixelKnightGame {
     if (this.player) {
       const x = this.player.x - camera.x
       const y = this.player.y - camera.y
-      ctx.fillStyle = this.player.blessingMs > 0 ? '#f2df97' : '#f5d8a1'
-      ctx.fillRect(x - 12, y - 16, 24, 18)
-      ctx.fillStyle = '#315a4f'
-      ctx.fillRect(x - 14, y + 2, 28, 18)
-      ctx.fillStyle = '#f1f5e7'
-      ctx.fillRect(x + 10, y - 8, 10, 22)
+      const facing = this.getFacingDirection(camera)
+      const renderedSprite = this.renderHeroSprite(ctx, x, y, facing)
+      if (!renderedSprite) {
+        ctx.fillStyle = this.player.blessingMs > 0 ? '#f2df97' : '#f5d8a1'
+        ctx.fillRect(x - 12, y - 16, 24, 18)
+        ctx.fillStyle = '#315a4f'
+        ctx.fillRect(x - 14, y + 2, 28, 18)
+        ctx.fillStyle = '#f1f5e7'
+        ctx.fillRect(x + 10, y - 8, 10, 22)
+      }
       if (this.player.whirlMs > 0) {
         ctx.strokeStyle = 'rgba(255,243,173,0.8)'
         ctx.lineWidth = 4
@@ -922,11 +959,13 @@ export class PixelKnightGame {
       ctx.fillRect(70 + index * 68, 112 + (index % 2) * 54, 8, 8)
     }
     ctx.fillStyle = '#f2ddaa'
-    ctx.fillRect(170, 220, 70, 54)
-    ctx.fillStyle = '#2f5e4f'
-    ctx.fillRect(160, 270, 96, 88)
-    ctx.fillStyle = '#f0f1e2'
-    ctx.fillRect(242, 238, 28, 82)
+    if (!this.renderHeroSprite(ctx, 215, 356, 'right', 5)) {
+      ctx.fillRect(170, 220, 70, 54)
+      ctx.fillStyle = '#2f5e4f'
+      ctx.fillRect(160, 270, 96, 88)
+      ctx.fillStyle = '#f0f1e2'
+      ctx.fillRect(242, 238, 28, 82)
+    }
 
     ctx.fillStyle = 'rgba(18,24,20,0.24)'
     ctx.fillRect(0, HEIGHT - 118, WIDTH, 118)

@@ -235,6 +235,17 @@ export default function PixelKnightView() {
               asChild
               className="border-[#314635]/18 bg-[#f7efd7]/70 text-[#193123] hover:bg-[#fff5dc]"
             >
+              <Link to="/games/pixel-knight/character-demo">
+                <Package2 />
+                角色 Demo
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              asChild
+              className="border-[#314635]/18 bg-[#f7efd7]/70 text-[#193123] hover:bg-[#fff5dc]"
+            >
               <Link to="/games/pixel-knight/data">
                 <Database />
                 数据后台

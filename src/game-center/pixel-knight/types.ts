@@ -17,6 +17,8 @@ export type DungeonId = 'sunmeadow' | 'vine-ruins' | 'crystal-cavern'
 
 export type GamePhase = 'boot' | 'loading' | 'home' | 'playing' | 'paused' | 'results' | 'error'
 
+export type FacingDirection = 'left' | 'right'
+
 export type ItemRarity = 'common' | 'magic' | 'rare' | 'legendary' | 'set'
 
 export type StatKey =
@@ -133,6 +135,18 @@ export type PreloadProgress = {
   total: number
   ratio: number
   label: string
+}
+
+export type PixelKnightSpriteMeta = {
+  assetFamily: string
+  version: string
+  frameWidth: number
+  frameHeight: number
+  directions: string[]
+  animations: Record<string, { frames: number[]; fps: number }>
+  pivot: { x: number; y: number }
+  selectedDirection: string
+  backupDirection?: string
 }
 
 export type PixelKnightHudState = {

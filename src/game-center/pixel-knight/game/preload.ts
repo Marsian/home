@@ -1,8 +1,12 @@
 import { dungeons, legendaryPowers, setBonuses, skills } from '../content/data'
-import type { PreloadProgress } from '../types'
+import type { PixelKnightSpriteMeta, PreloadProgress } from '../types'
 
 let cachedPromise: Promise<void> | null = null
 let warmLoaded = false
+let heroKnightSpriteAsset: { image: HTMLImageElement; meta: PixelKnightSpriteMeta } | null = null
+
+const heroKnightSpriteSrc = '/images/pixel-knight/characters/hero-knight-v0.png'
+const heroKnightMetaSrc = '/images/pixel-knight/characters/hero-knight-v0.meta.json'
 
 const preloadSteps = [
   { label: '正在点亮圣殿', wait: 160 },
@@ -24,21 +28,32 @@ function validateStaticData() {
   }
 }
 
-function simulateSpriteBake() {
-  const canvas = document.createElement('canvas')
-  canvas.width = 64
-  canvas.height = 64
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Unable to initialize pixel renderer.')
-  ctx.fillStyle = '#f2d08a'
-  ctx.fillRect(20, 8, 24, 18)
-  ctx.fillStyle = '#326153'
-  ctx.fillRect(18, 28, 28, 26)
-  ctx.fillStyle = '#f6f3e6'
-  ctx.fillRect(12, 24, 10, 22)
-  ctx.fillRect(42, 24, 10, 22)
-  ctx.fillStyle = '#ffc16d'
-  ctx.fillRect(50, 20, 6, 22)
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image()
+    image.decoding = 'async'
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error(`贴图加载失败：${src}`))
+    image.src = src
+  })
+}
+
+async function preloadHeroKnightSprite() {
+  const [image, metaResponse] = await Promise.all([loadImage(heroKnightSpriteSrc), fetch(heroKnightMetaSrc)])
+  if (!metaResponse.ok) {
+    throw new Error('角色贴图配置未能正确读取。')
+  }
+
+  const meta = (await metaResponse.json()) as PixelKnightSpriteMeta
+  if (image.naturalWidth < meta.frameWidth || image.naturalHeight < meta.frameHeight) {
+    throw new Error('角色贴图尺寸与 meta 配置不一致。')
+  }
+
+  heroKnightSpriteAsset = { image, meta }
+}
+
+export function getPixelKnightHeroSpriteAsset() {
+  return heroKnightSpriteAsset
 }
 
 export async function preloadGameData() {
@@ -49,6 +64,7 @@ export async function preloadGameData() {
 export function clearPixelKnightPreloadCache() {
   cachedPromise = null
   warmLoaded = false
+  heroKnightSpriteAsset = null
 }
 
 export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress) => void) {
@@ -65,7 +81,7 @@ export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress)
         validateStaticData()
       }
       if (index === 2) {
-        simulateSpriteBake()
+        await preloadHeroKnightSprite()
       }
       if (index === 5) {
         await preloadGameData()
@@ -89,4 +105,3 @@ export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress)
 
   return cachedPromise
 }
-
