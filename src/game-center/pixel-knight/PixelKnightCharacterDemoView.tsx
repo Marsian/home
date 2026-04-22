@@ -4,8 +4,14 @@ import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import pointMatrixData from '@/game-center/pixel-knight/assets/knight-point-matrix.json'
+import armorData from '@/game-center/pixel-knight/assets/equipment/recruit-armor.json'
+import helmetData from '@/game-center/pixel-knight/assets/equipment/recruit-helmet.json'
+import shieldData from '@/game-center/pixel-knight/assets/equipment/recruit-shield.json'
+import swordData from '@/game-center/pixel-knight/assets/equipment/recruit-sword.json'
 import {
   drawMatrixCharacter,
+  type MatrixEquipmentPiece,
+  type MatrixEquipmentSlot,
   type MatrixCharacterMode,
   type MatrixFacing,
   type MatrixManifest,
@@ -17,9 +23,47 @@ const PIXEL_SIZE = 8
 const PREVIEW_CANVAS_WIDTH = 320
 const PREVIEW_CANVAS_HEIGHT = 180
 const PREVIEW_PIXEL_SIZE = 4
+const BASE_ATTACK_DURATION_MS = 420
 
 type DemoMode = MatrixCharacterMode
 type Facing = MatrixFacing
+
+const equipmentCatalog: Record<MatrixEquipmentSlot, { name: string; piece: MatrixEquipmentPiece }> = {
+  helmet: { name: '头盔', piece: helmetData as MatrixEquipmentPiece },
+  armor: { name: '盔甲', piece: armorData as MatrixEquipmentPiece },
+  mainHand: { name: '主手·单手剑', piece: swordData as MatrixEquipmentPiece },
+  offHand: { name: '副手·盾牌', piece: shieldData as MatrixEquipmentPiece },
+}
+
+function EquipmentPreview({ piece }: { piece: MatrixEquipmentPiece }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const pixel = 3
+    canvas.width = piece.size[0] * pixel
+    canvas.height = piece.size[1] * pixel
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.imageSmoothingEnabled = false
+
+    for (const point of piece.points) {
+      ctx.fillStyle = point.color
+      ctx.fillRect(point.x * pixel, point.y * pixel, pixel, pixel)
+    }
+  }, [piece])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="h-10 w-10 rounded-sm border border-[#4b5838]/20 bg-[#efe6cf]"
+      style={{ imageRendering: 'pixelated' }}
+    />
+  )
+}
 
 function drawGround(ctx: CanvasRenderingContext2D, timeMs: number) {
   const gradient = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT)
@@ -63,10 +107,20 @@ export default function PixelKnightCharacterDemoView() {
   const pausedRef = useRef(false)
   const modeRef = useRef<DemoMode>('walk')
   const manifestRef = useRef<MatrixManifest | null>(null)
+  const elapsedRef = useRef(0)
+  const attackStartMsRef = useRef<number | null>(null)
+  const queuedAttackRef = useRef(false)
+  const attackDurationMsRef = useRef(BASE_ATTACK_DURATION_MS)
 
   const [paused, setPaused] = useState(false)
   const [mode, setMode] = useState<DemoMode>('walk')
   const [ready, setReady] = useState(false)
+  const [equippedSlots, setEquippedSlots] = useState<Record<MatrixEquipmentSlot, boolean>>({
+    helmet: true,
+    armor: true,
+    mainHand: true,
+    offHand: true,
+  })
 
   useEffect(() => {
     pausedRef.current = paused
@@ -103,6 +157,20 @@ export default function PixelKnightCharacterDemoView() {
       lastTs = timestamp
 
       if (!pausedRef.current) elapsed += dt
+      elapsedRef.current = elapsed
+      if (modeRef.current === 'attack' && attackStartMsRef.current !== null) {
+        const attackElapsed = elapsed - attackStartMsRef.current
+        if (attackElapsed >= attackDurationMsRef.current) {
+          if (queuedAttackRef.current) {
+            queuedAttackRef.current = false
+            attackStartMsRef.current = elapsed
+          } else {
+            attackStartMsRef.current = null
+            modeRef.current = 'idle'
+            setMode('idle')
+          }
+        }
+      }
       if (!pausedRef.current && modeRef.current === 'walk') {
         const velocity = 90 * (dt / 1000)
         actorX += facing === 'right' ? velocity : -velocity
@@ -118,32 +186,49 @@ export default function PixelKnightCharacterDemoView() {
       ctx.fill()
 
       if (ready && manifestRef.current) {
+        const equippedPieces: Partial<Record<MatrixEquipmentSlot, MatrixEquipmentPiece | null>> = {
+          helmet: equippedSlots.helmet ? equipmentCatalog.helmet.piece : null,
+          armor: equippedSlots.armor ? equipmentCatalog.armor.piece : null,
+          mainHand: equippedSlots.mainHand ? equipmentCatalog.mainHand.piece : null,
+          offHand: equippedSlots.offHand ? equipmentCatalog.offHand.piece : null,
+        }
+        const actionTimeMs =
+          modeRef.current === 'attack' && attackStartMsRef.current !== null
+            ? Math.max(0, elapsed - attackStartMsRef.current)
+            : elapsed
+
         drawMatrixCharacter(ctx, manifestRef.current, {
           actorX,
           actorFeetY,
           pixelSize: PIXEL_SIZE,
           facing,
           mode: modeRef.current,
-          timeMs: elapsed,
+          timeMs: actionTimeMs,
+          attackDurationMs: attackDurationMsRef.current,
+          equipment: equippedPieces,
         })
 
         previewCtx.fillStyle = '#000000'
         previewCtx.fillRect(0, 0, PREVIEW_CANVAS_WIDTH, PREVIEW_CANVAS_HEIGHT)
         drawMatrixCharacter(previewCtx, manifestRef.current, {
-          actorX: 98,
+          actorX: 82,
           actorFeetY: 156,
           pixelSize: PREVIEW_PIXEL_SIZE,
           facing: 'right',
           mode: 'idle',
           timeMs: elapsed,
+          attackDurationMs: attackDurationMsRef.current,
+          equipment: equippedPieces,
         })
         drawMatrixCharacter(previewCtx, manifestRef.current, {
-          actorX: 222,
+          actorX: 238,
           actorFeetY: 156,
           pixelSize: PREVIEW_PIXEL_SIZE,
           facing: 'left',
           mode: 'idle',
           timeMs: elapsed,
+          attackDurationMs: attackDurationMsRef.current,
+          equipment: equippedPieces,
         })
       }
 
@@ -155,7 +240,19 @@ export default function PixelKnightCharacterDemoView() {
       disposed = true
       cancelAnimationFrame(animationFrame)
     }
-  }, [ready])
+  }, [ready, equippedSlots])
+
+  const triggerAttack = () => {
+    if (modeRef.current === 'attack' && attackStartMsRef.current !== null) {
+      // Coalesce repeated calls into one queued follow-up attack.
+      queuedAttackRef.current = true
+      return
+    }
+    attackStartMsRef.current = elapsedRef.current
+    modeRef.current = 'attack'
+    setMode('attack')
+    if (pausedRef.current) setPaused(false)
+  }
 
   return (
     <main className="min-h-[100dvh] bg-[radial-gradient(circle_at_top,rgba(249,225,163,0.85),transparent_28%),linear-gradient(180deg,#f7ebc8_0%,#c8cd8e_46%,#77824f_100%)] px-4 py-5 text-[#1d2516] sm:px-6 sm:pl-24">
@@ -226,6 +323,18 @@ export default function PixelKnightCharacterDemoView() {
                 >
                   Idle
                 </Button>
+                <Button
+                  type="button"
+                  variant={mode === 'attack' ? 'default' : 'outline'}
+                  onClick={triggerAttack}
+                  className={
+                    mode === 'attack'
+                      ? 'bg-[#b8773d] text-[#fff5df] hover:bg-[#9a6331]'
+                      : 'border-[#455037]/18 bg-[#f7efd7]/70 text-[#243019] hover:bg-[#fff7df]'
+                  }
+                >
+                  普攻
+                </Button>
               </div>
 
               <div className="overflow-hidden rounded-[1.5rem] border border-[#232323] bg-black">
@@ -236,6 +345,42 @@ export default function PixelKnightCharacterDemoView() {
                   className="block h-auto w-full"
                   style={{ imageRendering: 'pixelated' }}
                 />
+              </div>
+
+              <div className="rounded-[1.25rem] border border-[#495738]/14 bg-[#f7efd8]/72 p-3">
+                <div className="text-[0.68rem] tracking-[0.26em] text-[#6c7753] uppercase">装备面板</div>
+                <div className="mt-2 grid gap-2">
+                  {(Object.keys(equipmentCatalog) as MatrixEquipmentSlot[]).map((slot) => {
+                    const equipped = equippedSlots[slot]
+                    const item = equipmentCatalog[slot]
+                    return (
+                      <div key={slot} className="flex items-center justify-between rounded-lg border border-[#495738]/12 bg-[#fff6e2]/80 px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <EquipmentPreview piece={item.piece} />
+                          <div className="text-sm text-[#334126]">{item.name}</div>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={equipped ? 'default' : 'outline'}
+                          onClick={() =>
+                            setEquippedSlots((current) => ({
+                              ...current,
+                              [slot]: !current[slot],
+                            }))
+                          }
+                          className={
+                            equipped
+                              ? 'h-8 bg-[#2f4328] text-[#f6f0de] hover:bg-[#22331d]'
+                              : 'h-8 border-[#455037]/20 bg-[#f8efd8]/70 text-[#243019] hover:bg-[#fff7df]'
+                          }
+                        >
+                          {equipped ? '卸下' : '穿上'}
+                        </Button>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </div>
           </div>

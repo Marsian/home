@@ -1,0 +1,19 @@
+{
+  "id": "recruit-sword",
+  "slot": "mainHand",
+  "weaponType": "sword",
+  "size": [12, 7],
+  "points": [
+    { "x": 0, "y": 2, "color": "#3a220f" }, { "x": 1, "y": 2, "color": "#a76436" }, { "x": 2, "y": 2, "color": "#c97a44" }, { "x": 3, "y": 2, "color": "#824a26" },
+    { "x": 0, "y": 3, "color": "#2f1a0d" }, { "x": 1, "y": 3, "color": "#a15d30" }, { "x": 2, "y": 3, "color": "#c97a44" }, { "x": 3, "y": 3, "color": "#854b28" },
+    { "x": 0, "y": 4, "color": "#2a170c" }, { "x": 1, "y": 4, "color": "#93542b" }, { "x": 2, "y": 4, "color": "#b56b39" }, { "x": 3, "y": 4, "color": "#7c4524" },
+    { "x": 4, "y": 1, "color": "#3c260f" }, { "x": 4, "y": 2, "color": "#d0a15c" }, { "x": 4, "y": 3, "color": "#d9aa62" }, { "x": 4, "y": 4, "color": "#d0a15c" }, { "x": 4, "y": 5, "color": "#3c260f" },
+    { "x": 5, "y": 2, "color": "#2a190f" }, { "x": 5, "y": 3, "color": "#f2ece3" }, { "x": 5, "y": 4, "color": "#2a190f" },
+    { "x": 6, "y": 2, "color": "#2a190f" }, { "x": 6, "y": 3, "color": "#f5f0e7" }, { "x": 6, "y": 4, "color": "#2a190f" },
+    { "x": 7, "y": 2, "color": "#2a190f" }, { "x": 7, "y": 3, "color": "#f3ede4" }, { "x": 7, "y": 4, "color": "#2a190f" },
+    { "x": 8, "y": 2, "color": "#2a190f" }, { "x": 8, "y": 3, "color": "#dedad4" }, { "x": 8, "y": 4, "color": "#2a190f" },
+    { "x": 9, "y": 2, "color": "#2a190f" }, { "x": 9, "y": 3, "color": "#cbc7c2" }, { "x": 9, "y": 4, "color": "#2a190f" },
+    { "x": 10, "y": 2, "color": "#2a190f" }, { "x": 10, "y": 3, "color": "#b6b3af" }, { "x": 10, "y": 4, "color": "#2a190f" },
+    { "x": 11, "y": 3, "color": "#9f9d9a" }
+  ]
+}
