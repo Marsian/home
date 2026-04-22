@@ -1,0 +1,120 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .topbar { fill: #393939; }
+    .topline { fill: #25180f; }
+    .panel { fill: #b8b7ae; fill-opacity: 0.8; stroke: #6f6a57; stroke-width: 6; shape-rendering: crispEdges; }
+    .panel-active { fill: #fff29a; stroke: #c9b55a; stroke-width: 6; shape-rendering: crispEdges; }
+    .panel-head { fill: #7e7b65; shape-rendering: crispEdges; }
+    .button-main { fill: #f8c84a; stroke: #7f5b18; stroke-width: 6; shape-rendering: crispEdges; }
+    .button-sub { fill: #cf4950; stroke: #7a2327; stroke-width: 6; shape-rendering: crispEdges; }
+    .stone { fill: #7b8668; stroke: #4f573e; stroke-width: 6; shape-rendering: crispEdges; }
+    .shadow { fill: #000; fill-opacity: 0.18; }
+    .title { font: 800 30px "Source Han Serif SC", serif; fill: #f2d56c; letter-spacing: 2px; }
+    .body { font: 700 26px "Source Han Serif SC", serif; fill: #24180f; }
+    .body-light { font: 700 24px "Source Han Serif SC", serif; fill: #f7f1da; }
+    .name { font: 800 34px "Source Han Serif SC", serif; fill: #20140d; }
+    .small { font: 700 20px "Source Han Serif SC", serif; fill: #24180f; }
+    .small-light { font: 700 20px "Source Han Serif SC", serif; fill: #f8f1db; }
+    .tiny { font: 700 16px "Source Han Serif SC", serif; fill: #24180f; }
+    .rank-red { font: 700 22px "Source Han Serif SC", serif; fill: #b22f31; }
+    .rank-blue { font: 700 22px "Source Han Serif SC", serif; fill: #356cae; }
+  </style>
+
+  <rect width="1600" height="900" fill="#8fc2de"/>
+  <rect y="730" width="1600" height="170" fill="#6ca157"/>
+  <rect y="760" width="1600" height="140" fill="#62974d"/>
+  <circle cx="1410" cy="170" r="160" fill="#dde8ef" fill-opacity="0.8"/>
+  <circle cx="1495" cy="120" r="110" fill="#edf2f6" fill-opacity="0.75"/>
+  <circle cx="1300" cy="125" r="86" fill="#dce8ef" fill-opacity="0.7"/>
+
+  <rect x="0" y="0" width="1600" height="76" class="topbar"/>
+  <rect x="0" y="72" width="1600" height="8" class="topline"/>
+  <text x="690" y="47" class="title">选择角色</text>
+
+  <path d="M40 692 L110 530 L208 480 L265 560 L326 502 L388 618 L454 560 L530 664 L610 548 L692 612 L752 474 L846 560 L930 462 L1012 594 L1096 488 L1174 572 L1258 468 L1328 596 L1404 538 L1498 654 L1560 616 L1600 740 L0 740 Z" fill="#b9cb67"/>
+  <path d="M0 740 L72 654 L158 600 L236 644 L318 568 L408 620 L498 572 L592 636 L674 578 L746 646 L820 592 L902 648 L984 574 L1078 650 L1160 600 L1248 648 L1330 582 L1410 636 L1498 598 L1600 676 L1600 900 L0 900 Z" fill="#5d924b"/>
+  <path d="M0 780 L150 730 L242 760 L324 694 L430 742 L534 700 L646 776 L780 706 L906 770 L1030 712 L1142 768 L1260 716 L1378 780 L1508 732 L1600 786 L1600 900 L0 900 Z" fill="#6fa455"/>
+
+  <ellipse cx="730" cy="625" rx="196" ry="58" class="shadow"/>
+  <rect x="640" y="486" width="182" height="190" rx="12" class="stone"/>
+  <rect x="672" y="452" width="120" height="42" fill="#65814c"/>
+  <rect x="726" y="436" width="20" height="22" fill="#7ea062"/>
+  <rect x="698" y="528" width="70" height="92" fill="#3f3f40"/>
+  <rect x="680" y="440" width="108" height="96" fill="#5f245e"/>
+  <rect x="656" y="422" width="156" height="32" fill="#3a2649"/>
+  <rect x="676" y="392" width="118" height="54" fill="#5c2466"/>
+  <rect x="724" y="346" width="26" height="54" fill="#22202d"/>
+  <path d="M650 386 L710 326 L782 326 L838 386 L820 402 L808 402 L808 430 L674 430 L674 404 L662 404 Z" fill="#5c2466"/>
+  <rect x="790" y="458" width="58" height="126" fill="#2e2635"/>
+  <rect x="818" y="490" width="86" height="16" fill="#f1972f"/>
+  <rect x="850" y="466" width="24" height="80" fill="#2a232d"/>
+  <rect x="870" y="450" width="28" height="26" fill="#2a232d"/>
+  <rect x="894" y="434" width="30" height="18" fill="#f1972f"/>
+  <rect x="908" y="460" width="18" height="54" fill="#2a232d"/>
+  <rect x="586" y="432" width="118" height="26" fill="#f14f6f" transform="rotate(-38 586 432)"/>
+  <rect x="564" y="404" width="144" height="36" fill="#f8d7eb" fill-opacity="0.8" transform="rotate(-38 564 404)"/>
+  <rect x="556" y="488" width="158" height="22" fill="#f5c7e5" fill-opacity="0.75" transform="rotate(30 556 488)"/>
+  <rect x="574" y="516" width="134" height="16" fill="#ebb0d9" fill-opacity="0.55" transform="rotate(30 574 516)"/>
+  <rect x="706" y="470" width="60" height="64" fill="#f3e6c8"/>
+  <rect x="720" y="488" width="12" height="12" fill="#2f6d7e"/>
+  <rect x="750" y="488" width="12" height="12" fill="#2f6d7e"/>
+  <rect x="734" y="514" width="18" height="8" fill="#8b553e"/>
+  <rect x="694" y="534" width="28" height="46" fill="#f3e6c8"/>
+  <rect x="766" y="534" width="26" height="46" fill="#f3e6c8"/>
+  <rect x="700" y="580" width="30" height="54" fill="#402a42"/>
+  <rect x="760" y="580" width="30" height="54" fill="#402a42"/>
+
+  <rect x="1120" y="120" width="420" height="162" rx="8" class="panel-active"/>
+  <rect x="1246" y="142" width="252" height="56" rx="4" class="panel-head"/>
+  <polygon points="1170,158 1214,128 1258,158 1258,226 1214,254 1170,226" fill="#d49c48" stroke="#5a3c1b" stroke-width="6"/>
+  <circle cx="1214" cy="190" r="36" fill="#8f2d22"/>
+  <rect x="1192" y="170" width="44" height="12" fill="#d84f39"/>
+  <rect x="1198" y="192" width="32" height="30" fill="#d84f39"/>
+  <text x="1178" y="268" class="body">Lv.60</text>
+  <text x="1272" y="184" class="name">Mars</text>
+  <text x="1272" y="230" class="body">火焰骑士</text>
+  <text x="1272" y="272" class="rank-red">红玉</text>
+
+  <rect x="1120" y="298" width="420" height="146" rx="8" class="panel"/>
+  <rect x="1246" y="318" width="252" height="50" rx="4" class="panel-head"/>
+  <polygon points="1170,334 1214,304 1258,334 1258,402 1214,430 1170,402" fill="#d49c48" stroke="#5a3c1b" stroke-width="6"/>
+  <circle cx="1214" cy="368" r="36" fill="#276bb0"/>
+  <rect x="1194" y="348" width="18" height="40" fill="#3bd1ff"/>
+  <rect x="1218" y="348" width="18" height="40" fill="#3bd1ff"/>
+  <text x="1186" y="442" class="body">Lv.5</text>
+  <text x="1272" y="360" class="name">M</text>
+  <text x="1272" y="406" class="body">风暴守卫</text>
+
+  <rect x="1120" y="460" width="420" height="146" rx="8" class="panel"/>
+  <rect x="1246" y="480" width="252" height="50" rx="4" class="panel-head"/>
+  <polygon points="1170,496 1214,466 1258,496 1258,564 1214,592 1170,564" fill="#d49c48" stroke="#5a3c1b" stroke-width="6"/>
+  <circle cx="1214" cy="530" r="36" fill="#a8881c"/>
+  <path d="M1192 550 L1224 510 L1240 526 L1208 566 Z" fill="#ffe765"/>
+  <path d="M1188 522 L1206 504 L1232 530 L1214 548 Z" fill="#ffe765"/>
+  <text x="1178" y="604" class="body">Lv.60</text>
+  <text x="1272" y="522" class="name">裁决</text>
+  <text x="1272" y="566" class="body">裁决者</text>
+  <text x="1272" y="604" class="rank-red">红玉</text>
+
+  <rect x="1120" y="622" width="420" height="146" rx="8" class="panel"/>
+  <rect x="1246" y="642" width="252" height="50" rx="4" class="panel-head"/>
+  <polygon points="1170,658 1214,628 1258,658 1258,726 1214,754 1170,726" fill="#d49c48" stroke="#5a3c1b" stroke-width="6"/>
+  <circle cx="1214" cy="692" r="36" fill="#347c2f"/>
+  <circle cx="1214" cy="692" r="14" fill="#b7f45d"/>
+  <path d="M1214 658 C1232 666 1236 684 1226 700 C1218 712 1206 716 1192 708 C1180 700 1178 680 1192 668 C1200 662 1206 660 1214 658 Z" fill="none" stroke="#8cf35a" stroke-width="8"/>
+  <text x="1178" y="766" class="body">Lv.60</text>
+  <text x="1272" y="684" class="name">自然</text>
+  <text x="1272" y="726" class="body">自然使</text>
+  <text x="1272" y="766" class="rank-blue">精钢</text>
+
+  <rect x="612" y="794" width="92" height="86" rx="8" class="button-sub"/>
+  <rect x="648" y="816" width="10" height="40" fill="#f6efe0"/>
+  <rect x="666" y="816" width="10" height="40" fill="#f6efe0"/>
+  <rect x="636" y="804" width="52" height="10" fill="#f6efe0"/>
+  <rect x="624" y="856" width="76" height="8" fill="#a92c34"/>
+
+  <rect x="730" y="794" width="322" height="86" rx="8" class="button-main"/>
+  <text x="826" y="852" class="name">进入游戏</text>
+
+  <text x="1490" y="878" class="small-light">Pixel Knight UI Mock</text>
+</svg>

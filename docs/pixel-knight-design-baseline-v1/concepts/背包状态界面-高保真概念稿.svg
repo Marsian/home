@@ -1,0 +1,122 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .title { font: 800 40px "Source Han Serif SC", serif; fill: #2f2118; letter-spacing: 3px; }
+    .sub { font: 800 26px "Source Han Serif SC", serif; fill: #f6ebd3; letter-spacing: 2px; }
+    .tiny { font: 600 18px "Source Han Serif SC", serif; fill: #6a553b; letter-spacing: 2px; }
+    .body { font: 600 20px "Source Han Serif SC", serif; fill: #4c3b2a; }
+    .label { font: 700 22px "Source Han Serif SC", serif; fill: #2f2118; }
+    .panel { fill: #e7d7b7; stroke: #3c2a1d; stroke-width: 6; shape-rendering: crispEdges; }
+    .panel-dark { fill: #31443a; stroke: #1f1711; stroke-width: 6; shape-rendering: crispEdges; }
+    .slot { fill: #f5ead4; stroke: #433024; stroke-width: 4; shape-rendering: crispEdges; }
+    .grid { fill: #f3e7d0; stroke: #433024; stroke-width: 3; shape-rendering: crispEdges; }
+    .tabA { fill: #cb7a34; stroke: #3c2a1d; stroke-width: 5; shape-rendering: crispEdges; }
+    .tabB { fill: #8d7a5f; stroke: #3c2a1d; stroke-width: 5; shape-rendering: crispEdges; }
+    .good { fill: #6ce3a1; }
+    .rare { fill: #8e79ff; }
+    .legend { fill: #ffb347; }
+  </style>
+  <rect width="1600" height="900" fill="#d9c59b"/>
+  <rect x="18" y="18" width="1564" height="864" rx="24" fill="#f6edd8" stroke="#3f2d1f" stroke-width="8"/>
+  <rect x="40" y="40" width="1520" height="92" rx="18" fill="#30433A"/>
+  <text x="76" y="80" class="tiny" fill="#cfbe99">PIXEL KNIGHT / INVENTORY &amp; STATUS</text>
+  <text x="76" y="116" class="sub">背包 / 状态 · 同一总窗口骨架</text>
+
+  <rect x="66" y="154" width="1468" height="692" rx="22" class="panel"/>
+  <rect x="92" y="178" width="156" height="52" rx="10" class="tabA"/>
+  <text x="138" y="212" class="label" fill="#F7EFDA">背包</text>
+  <rect x="254" y="178" width="156" height="52" rx="10" class="tabB"/>
+  <text x="300" y="212" class="label" fill="#F7EFDA">状态</text>
+  <rect x="1360" y="178" width="132" height="52" rx="10" class="tabB"/>
+  <text x="1398" y="212" class="label" fill="#F7EFDA">关闭</text>
+
+  <rect x="92" y="254" width="372" height="560" rx="18" class="panel-dark"/>
+  <text x="124" y="296" class="tiny" fill="#cfbe99">LEFT COLUMN</text>
+  <text x="124" y="332" class="sub">纸娃娃 / 装备槽</text>
+  <rect x="126" y="364" width="304" height="408" rx="16" fill="#45624F" stroke="#1E1711" stroke-width="5"/>
+  <rect x="234" y="416" width="84" height="86" fill="#F1C978"/>
+  <rect x="214" y="504" width="124" height="122" fill="#8C4936"/>
+  <rect x="210" y="632" width="52" height="86" fill="#47352A"/>
+  <rect x="290" y="632" width="52" height="86" fill="#47352A"/>
+  <rect x="142" y="424" width="58" height="58" class="slot"/>
+  <rect x="356" y="424" width="58" height="58" class="slot"/>
+  <rect x="128" y="510" width="66" height="66" class="slot"/>
+  <rect x="366" y="510" width="66" height="66" class="slot"/>
+  <rect x="166" y="676" width="66" height="66" class="slot"/>
+  <rect x="326" y="676" width="66" height="66" class="slot"/>
+  <rect x="240" y="334" width="84" height="58" class="slot"/>
+  <rect x="236" y="758" width="92" height="56" class="slot"/>
+  <text x="126" y="794" class="body" fill="#F7EFDA">装备槽、强化入口与纸娃娃共享一列。</text>
+
+  <rect x="490" y="254" width="548" height="560" rx="18" class="panel"/>
+  <text x="522" y="296" class="tiny">CENTER COLUMN</text>
+  <text x="522" y="332" class="title">背包分页与物品格</text>
+  <rect x="522" y="350" width="112" height="42" rx="10" class="tabA"/>
+  <text x="552" y="378" class="body" fill="#F7EFDA">装备</text>
+  <rect x="644" y="350" width="112" height="42" rx="10" class="tabB"/>
+  <text x="674" y="378" class="body" fill="#F7EFDA">材料</text>
+  <rect x="766" y="350" width="112" height="42" rx="10" class="tabB"/>
+  <text x="796" y="378" class="body" fill="#F7EFDA">消耗</text>
+  <rect x="888" y="350" width="112" height="42" rx="10" class="tabB"/>
+  <text x="918" y="378" class="body" fill="#F7EFDA">任务</text>
+
+  <rect x="522" y="416" width="484" height="364" rx="14" fill="#D8C6A6" stroke="#433024" stroke-width="5"/>
+  <rect x="544" y="438" width="66" height="66" class="grid"/>
+  <rect x="620" y="438" width="66" height="66" class="grid"/>
+  <rect x="696" y="438" width="66" height="66" class="grid"/>
+  <rect x="772" y="438" width="66" height="66" class="grid"/>
+  <rect x="848" y="438" width="66" height="66" fill="#FFEDCA" stroke="#433024" stroke-width="4"/>
+  <rect x="924" y="438" width="66" height="66" class="grid"/>
+  <rect x="544" y="514" width="66" height="66" class="grid"/>
+  <rect x="620" y="514" width="66" height="66" class="grid"/>
+  <rect x="696" y="514" width="66" height="66" class="grid"/>
+  <rect x="772" y="514" width="66" height="66" class="grid"/>
+  <rect x="848" y="514" width="66" height="66" class="grid"/>
+  <rect x="924" y="514" width="66" height="66" class="grid"/>
+  <rect x="544" y="590" width="66" height="66" class="grid"/>
+  <rect x="620" y="590" width="66" height="66" class="grid"/>
+  <rect x="696" y="590" width="66" height="66" class="grid"/>
+  <rect x="772" y="590" width="66" height="66" class="grid"/>
+  <rect x="848" y="590" width="66" height="66" class="grid"/>
+  <rect x="924" y="590" width="66" height="66" class="grid"/>
+  <rect x="544" y="666" width="66" height="66" class="grid"/>
+  <rect x="620" y="666" width="66" height="66" class="grid"/>
+  <rect x="696" y="666" width="66" height="66" class="grid"/>
+  <rect x="772" y="666" width="66" height="66" class="grid"/>
+  <rect x="848" y="666" width="66" height="66" class="grid"/>
+  <rect x="924" y="666" width="66" height="66" class="grid"/>
+  <rect x="866" y="456" width="30" height="18" class="legend"/>
+  <rect x="548" y="742" width="120" height="18" class="good"/>
+  <rect x="684" y="742" width="92" height="18" class="rare"/>
+  <rect x="790" y="742" width="114" height="18" class="legend"/>
+  <text x="522" y="802" class="body">单击查看详情，双击或拖拽装备，右键打开快捷动作。</text>
+
+  <rect x="1066" y="254" width="436" height="560" rx="18" class="panel"/>
+  <text x="1098" y="296" class="tiny">RIGHT COLUMN</text>
+  <text x="1098" y="332" class="title">属性 / 词条 / 说明</text>
+  <rect x="1098" y="354" width="372" height="112" rx="14" fill="#F5EAD4" stroke="#433024" stroke-width="5"/>
+  <text x="1122" y="388" class="tiny">ITEM DETAIL</text>
+  <text x="1122" y="418" class="label">曙辉重剑</text>
+  <text x="1122" y="446" class="body">传奇 · 武器 · 强化 +5 · 羁绊 2</text>
+
+  <rect x="1098" y="490" width="178" height="150" rx="14" fill="#F5EAD4" stroke="#433024" stroke-width="5"/>
+  <text x="1120" y="524" class="tiny">PERMANENT</text>
+  <text x="1120" y="556" class="body">攻击 152</text>
+  <text x="1120" y="586" class="body">护甲 88</text>
+  <text x="1120" y="616" class="body">生命 1260</text>
+
+  <rect x="1292" y="490" width="178" height="150" rx="14" fill="#F5EAD4" stroke="#433024" stroke-width="5"/>
+  <text x="1314" y="524" class="tiny">EQUIPMENT</text>
+  <text x="1314" y="556" class="body">+ 攻击 34</text>
+  <text x="1314" y="586" class="body">+ 暴击 8%</text>
+  <text x="1314" y="616" class="body">+ 技能 12</text>
+
+  <rect x="1098" y="658" width="372" height="98" rx="14" fill="#F5EAD4" stroke="#433024" stroke-width="5"/>
+  <text x="1122" y="692" class="tiny">TEMPORARY / COMPARE</text>
+  <text x="1122" y="724" class="body">临时增益：祝福激活中</text>
+  <text x="1334" y="724" class="body" fill="#3C8D5D">▲ 攻击 +12</text>
+
+  <rect x="1098" y="776" width="164" height="40" rx="10" class="tabA"/>
+  <text x="1146" y="803" class="body" fill="#F7EFDA">装备</text>
+  <rect x="1274" y="776" width="196" height="40" rx="10" class="tabB"/>
+  <text x="1324" y="803" class="body" fill="#F7EFDA">强化 / 词条入口</text>
+</svg>
