@@ -261,13 +261,13 @@ export function createStarterSword(): ItemInstance {
   const stats = { attack: 8, critChance: 0.02, skillPower: 2 }
   return {
     id: 'starter-sword',
-    name: '训练骑士剑',
+    name: '短剑',
     slot: 'weapon',
     rarity: 'common',
     itemLevel: 1,
     stats,
     score: computeItemScore(stats),
-    description: '每位像素骑士踏上旅途时的第一把剑。',
+    description: '基础短剑，适合近战起手。',
   }
 }
 
@@ -275,13 +275,13 @@ export function createStarterShield(): ItemInstance {
   const stats = { armor: 9, vitality: 7 }
   return {
     id: 'starter-shield',
-    name: '木纹练习盾',
+    name: '木盾',
     slot: 'shield',
     rarity: 'common',
     itemLevel: 1,
     stats,
     score: computeItemScore(stats),
-    description: '朴素但可靠，能挡下最初的几次冲撞。',
+    description: '基础木盾，提供稳定防护。',
   }
 }
 

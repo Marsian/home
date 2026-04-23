@@ -5,8 +5,8 @@ let cachedPromise: Promise<void> | null = null
 let warmLoaded = false
 let heroKnightSpriteAsset: { image: HTMLImageElement; meta: PixelKnightSpriteMeta } | null = null
 
-const heroKnightSpriteSrc = '/images/pixel-knight/characters/hero-knight-v0.png'
-const heroKnightMetaSrc = '/images/pixel-knight/characters/hero-knight-v0.meta.json'
+const heroKnightSpriteSrc = '/images/pixel-knight/characters/hero-knight-a1-no-scarf.png'
+const heroKnightMetaSrc = '/images/pixel-knight/characters/hero-knight-a1-no-scarf.meta.json'
 
 const preloadSteps = [
   { label: '正在点亮圣殿', wait: 160 },
@@ -39,14 +39,26 @@ function loadImage(src: string) {
 }
 
 async function preloadHeroKnightSprite() {
-  const [image, metaResponse] = await Promise.all([loadImage(heroKnightSpriteSrc), fetch(heroKnightMetaSrc)])
-  if (!metaResponse.ok) {
-    throw new Error('角色贴图配置未能正确读取。')
-  }
+  const image = await loadImage(heroKnightSpriteSrc)
+  let meta: PixelKnightSpriteMeta
 
-  const meta = (await metaResponse.json()) as PixelKnightSpriteMeta
-  if (image.naturalWidth < meta.frameWidth || image.naturalHeight < meta.frameHeight) {
-    throw new Error('角色贴图尺寸与 meta 配置不一致。')
+  try {
+    const metaResponse = await fetch(heroKnightMetaSrc)
+    if (!metaResponse.ok) throw new Error('missing-meta')
+    meta = (await metaResponse.json()) as PixelKnightSpriteMeta
+  } catch {
+    // Fallback: keep runtime robust even when external meta is not available yet.
+    meta = {
+      assetFamily: 'hero-knight',
+      version: 'fallback-1',
+      frameWidth: image.naturalWidth,
+      frameHeight: image.naturalHeight,
+      directions: ['right', 'left'],
+      animations: { idle: { frames: [0], fps: 1 } },
+      pivot: { x: Math.round(image.naturalWidth * 0.5), y: Math.round(image.naturalHeight * 0.84) },
+      selectedDirection: 'right',
+      backupDirection: 'left',
+    }
   }
 
   heroKnightSpriteAsset = { image, meta }

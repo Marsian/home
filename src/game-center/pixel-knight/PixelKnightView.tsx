@@ -4,8 +4,19 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import knightManifestData from '@/game-center/pixel-knight/assets/characters/knight.json'
+import swordMatrixData from '@/game-center/pixel-knight/assets/equipment/main-hand/iron-sword.json'
+import shieldMatrixData from '@/game-center/pixel-knight/assets/equipment/off-hand/wood-shield.json'
+import {
+  drawMatrixCharacter,
+  type MatrixEquipmentPiece,
+  type MatrixEquipmentSlot,
+  type MatrixManifest,
+} from '@/game-center/pixel-knight/rendering/matrixCharacterRenderer'
 
 import {
+  createStarterShield,
+  createStarterSword,
   difficultyConfigs,
   difficultyOrder,
   dungeons,
@@ -75,6 +86,82 @@ function formatTime(ms: number) {
   return `${mm}:${ss}`
 }
 
+const selectKnightManifest = knightManifestData as MatrixManifest
+const selectKnightEquipment: Partial<Record<MatrixEquipmentSlot, MatrixEquipmentPiece | null>> = {
+  mainHand: swordMatrixData as MatrixEquipmentPiece,
+  offHand: shieldMatrixData as MatrixEquipmentPiece,
+}
+
+function CharacterSelectKnightCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    let disposed = false
+    let frameId = 0
+    let lastTs = performance.now()
+    let elapsed = 0
+
+    const render = (timestamp: number) => {
+      if (disposed) return
+      const dt = Math.min(34, timestamp - lastTs)
+      lastTs = timestamp
+      elapsed += dt
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.imageSmoothingEnabled = false
+
+      const shadowPulse = 0.92 + Math.sin(elapsed / 300) * 0.04
+      ctx.fillStyle = 'rgba(23, 18, 11, 0.34)'
+      ctx.beginPath()
+      ctx.ellipse(254, 454, 142 * shadowPulse, 30, 0, 0, Math.PI * 2)
+      ctx.fill()
+
+      ctx.fillStyle = '#758264'
+      ctx.fillRect(160, 320, 190, 146)
+      ctx.fillStyle = '#4d553f'
+      ctx.fillRect(160, 320, 190, 16)
+      ctx.fillStyle = '#80906e'
+      ctx.fillRect(194, 292, 122, 32)
+      ctx.fillStyle = '#657257'
+      ctx.fillRect(248, 274, 16, 18)
+
+      const breathing = Math.sin(elapsed / 350) * 2
+      drawMatrixCharacter(ctx, selectKnightManifest, {
+        actorX: 256,
+        actorFeetY: 338 + breathing,
+        pixelSize: 10,
+        facing: 'right',
+        mode: 'walk',
+        timeMs: elapsed,
+        equipment: selectKnightEquipment,
+      })
+
+      frameId = requestAnimationFrame(render)
+    }
+
+    frameId = requestAnimationFrame(render)
+    return () => {
+      disposed = true
+      cancelAnimationFrame(frameId)
+    }
+  }, [])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={512}
+      height={512}
+      className="h-full max-h-[520px] w-full max-w-[520px]"
+      style={{ imageRendering: 'pixelated' }}
+    />
+  )
+}
+
 export default function PixelKnightView() {
   const navigate = useNavigate()
   const hostRef = useRef<HTMLDivElement>(null)
@@ -92,6 +179,7 @@ export default function PixelKnightView() {
   })
   const [inventoryOpen, setInventoryOpen] = useState(false)
   const [lastResult, setLastResult] = useState<RunResult | null>(null)
+  const [homeStage, setHomeStage] = useState<'character' | 'lobby'>('character')
 
   useEffect(() => {
     savePixelKnightProfile(profile)
@@ -145,6 +233,7 @@ export default function PixelKnightView() {
         })
         if (cancelled) return
         setProfile((current) => ({ ...current, hasCompletedInitialLoad: true }))
+        setHomeStage('character')
         setPhase('home')
       } catch (error) {
         if (cancelled) return
@@ -179,6 +268,7 @@ export default function PixelKnightView() {
     void preloadPixelKnightAssets((progress) => setPreload(progress))
       .then(() => {
         setProfile((current) => ({ ...current, hasCompletedInitialLoad: true }))
+        setHomeStage('character')
         setPhase('home')
       })
       .catch((error) => {
@@ -205,8 +295,22 @@ export default function PixelKnightView() {
 
   const backToHome = () => {
     gameRef.current?.stopToHome()
+    setHomeStage('character')
     setPhase('home')
     setInventoryOpen(false)
+  }
+
+  const confirmKnightSelection = () => {
+    setProfile((current) => ({
+      ...current,
+      baseClassId: 'knight',
+      equipment: {
+        ...current.equipment,
+        weapon: current.equipment.weapon ?? createStarterSword(),
+        shield: current.equipment.shield ?? createStarterShield(),
+      },
+    }))
+    setHomeStage('lobby')
   }
 
   return (
@@ -262,7 +366,96 @@ export default function PixelKnightView() {
               <LoadingOverlay progress={preload} error={loadError} onRetry={retryPreload} />
             )}
 
-            {phase === 'home' ? (
+            {phase === 'home' && homeStage === 'character' ? (
+              <div className="absolute inset-0 z-30 overflow-hidden bg-[#8fc2de]">
+                <div className="absolute inset-x-0 bottom-0 h-[34%] bg-[#6ca157]" />
+                <div className="absolute inset-x-0 bottom-0 h-[28%] bg-[#62974d]" />
+                <div className="absolute -bottom-3 left-0 right-0 h-[36%] bg-[#5d924b] [clip-path:polygon(0%_36%,8%_24%,16%_34%,24%_20%,33%_30%,42%_18%,50%_31%,60%_17%,70%_33%,80%_21%,90%_34%,100%_26%,100%_100%,0%_100%)]" />
+                <div className="absolute -bottom-4 left-0 right-0 h-[24%] bg-[#6fa455] [clip-path:polygon(0%_44%,8%_30%,16%_42%,24%_26%,32%_38%,41%_24%,50%_40%,58%_28%,66%_42%,74%_30%,82%_44%,90%_30%,100%_46%,100%_100%,0%_100%)]" />
+                <div className="absolute right-24 top-8 h-36 w-36 rounded-full bg-white/70" />
+                <div className="absolute right-52 top-10 h-24 w-24 rounded-full bg-white/55" />
+                <div className="absolute right-6 top-6 h-28 w-28 rounded-full bg-white/60" />
+
+                <div className="relative z-10 flex h-full flex-col">
+                  <div className="h-[76px] border-b-[8px] border-[#25180f] bg-[#393939] px-6">
+                    <div className="flex h-full items-center justify-center text-[28px] font-black tracking-[0.12em] text-[#f2d56c]">
+                      选择角色
+                    </div>
+                  </div>
+
+                  <div className="grid flex-1 gap-4 p-4 pt-5 lg:grid-cols-[1fr_420px] lg:gap-5 lg:px-8">
+                    <div className="flex items-end justify-center rounded-[8px] border-[6px] border-[#4f573e] bg-[#7b8668]/58">
+                      <CharacterSelectKnightCanvas />
+                    </div>
+
+                    <div className="space-y-3">
+                      {[
+                        { id: 'knight', name: '骑士', className: '近卫骑士', level: 'Lv.1', active: true, rank: '新兵' },
+                        { id: 'future-1', name: '未开放', className: '敬请期待', level: 'Lv.0', active: false, rank: '---' },
+                        { id: 'future-2', name: '未开放', className: '敬请期待', level: 'Lv.0', active: false, rank: '---' },
+                        { id: 'future-3', name: '未开放', className: '敬请期待', level: 'Lv.0', active: false, rank: '---' },
+                      ].map((entry) => (
+                        <button
+                          key={entry.id}
+                          type="button"
+                          onClick={() => entry.active && setProfile((current) => ({ ...current, baseClassId: 'knight' }))}
+                          className={cn(
+                            'w-full rounded-[8px] border-[6px] px-4 py-3 text-left transition',
+                            entry.active
+                              ? 'border-[#c9b55a] bg-[#fff29a] text-[#24180f]'
+                              : 'border-[#6f6a57] bg-[#b8b7ae]/88 text-[#2a241d] hover:bg-[#c0bfb6]/92',
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="h-12 w-12 shrink-0 rounded-[6px] border-[3px] border-[#5a3c1b] bg-[#d49c48]">
+                                <div
+                                  className={cn(
+                                    'mx-auto mt-2 h-6 w-6 rounded-full',
+                                    entry.active ? 'bg-[#8f2d22]' : 'bg-[#6e7479]',
+                                  )}
+                                />
+                              </div>
+                              <div>
+                                <div className="text-xl font-black">{entry.name}</div>
+                                <div className="mt-0.5 text-sm font-bold">{entry.className}</div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-black">{entry.level}</div>
+                              <div className="mt-1 text-sm font-bold">{entry.rank}</div>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-4 px-4 pb-4 lg:px-8 lg:pb-5">
+                    <button
+                      type="button"
+                      className="flex h-[78px] w-[88px] items-center justify-center rounded-[8px] border-[6px] border-[#7a2327] bg-[#cf4950] text-[#f6efe0]"
+                      aria-label="删除角色"
+                    >
+                      <div className="relative h-9 w-7">
+                        <span className="absolute left-0 top-1 h-1 w-7 bg-current" />
+                        <span className="absolute left-1 top-2 h-7 w-1 bg-current" />
+                        <span className="absolute right-1 top-2 h-7 w-1 bg-current" />
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={confirmKnightSelection}
+                      className="h-[78px] w-[320px] rounded-[8px] border-[6px] border-[#7f5b18] bg-[#f8c84a] text-[34px] font-black tracking-[0.06em] text-[#20140d] transition hover:brightness-105"
+                    >
+                      进入游戏
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {phase === 'home' && homeStage === 'lobby' ? (
               <div className="absolute inset-0 z-30 flex items-center justify-center bg-[radial-gradient(circle_at_top,rgba(248,222,156,0.16),transparent_24%),linear-gradient(180deg,rgba(9,12,10,0.22),rgba(7,10,8,0.58))] p-4">
                 <div className="grid w-full max-w-5xl gap-4 lg:grid-cols-[1.1fr_0.9fr]">
                   <div className="rounded-[1.8rem] border border-[#f3d48f]/16 bg-[#172019]/86 p-5 backdrop-blur-[3px]">
