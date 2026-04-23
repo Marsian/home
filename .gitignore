@@ -19,3 +19,5 @@ src/game-center/fruit-ninja/assets/verify/
 
 .npm-cache/
 .playwright-cli/
+
+public/images/pixel-knight/raven-fantasy/

@@ -33,36 +33,46 @@ type MatrixEquipmentAnchor =
 
 export type MatrixEquipmentPiece = {
   id: string
+  name: string
   slot: MatrixEquipmentSlot
   weaponType?: MatrixWeaponType
-  size: [number, number]
-  points: PixelPoint[]
+  anchorOffset?: [number, number]
+  size?: [number, number]
+  points?: PixelPoint[]
+  parts?: Record<
+    string,
+    {
+      size: [number, number]
+      points: PixelPoint[]
+      layer?: 'back' | 'base' | 'front'
+    }
+  >
 }
 
 const equipmentAnchorsBySlot: Record<MatrixEquipmentSlot, MatrixEquipmentAnchor> = {
   helmet: {
     type: 'part',
     part: 'head',
-    offset: [1, -1],
+    offset: [0, 0],
   },
   armor: {
     type: 'part',
     part: 'torso',
-    offset: [0, 1],
+    offset: [0, 0],
   },
   mainHand: {
     type: 'part',
     part: 'rightArm',
-    offset: [6, 7],
+    offset: [0, 0],
     rotateWithPart: true,
-    pivot: [1, 3],
+    pivot: [1, 9],
   },
   offHand: {
     type: 'part',
     part: 'leftArm',
-    offset: [1, 7],
+    offset: [0, 0],
     rotateWithPart: true,
-    pivot: [5, 5],
+    pivot: [7, 7],
   },
 }
 
@@ -221,6 +231,28 @@ function drawRotatedMatrixPart(
   ctx.rotate(angleRad)
   ctx.drawImage(partCanvas, -pivotXPx, -pivotYPx)
   ctx.restore()
+}
+
+function resolveEquipmentLayerEntries(
+  piece: MatrixEquipmentPiece,
+  layer: 'all' | 'back' | 'front',
+): Array<{ size: [number, number]; points: PixelPoint[] }> {
+  if (piece.parts) {
+    const entries = Object.values(piece.parts)
+    if (layer === 'all') {
+      return entries
+        .filter((part) => (part.layer ?? 'base') === 'base')
+        .map((part) => ({ size: part.size, points: part.points }))
+    }
+    return entries
+      .filter((part) => (part.layer ?? 'base') === layer)
+      .map((part) => ({ size: part.size, points: part.points }))
+  }
+
+  if (piece.size && piece.points) {
+    return layer === 'all' ? [{ size: piece.size, points: piece.points }] : []
+  }
+  return []
 }
 
 export function drawMatrixCharacter(
@@ -383,54 +415,63 @@ export function drawMatrixCharacter(
     rightLeg: { x: legOffsets.rightLeg.x, y: legOffsets.rightLeg.y, angle: legOffsets.rightLeg.angle },
   }
 
-  const drawEquipmentPiece = (piece: MatrixEquipmentPiece) => {
+  const drawEquipmentPiece = (piece: MatrixEquipmentPiece, layer: 'all' | 'back' | 'front' = 'all') => {
+    const layerEntries = resolveEquipmentLayerEntries(piece, layer)
+    if (layerEntries.length === 0) return
+
     const anchor = equipmentAnchorsBySlot[piece.slot]
-    const piecePart: MatrixPart = { offset: [0, 0], size: piece.size, points: piece.points }
-    if (anchor.type === 'body') {
-      const localX = anchor.offset[0] - bounds.minX
-      const drawX = options.facing === 'right' ? localX : totalWidth - localX - piece.size[0]
-      const drawY = anchor.offset[1] - bounds.minY
-      drawMatrixPart(
-        ctx,
-        piecePart,
-        groupLeft + drawX * options.pixelSize,
-        groupTop + drawY * options.pixelSize,
-        options.pixelSize,
-        options.facing,
-      )
-      return
-    }
+    const anchorOffset = piece.anchorOffset ?? [0, 0]
+    const resolvedAnchorX = anchor.offset[0] + anchorOffset[0]
+    const resolvedAnchorY = anchor.offset[1] + anchorOffset[1]
+    for (const entry of layerEntries) {
+      const piecePart: MatrixPart = { offset: [0, 0], size: entry.size, points: entry.points }
+      if (anchor.type === 'body') {
+        const localX = resolvedAnchorX - bounds.minX
+        const drawX = options.facing === 'right' ? localX : totalWidth - localX - entry.size[0]
+        const drawY = resolvedAnchorY - bounds.minY
+        drawMatrixPart(
+          ctx,
+          piecePart,
+          groupLeft + drawX * options.pixelSize,
+          groupTop + drawY * options.pixelSize,
+          options.pixelSize,
+          options.facing,
+        )
+        continue
+      }
 
-    const anchorPart = manifest.parts[anchor.part]
-    const transform = partTransforms[anchor.part]
-    const partWorld = resolvePartWorld(anchor.part, transform.x, transform.y)
-    const pivot = anchor.pivot ?? [piece.size[0] / 2, piece.size[1] / 2]
-    const usesAttachmentAnchor = !!anchor.rotateWithPart
-    const attachmentX =
-      options.facing === 'right'
-        ? anchor.offset[0]
-        : anchorPart.size[0] - anchor.offset[0] - 1
-    const angle = (anchor.rotateWithPart ? transform.angle : 0) + (anchor.angleOffset ?? 0)
-    if (usesAttachmentAnchor) {
-      const [partPivotX, partPivotY] = resolvePartRotationPivot(anchor.part, anchorPart, options.facing)
-      const dx = attachmentX - partPivotX
-      const dy = anchor.offset[1] - partPivotY
-      const cosA = Math.cos(transform.angle)
-      const sinA = Math.sin(transform.angle)
-      const rotatedAttachmentX = dx * cosA - dy * sinA + partPivotX
-      const rotatedAttachmentY = dx * sinA + dy * cosA + partPivotY
-      const effectivePivotX = options.facing === 'right' ? pivot[0] : piece.size[0] - 1 - pivot[0]
-      const x0 = partWorld.x + (rotatedAttachmentX - effectivePivotX) * options.pixelSize
-      const y0 = partWorld.y + (rotatedAttachmentY - pivot[1]) * options.pixelSize
-      drawRotatedMatrixPart(ctx, piecePart, x0, y0, options.pixelSize, options.facing, angle, pivot[0], pivot[1])
-      return
-    }
+      const anchorPart = manifest.parts[anchor.part]
+      const transform = partTransforms[anchor.part]
+      const partWorld = resolvePartWorld(anchor.part, transform.x, transform.y)
+      const pivot = anchor.pivot ?? [entry.size[0] / 2, entry.size[1] / 2]
+      const usesAttachmentAnchor = !!anchor.rotateWithPart
+      const attachmentX =
+        options.facing === 'right'
+          ? resolvedAnchorX
+          : anchorPart.size[0] - resolvedAnchorX - 1
+      const angle = (anchor.rotateWithPart ? transform.angle : 0) + (anchor.angleOffset ?? 0)
+      if (usesAttachmentAnchor) {
+        const [partPivotX, partPivotY] = resolvePartRotationPivot(anchor.part, anchorPart, options.facing)
+        const dx = attachmentX - partPivotX
+        const dy = resolvedAnchorY - partPivotY
+        const cosA = Math.cos(transform.angle)
+        const sinA = Math.sin(transform.angle)
+        const rotatedAttachmentX = dx * cosA - dy * sinA + partPivotX
+        const rotatedAttachmentY = dx * sinA + dy * cosA + partPivotY
+        const effectivePivotX = options.facing === 'right' ? pivot[0] : entry.size[0] - 1 - pivot[0]
+        const x0 = partWorld.x + (rotatedAttachmentX - effectivePivotX) * options.pixelSize
+        const y0 = partWorld.y + (rotatedAttachmentY - pivot[1]) * options.pixelSize
+        drawRotatedMatrixPart(ctx, piecePart, x0, y0, options.pixelSize, options.facing, angle, pivot[0], pivot[1])
+        continue
+      }
 
-    const drawLocalX = options.facing === 'right' ? anchor.offset[0] : anchorPart.size[0] - anchor.offset[0] - piece.size[0]
-    const drawLocalY = anchor.offset[1]
-    const x0 = partWorld.x + drawLocalX * options.pixelSize
-    const y0 = partWorld.y + drawLocalY * options.pixelSize
-    drawMatrixPart(ctx, piecePart, x0, y0, options.pixelSize, options.facing)
+      const drawLocalX =
+        options.facing === 'right' ? resolvedAnchorX : anchorPart.size[0] - resolvedAnchorX - entry.size[0]
+      const drawLocalY = resolvedAnchorY
+      const x0 = partWorld.x + drawLocalX * options.pixelSize
+      const y0 = partWorld.y + drawLocalY * options.pixelSize
+      drawMatrixPart(ctx, piecePart, x0, y0, options.pixelSize, options.facing)
+    }
   }
 
   const drawHandEquipmentForArm = (armKey: MatrixPartKey) => {
@@ -441,15 +482,16 @@ export function drawMatrixCharacter(
   }
 
   drawArmPart(armBackKey, armOffsets[armBackKey].x, armOffsets[armBackKey].y, armOffsets[armBackKey].angle)
-  drawHandEquipmentForArm(armBackKey)
   drawLegPart(backLegKey, legOffsets[backLegKey].x, legOffsets[backLegKey].y, legOffsets[backLegKey].angle)
   drawLegPart(frontLegKey, legOffsets[frontLegKey].x, legOffsets[frontLegKey].y, legOffsets[frontLegKey].angle)
   drawPart('torso', partTransforms.torso.x, partTransforms.torso.y)
+  drawArmPart(armFrontKey, armOffsets[armFrontKey].x, armOffsets[armFrontKey].y, armOffsets[armFrontKey].angle)
   const armor = options.equipment?.armor
   if (armor) drawEquipmentPiece(armor)
-  drawPart('head', partTransforms.head.x, partTransforms.head.y)
   const helmet = options.equipment?.helmet
-  if (helmet) drawEquipmentPiece(helmet)
-  drawArmPart(armFrontKey, armOffsets[armFrontKey].x, armOffsets[armFrontKey].y, armOffsets[armFrontKey].angle)
+  if (helmet) drawEquipmentPiece(helmet, 'back')
+  drawPart('head', partTransforms.head.x, partTransforms.head.y)
+  if (helmet) drawEquipmentPiece(helmet, 'front')
+  drawHandEquipmentForArm(armBackKey)
   drawHandEquipmentForArm(armFrontKey)
 }

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Pause, Play } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import pointMatrixData from '@/game-center/pixel-knight/assets/knight-point-matrix.json'
 import armorData from '@/game-center/pixel-knight/assets/equipment/recruit-armor.json'
 import helmetData from '@/game-center/pixel-knight/assets/equipment/recruit-helmet.json'
+import helmetAzureData from '@/game-center/pixel-knight/assets/equipment/recruit-helmet-azure.json'
 import shieldData from '@/game-center/pixel-knight/assets/equipment/recruit-shield.json'
 import swordData from '@/game-center/pixel-knight/assets/equipment/recruit-sword.json'
 import {
@@ -20,19 +21,21 @@ import {
 const CANVAS_WIDTH = 960
 const CANVAS_HEIGHT = 540
 const PIXEL_SIZE = 8
-const PREVIEW_CANVAS_WIDTH = 320
-const PREVIEW_CANVAS_HEIGHT = 180
-const PREVIEW_PIXEL_SIZE = 4
 const BASE_ATTACK_DURATION_MS = 420
 
 type DemoMode = MatrixCharacterMode
 type Facing = MatrixFacing
 
-const equipmentCatalog: Record<MatrixEquipmentSlot, { name: string; piece: MatrixEquipmentPiece }> = {
-  helmet: { name: '头盔', piece: helmetData as MatrixEquipmentPiece },
-  armor: { name: '盔甲', piece: armorData as MatrixEquipmentPiece },
-  mainHand: { name: '主手·单手剑', piece: swordData as MatrixEquipmentPiece },
-  offHand: { name: '副手·盾牌', piece: shieldData as MatrixEquipmentPiece },
+const helmetVariants: MatrixEquipmentPiece[] = [
+  helmetData as MatrixEquipmentPiece,
+  helmetAzureData as unknown as MatrixEquipmentPiece,
+]
+
+const equipmentCatalog: Record<MatrixEquipmentSlot, MatrixEquipmentPiece> = {
+  helmet: helmetData as MatrixEquipmentPiece,
+  armor: armorData as MatrixEquipmentPiece,
+  mainHand: swordData as MatrixEquipmentPiece,
+  offHand: shieldData as MatrixEquipmentPiece,
 }
 
 function EquipmentPreview({ piece }: { piece: MatrixEquipmentPiece }) {
@@ -44,15 +47,29 @@ function EquipmentPreview({ piece }: { piece: MatrixEquipmentPiece }) {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
+    const entries = piece.parts
+      ? Object.values(piece.parts).sort((a, b) => {
+          const rank = (layer?: 'back' | 'base' | 'front') => (layer === 'back' ? 0 : layer === 'front' ? 2 : 1)
+          return rank(a.layer) - rank(b.layer)
+        })
+      : piece.size && piece.points
+        ? [{ size: piece.size, points: piece.points }]
+        : []
+    if (entries.length === 0) return
+
+    const width = Math.max(...entries.map((entry) => entry.size[0]))
+    const height = Math.max(...entries.map((entry) => entry.size[1]))
     const pixel = 3
-    canvas.width = piece.size[0] * pixel
-    canvas.height = piece.size[1] * pixel
+    canvas.width = width * pixel
+    canvas.height = height * pixel
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.imageSmoothingEnabled = false
 
-    for (const point of piece.points) {
-      ctx.fillStyle = point.color
-      ctx.fillRect(point.x * pixel, point.y * pixel, pixel, pixel)
+    for (const entry of entries) {
+      for (const point of entry.points) {
+        ctx.fillStyle = point.color
+        ctx.fillRect(point.x * pixel, point.y * pixel, pixel, pixel)
+      }
     }
   }, [piece])
 
@@ -103,7 +120,6 @@ function drawGround(ctx: CanvasRenderingContext2D, timeMs: number) {
 export default function PixelKnightCharacterDemoView() {
   const navigate = useNavigate()
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const previewCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const pausedRef = useRef(false)
   const modeRef = useRef<DemoMode>('walk')
   const manifestRef = useRef<MatrixManifest | null>(null)
@@ -115,12 +131,14 @@ export default function PixelKnightCharacterDemoView() {
   const [paused, setPaused] = useState(false)
   const [mode, setMode] = useState<DemoMode>('walk')
   const [ready, setReady] = useState(false)
+  const [selectedHelmetId, setSelectedHelmetId] = useState(helmetAzureData.id as string)
   const [equippedSlots, setEquippedSlots] = useState<Record<MatrixEquipmentSlot, boolean>>({
     helmet: true,
     armor: true,
     mainHand: true,
     offHand: true,
   })
+  const selectedHelmet = helmetVariants.find((piece) => piece.id === selectedHelmetId) ?? helmetVariants[0]
 
   useEffect(() => {
     pausedRef.current = paused
@@ -137,11 +155,9 @@ export default function PixelKnightCharacterDemoView() {
 
   useEffect(() => {
     const canvas = canvasRef.current
-    const previewCanvas = previewCanvasRef.current
-    if (!canvas || !previewCanvas) return
+    if (!canvas) return
     const ctx = canvas.getContext('2d')
-    const previewCtx = previewCanvas.getContext('2d')
-    if (!ctx || !previewCtx) return
+    if (!ctx) return
 
     let disposed = false
     let animationFrame = 0
@@ -187,10 +203,10 @@ export default function PixelKnightCharacterDemoView() {
 
       if (ready && manifestRef.current) {
         const equippedPieces: Partial<Record<MatrixEquipmentSlot, MatrixEquipmentPiece | null>> = {
-          helmet: equippedSlots.helmet ? equipmentCatalog.helmet.piece : null,
-          armor: equippedSlots.armor ? equipmentCatalog.armor.piece : null,
-          mainHand: equippedSlots.mainHand ? equipmentCatalog.mainHand.piece : null,
-          offHand: equippedSlots.offHand ? equipmentCatalog.offHand.piece : null,
+          helmet: equippedSlots.helmet ? selectedHelmet : null,
+          armor: equippedSlots.armor ? equipmentCatalog.armor : null,
+          mainHand: equippedSlots.mainHand ? equipmentCatalog.mainHand : null,
+          offHand: equippedSlots.offHand ? equipmentCatalog.offHand : null,
         }
         const actionTimeMs =
           modeRef.current === 'attack' && attackStartMsRef.current !== null
@@ -207,29 +223,6 @@ export default function PixelKnightCharacterDemoView() {
           attackDurationMs: attackDurationMsRef.current,
           equipment: equippedPieces,
         })
-
-        previewCtx.fillStyle = '#000000'
-        previewCtx.fillRect(0, 0, PREVIEW_CANVAS_WIDTH, PREVIEW_CANVAS_HEIGHT)
-        drawMatrixCharacter(previewCtx, manifestRef.current, {
-          actorX: 82,
-          actorFeetY: 156,
-          pixelSize: PREVIEW_PIXEL_SIZE,
-          facing: 'right',
-          mode: 'idle',
-          timeMs: elapsed,
-          attackDurationMs: attackDurationMsRef.current,
-          equipment: equippedPieces,
-        })
-        drawMatrixCharacter(previewCtx, manifestRef.current, {
-          actorX: 238,
-          actorFeetY: 156,
-          pixelSize: PREVIEW_PIXEL_SIZE,
-          facing: 'left',
-          mode: 'idle',
-          timeMs: elapsed,
-          attackDurationMs: attackDurationMsRef.current,
-          equipment: equippedPieces,
-        })
       }
 
       animationFrame = requestAnimationFrame(render)
@@ -240,7 +233,7 @@ export default function PixelKnightCharacterDemoView() {
       disposed = true
       cancelAnimationFrame(animationFrame)
     }
-  }, [ready, equippedSlots])
+  }, [ready, equippedSlots, selectedHelmet])
 
   const triggerAttack = () => {
     if (modeRef.current === 'attack' && attackStartMsRef.current !== null) {
@@ -273,6 +266,14 @@ export default function PixelKnightCharacterDemoView() {
             >
               <ArrowLeft />
               返回游戏
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              asChild
+              className="border-[#455037]/18 bg-[#f7efd7]/70 text-[#243019] hover:bg-[#fff7df]"
+            >
+              <Link to="/games/pixel-knight/pixel-editor">像素编辑器</Link>
             </Button>
           </div>
         </div>
@@ -337,46 +338,62 @@ export default function PixelKnightCharacterDemoView() {
                 </Button>
               </div>
 
-              <div className="overflow-hidden rounded-[1.5rem] border border-[#232323] bg-black">
-                <canvas
-                  ref={previewCanvasRef}
-                  width={PREVIEW_CANVAS_WIDTH}
-                  height={PREVIEW_CANVAS_HEIGHT}
-                  className="block h-auto w-full"
-                  style={{ imageRendering: 'pixelated' }}
-                />
-              </div>
-
-              <div className="rounded-[1.25rem] border border-[#495738]/14 bg-[#f7efd8]/72 p-3">
+              <div className="rounded-[1.35rem] border border-[#495738]/14 bg-[#f7efd8]/72 p-3 sm:p-4">
                 <div className="text-[0.68rem] tracking-[0.26em] text-[#6c7753] uppercase">装备面板</div>
-                <div className="mt-2 grid gap-2">
+                <div className="mt-3 grid gap-2 md:grid-cols-2">
                   {(Object.keys(equipmentCatalog) as MatrixEquipmentSlot[]).map((slot) => {
                     const equipped = equippedSlots[slot]
-                    const item = equipmentCatalog[slot]
+                    const item = slot === 'helmet' ? selectedHelmet : equipmentCatalog[slot]
                     return (
-                      <div key={slot} className="flex items-center justify-between rounded-lg border border-[#495738]/12 bg-[#fff6e2]/80 px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <EquipmentPreview piece={item.piece} />
-                          <div className="text-sm text-[#334126]">{item.name}</div>
+                      <div
+                        key={slot}
+                        className="rounded-xl border border-[#495738]/12 bg-[#fff6e2]/80 px-3 py-2.5"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <EquipmentPreview piece={item} />
+                            <div className="text-sm text-[#334126]">{item.name}</div>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={equipped ? 'default' : 'outline'}
+                            onClick={() =>
+                              setEquippedSlots((current) => ({
+                                ...current,
+                                [slot]: !current[slot],
+                              }))
+                            }
+                            className={
+                              equipped
+                                ? 'h-8 bg-[#2f4328] text-[#f6f0de] hover:bg-[#22331d]'
+                                : 'h-8 border-[#455037]/20 bg-[#f8efd8]/70 text-[#243019] hover:bg-[#fff7df]'
+                            }
+                          >
+                            {equipped ? '卸下' : '穿上'}
+                          </Button>
                         </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={equipped ? 'default' : 'outline'}
-                          onClick={() =>
-                            setEquippedSlots((current) => ({
-                              ...current,
-                              [slot]: !current[slot],
-                            }))
-                          }
-                          className={
-                            equipped
-                              ? 'h-8 bg-[#2f4328] text-[#f6f0de] hover:bg-[#22331d]'
-                              : 'h-8 border-[#455037]/20 bg-[#f8efd8]/70 text-[#243019] hover:bg-[#fff7df]'
-                          }
-                        >
-                          {equipped ? '卸下' : '穿上'}
-                        </Button>
+                        {slot === 'helmet' ? (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {helmetVariants.map((piece) => {
+                              const active = piece.id === selectedHelmetId
+                              return (
+                                <button
+                                  key={piece.id}
+                                  type="button"
+                                  onClick={() => setSelectedHelmetId(piece.id)}
+                                  className={
+                                    active
+                                      ? 'rounded-md border border-[#2f4328]/40 bg-[#2f4328] px-2 py-1 text-xs text-[#f6f0de]'
+                                      : 'rounded-md border border-[#455037]/20 bg-[#f8efd8]/70 px-2 py-1 text-xs text-[#243019]'
+                                  }
+                                >
+                                  {piece.name}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        ) : null}
                       </div>
                     )
                   })}
