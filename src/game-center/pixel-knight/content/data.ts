@@ -149,30 +149,30 @@ export const skills: SkillDef[] = [
 ]
 
 export const legendaryPowers: LegendaryPowerDef[] = [
-  { id: 'whirlwind-trail', name: '烈风刻印', description: '旋风斩会洒落持续灼光。' },
-  { id: 'shield-nova', name: '圣盾回响', description: '盾击命中后额外释放一次小型震波。' },
-  { id: 'holy-trail', name: '曙光踏痕', description: '圣光突进在路径上留下神圣轨迹。' },
-  { id: 'blessing-chain', name: '辉芒传导', description: '祝福期间每秒释放追踪圣光。' },
-  { id: 'dash-guard', name: '守御翻滚', description: '闪避结束后获得短暂减伤。' },
-  { id: 'crit-brand', name: '裂锋铭刻', description: '突进命中的敌人更易受到暴击。' },
-  { id: 'sunburst', name: '晨焰余辉', description: '击败精英时会炸开一圈圣焰。' },
-  { id: 'bulwark', name: '光壁契章', description: '生命较低时自动提升护甲。' },
-  { id: 'reverberation', name: '旋斩余响', description: '旋风结束后触发一次额外重击。' },
-  { id: 'meadow-grace', name: '草原赐福', description: '每次击中都有几率回复微量生命。' },
-  { id: 'gilded-edge', name: '镀金锋芒', description: '稀有和传奇掉落时额外获得金币。' },
-  { id: 'boss-hunter', name: '猎王纹章', description: '对 Boss 造成的伤害提高。' },
+  { id: 'whirlwind-trail', name: '旋风余波', description: '旋风斩会留下持续伤害区域。' },
+  { id: 'shield-nova', name: '盾击扩散', description: '盾击命中后会触发一次小范围伤害。' },
+  { id: 'holy-trail', name: '突进轨迹', description: '圣光突进会在路径上留下伤害轨迹。' },
+  { id: 'blessing-chain', name: '祝福连击', description: '祝福期间每秒释放一次追踪光弹。' },
+  { id: 'dash-guard', name: '翻滚护甲', description: '闪避结束后获得短暂减伤。' },
+  { id: 'crit-brand', name: '易伤标记', description: '被突进命中的敌人更容易被暴击。' },
+  { id: 'sunburst', name: '精英爆裂', description: '击败精英时会触发一次范围爆炸。' },
+  { id: 'bulwark', name: '低血护甲', description: '生命较低时自动提高护甲。' },
+  { id: 'reverberation', name: '旋斩追加', description: '旋风结束后追加一次重击。' },
+  { id: 'meadow-grace', name: '击中回复', description: '每次击中都有概率回复少量生命。' },
+  { id: 'gilded-edge', name: '掉落金币', description: '稀有和传奇掉落时额外获得金币。' },
+  { id: 'boss-hunter', name: '首领克制', description: '对 Boss 造成的伤害提高。' },
 ]
 
 export const setBonuses: SetBonusDef[] = [
-  { id: 'dawn-guard-2', name: '曙光守誓 2 件', pieces: 2, description: '护甲提高 18，旋风斩持续时间略微增加。' },
-  { id: 'dawn-guard-4', name: '曙光守誓 4 件', pieces: 4, description: '盾击附带圣光爆炸，并让祝福期间的伤害提高。' },
+  { id: 'dawn-guard-2', name: '守卫套装 2 件', pieces: 2, description: '护甲提高 18，旋风斩持续时间略微增加。' },
+  { id: 'dawn-guard-4', name: '守卫套装 4 件', pieces: 4, description: '盾击附带范围爆炸，祝福期间伤害提高。' },
 ]
 
 const itemSlotNames: Record<EquipmentSlot, string[]> = {
-  weapon: ['晨刃长剑', '金纹骑士剑', '曙辉重剑'],
-  shield: ['晨纹盾', '圣堂鸢盾', '曙光塔盾'],
-  helmet: ['巡礼头冠', '风痕骑盔', '晶羽头饰'],
-  armor: ['守誓胸甲', '暖阳战衣', '青藤铠衣'],
+  weapon: ['铁剑', '骑士长剑', '重剑'],
+  shield: ['木盾', '骑士盾', '塔盾'],
+  helmet: ['布帽', '铁盔', '护面盔'],
+  armor: ['铁甲', '链甲', '板甲'],
   gloves: ['铆钉手套', '圣印护手', '迅击臂甲'],
   boots: ['巡游靴', '流光长靴', '石阶战靴'],
   amulet: ['牧晨吊坠', '辉环护符', '矿心坠饰'],
@@ -193,10 +193,10 @@ const slotStatWeights: Record<EquipmentSlot, number> = {
 }
 
 const setPiecesBySlot: Partial<Record<EquipmentSlot, string>> = {
-  helmet: '曙光守誓·冠',
-  armor: '曙光守誓·甲',
-  gloves: '曙光守誓·护',
-  boots: '曙光守誓·靴',
+  helmet: '守卫套装·头',
+  armor: '守卫套装·甲',
+  gloves: '守卫套装·手',
+  boots: '守卫套装·靴',
 }
 
 function randomFrom<T>(values: T[]) {
@@ -445,4 +445,3 @@ export function slotLabel(slot: EquipmentSlot) {
       return '右戒'
   }
 }
-

@@ -250,7 +250,8 @@ function resolveEquipmentLayerEntries(
   }
 
   if (piece.size && piece.points) {
-    return layer === 'all' ? [{ size: piece.size, points: piece.points }] : []
+    if (layer === 'back') return []
+    return [{ size: piece.size, points: piece.points }]
   }
   return []
 }

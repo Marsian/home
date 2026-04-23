@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { ArrowLeft, Pencil } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { ArrowLeft, ChevronDown, ChevronRight, Pencil } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,11 @@ type MatrixPart = {
 }
 type MatrixAsset = { parts: Record<string, MatrixPart> }
 type JsonModule = { default: unknown }
+type FileTreeNode = {
+  name: string
+  path?: string
+  children?: FileTreeNode[]
+}
 
 const assetJsonModules = import.meta.glob('/src/game-center/pixel-knight/assets/**/*.json', {
   eager: true,
@@ -84,10 +89,55 @@ function buildPreview(value: unknown) {
   return { pixels: [] as PreviewPixel[], width: 1, height: 1 }
 }
 
+function buildFileTree(paths: string[]): FileTreeNode[] {
+  const root: FileTreeNode = { name: 'root', children: [] }
+
+  for (const fullPath of paths) {
+    const relativePath = fullPath.replace('/src/game-center/pixel-knight/assets/', '')
+    const segments = relativePath.split('/').filter(Boolean)
+    let cursor = root
+
+    for (let index = 0; index < segments.length; index += 1) {
+      const segment = segments[index]
+      const isLeaf = index === segments.length - 1
+      const children = cursor.children ?? []
+      let child = children.find((node) => node.name === segment)
+      if (!child) {
+        child = { name: segment, children: isLeaf ? undefined : [] }
+        children.push(child)
+        cursor.children = children
+      }
+      if (isLeaf) {
+        child.path = fullPath
+      } else {
+        child.children = child.children ?? []
+        cursor = child
+      }
+    }
+  }
+
+  const sortNodes = (nodes: FileTreeNode[]) => {
+    nodes.sort((a, b) => {
+      const aDir = Boolean(a.children?.length)
+      const bDir = Boolean(b.children?.length)
+      if (aDir !== bDir) return aDir ? -1 : 1
+      return a.name.localeCompare(b.name)
+    })
+    for (const node of nodes) {
+      if (node.children?.length) sortNodes(node.children)
+    }
+  }
+
+  sortNodes(root.children ?? [])
+  return root.children ?? []
+}
+
 export default function PixelKnightPixelEditorFilesView() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const filePaths = useMemo(() => Object.keys(assetJsonModules).sort(), [])
+  const fileTree = useMemo(() => buildFileTree(filePaths), [filePaths])
+  const [expandedDirs, setExpandedDirs] = useState<Record<string, boolean>>({})
 
   const selectedPath = useMemo(() => {
     const fromQuery = searchParams.get('file')
@@ -104,6 +154,13 @@ export default function PixelKnightPixelEditorFilesView() {
 
   const selectFile = (path: string) => {
     setSearchParams({ file: path })
+  }
+
+  const toggleDir = (id: string) => {
+    setExpandedDirs((prev) => {
+      const current = prev[id] ?? true
+      return { ...prev, [id]: !current }
+    })
   }
 
   const goEdit = () => {
@@ -139,23 +196,13 @@ export default function PixelKnightPixelEditorFilesView() {
             <aside className="space-y-3 rounded-[1.1rem] border border-[#495738]/14 bg-[#fff6e2]/75 p-3">
               <div className="text-xs tracking-[0.26em] text-[#6c7753] uppercase">文件列表 ({filePaths.length})</div>
               <div className="max-h-[560px] space-y-2 overflow-auto pr-1">
-                {filePaths.map((path) => {
-                  const active = path === selectedPath
-                  return (
-                    <button
-                      key={path}
-                      type="button"
-                      onClick={() => selectFile(path)}
-                      className={
-                        active
-                          ? 'w-full rounded-md border border-[#2f4328]/40 bg-[#2f4328] px-2 py-1.5 text-left text-xs text-[#f6f0de]'
-                          : 'w-full rounded-md border border-[#455037]/20 bg-[#f8efd8]/70 px-2 py-1.5 text-left text-xs text-[#243019]'
-                      }
-                    >
-                      {path.replace('/src/game-center/pixel-knight/assets/', '')}
-                    </button>
-                  )
-                })}
+                <FileTreeView
+                  nodes={fileTree}
+                  selectedPath={selectedPath}
+                  expandedDirs={expandedDirs}
+                  onToggleDir={toggleDir}
+                  onSelectFile={selectFile}
+                />
               </div>
             </aside>
 
@@ -209,5 +256,73 @@ export default function PixelKnightPixelEditorFilesView() {
 
       </div>
     </main>
+  )
+}
+
+function FileTreeView({
+  nodes,
+  selectedPath,
+  expandedDirs,
+  onToggleDir,
+  onSelectFile,
+  depth = 0,
+  parentId = '',
+}: {
+  nodes: FileTreeNode[]
+  selectedPath: string
+  expandedDirs: Record<string, boolean>
+  onToggleDir: (id: string) => void
+  onSelectFile: (path: string) => void
+  depth?: number
+  parentId?: string
+}) {
+  return (
+    <div className="space-y-1">
+      {nodes.map((node) => {
+        const nodeId = parentId ? `${parentId}/${node.name}` : node.name
+        const isDir = Boolean(node.children?.length)
+        const isExpanded = expandedDirs[nodeId] ?? true
+        const isActiveFile = Boolean(node.path && node.path === selectedPath)
+        return (
+          <div key={nodeId}>
+            {isDir ? (
+              <button
+                type="button"
+                onClick={() => onToggleDir(nodeId)}
+                className="flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-xs text-[#243019] hover:bg-[#f8efd8]/70"
+                style={{ paddingLeft: `${8 + depth * 14}px` }}
+              >
+                {isExpanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
+                <span>{node.name}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => node.path && onSelectFile(node.path)}
+                className={
+                  isActiveFile
+                    ? 'w-full rounded-md border border-[#2f4328]/40 bg-[#2f4328] px-2 py-1 text-left text-xs text-[#f6f0de]'
+                    : 'w-full rounded-md border border-transparent px-2 py-1 text-left text-xs text-[#243019] hover:bg-[#f8efd8]/70'
+                }
+                style={{ paddingLeft: `${26 + depth * 14}px` }}
+              >
+                {node.name}
+              </button>
+            )}
+            {isDir && isExpanded && node.children?.length ? (
+              <FileTreeView
+                nodes={node.children}
+                selectedPath={selectedPath}
+                expandedDirs={expandedDirs}
+                onToggleDir={onToggleDir}
+                onSelectFile={onSelectFile}
+                depth={depth + 1}
+                parentId={nodeId}
+              />
+            ) : null}
+          </div>
+        )
+      })}
+    </div>
   )
 }

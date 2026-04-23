@@ -3,12 +3,12 @@ import { ArrowLeft, Pause, Play } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
-import pointMatrixData from '@/game-center/pixel-knight/assets/knight-point-matrix.json'
-import armorData from '@/game-center/pixel-knight/assets/equipment/recruit-armor.json'
-import helmetData from '@/game-center/pixel-knight/assets/equipment/recruit-helmet.json'
-import helmetAzureData from '@/game-center/pixel-knight/assets/equipment/recruit-helmet-azure.json'
-import shieldData from '@/game-center/pixel-knight/assets/equipment/recruit-shield.json'
-import swordData from '@/game-center/pixel-knight/assets/equipment/recruit-sword.json'
+import pointMatrixData from '@/game-center/pixel-knight/assets/characters/knight.json'
+import armorData from '@/game-center/pixel-knight/assets/equipment/armor/iron-armor.json'
+import helmetData from '@/game-center/pixel-knight/assets/equipment/helmet/cloth-cap.json'
+import helmetAzureData from '@/game-center/pixel-knight/assets/equipment/helmet/iron-helmet.json'
+import shieldData from '@/game-center/pixel-knight/assets/equipment/off-hand/wood-shield.json'
+import swordData from '@/game-center/pixel-knight/assets/equipment/main-hand/iron-sword.json'
 import {
   drawMatrixCharacter,
   type MatrixEquipmentPiece,
