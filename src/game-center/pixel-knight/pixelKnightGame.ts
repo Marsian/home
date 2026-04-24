@@ -1,5 +1,16 @@
 import { difficultyConfigs, generateLootItems, getDungeonById, skills } from './content/data'
+import knightManifestData from '@/game-center/pixel-knight/assets/characters/knight.json'
+import shieldMatrixData from '@/game-center/pixel-knight/assets/equipment/off-hand/wood-shield.json'
+import swordMatrixData from '@/game-center/pixel-knight/assets/equipment/main-hand/iron-sword.json'
 import { getPixelKnightHeroSpriteAsset } from './game/preload'
+import {
+  drawMatrixCharacter,
+  type MatrixCharacterMode,
+  type MatrixEquipmentPiece,
+  type MatrixEquipmentSlot,
+  type MatrixFacing,
+  type MatrixManifest,
+} from './rendering/matrixCharacterRenderer'
 import type {
   DifficultyTier,
   DungeonId,
@@ -29,6 +40,10 @@ type PlayerState = {
   blessingCooldownMs: number
   dodgeCooldownMs: number
   whirlwindCooldownMs: number
+  moving: boolean
+  attackAnimMs: number
+  attackAnimElapsedMs: number
+  locomotionAnimElapsedMs: number
 }
 
 type EnemyKind = 'mossling' | 'needlebat' | 'vinebrute' | 'sunpriest'
@@ -79,6 +94,13 @@ const TILE = 60
 const WORLD_COLS = 48
 const WORLD_ROWS = 27
 const PORTAL_RADIUS = 30
+const MATRIX_PLAYER_PIXEL_SIZE = 3
+const MATRIX_ATTACK_DURATION_MS = 420
+const matrixKnightManifest = knightManifestData as MatrixManifest
+const matrixKnightEquipment: Partial<Record<MatrixEquipmentSlot, MatrixEquipmentPiece | null>> = {
+  mainHand: swordMatrixData as MatrixEquipmentPiece,
+  offHand: shieldMatrixData as MatrixEquipmentPiece,
+}
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value))
@@ -350,6 +372,10 @@ export class PixelKnightGame {
       blessingCooldownMs: 0,
       dodgeCooldownMs: 0,
       whirlwindCooldownMs: 0,
+      moving: false,
+      attackAnimMs: 0,
+      attackAnimElapsedMs: 0,
+      locomotionAnimElapsedMs: 0,
     }
     this.enemies = spawnEnemyClusters(built.rows, config.dungeonId, config.difficulty)
     this.projectiles = []
@@ -473,6 +499,10 @@ export class PixelKnightGame {
     this.player.blessingCooldownMs = Math.max(0, this.player.blessingCooldownMs - dt)
     this.player.dodgeCooldownMs = Math.max(0, this.player.dodgeCooldownMs - dt)
     this.player.whirlwindCooldownMs = Math.max(0, this.player.whirlwindCooldownMs - dt)
+    this.player.attackAnimMs = Math.max(0, this.player.attackAnimMs - dt)
+    this.player.attackAnimElapsedMs =
+      this.player.attackAnimMs > 0 ? Math.min(MATRIX_ATTACK_DURATION_MS, this.player.attackAnimElapsedMs + dt) : 0
+    this.player.locomotionAnimElapsedMs += dt
     this.player.invulnerableMs = Math.max(0, this.player.invulnerableMs - dt)
     this.player.dashGuardMs = Math.max(0, this.player.dashGuardMs - dt)
     this.player.blessingMs = Math.max(0, this.player.blessingMs - dt)
@@ -483,6 +513,7 @@ export class PixelKnightGame {
       y: (this.keys.has('KeyS') ? 1 : 0) - (this.keys.has('KeyW') ? 1 : 0),
     }
     const move = normalize(input)
+    this.player.moving = Math.abs(move.x) > 0 || Math.abs(move.y) > 0
     const speed = (this.run.stats.moveSpeed + (this.player.whirlMs > 0 ? -30 : 0)) * (dt / 1000)
     this.tryMovePlayer(move.x * speed, move.y * speed)
 
@@ -592,6 +623,8 @@ export class PixelKnightGame {
   private useBasicAttack() {
     if (!this.player || !this.run || this.player.attackCooldownMs > 0) return
     this.player.attackCooldownMs = skills.find((skill) => skill.id === 'basic-slash')?.cooldownMs ?? 360
+    this.player.attackAnimMs = MATRIX_ATTACK_DURATION_MS
+    this.player.attackAnimElapsedMs = 0
     const camera = this.getCamera()
     const worldMouse = { x: this.mouse.x + camera.x, y: this.mouse.y + camera.y }
     const direction = normalize({ x: worldMouse.x - this.player.x, y: worldMouse.y - this.player.y })
@@ -796,6 +829,34 @@ export class PixelKnightGame {
     return true
   }
 
+  private resolvePlayerMatrixMode(player: PlayerState): MatrixCharacterMode {
+    if (player.attackAnimMs > 0) return 'attack'
+    return player.moving ? 'walk' : 'idle'
+  }
+
+  private renderMatrixPlayer(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    facing: FacingDirection,
+    player: PlayerState,
+  ) {
+    const matrixFacing: MatrixFacing = facing === 'left' ? 'left' : 'right'
+    drawMatrixCharacter(ctx, matrixKnightManifest, {
+      actorX: x,
+      actorFeetY: y + 8,
+      pixelSize: MATRIX_PLAYER_PIXEL_SIZE,
+      facing: matrixFacing,
+      mode: this.resolvePlayerMatrixMode(player),
+      timeMs: player.locomotionAnimElapsedMs,
+      attackDurationMs: MATRIX_ATTACK_DURATION_MS,
+      attackLocomotionMode: player.moving ? 'walk' : 'idle',
+      locomotionTimeMs: player.locomotionAnimElapsedMs,
+      attackTimeMs: player.attackAnimElapsedMs,
+      equipment: matrixKnightEquipment,
+    })
+  }
+
   private emitHud() {
     const playerCell = this.player
       ? { x: Math.floor(this.player.x / TILE), y: Math.floor(this.player.y / TILE) }
@@ -918,15 +979,7 @@ export class PixelKnightGame {
       const x = this.player.x - camera.x
       const y = this.player.y - camera.y
       const facing = this.getFacingDirection(camera)
-      const renderedSprite = this.renderHeroSprite(ctx, x, y, facing)
-      if (!renderedSprite) {
-        ctx.fillStyle = this.player.blessingMs > 0 ? '#f2df97' : '#f5d8a1'
-        ctx.fillRect(x - 12, y - 16, 24, 18)
-        ctx.fillStyle = '#315a4f'
-        ctx.fillRect(x - 14, y + 2, 28, 18)
-        ctx.fillStyle = '#f1f5e7'
-        ctx.fillRect(x + 10, y - 8, 10, 22)
-      }
+      this.renderMatrixPlayer(ctx, x, y, facing, this.player)
       if (this.player.whirlMs > 0) {
         ctx.strokeStyle = 'rgba(255,243,173,0.8)'
         ctx.lineWidth = 4

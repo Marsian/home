@@ -267,6 +267,9 @@ export function drawMatrixCharacter(
     mode: MatrixCharacterMode
     timeMs: number
     attackDurationMs?: number
+    attackLocomotionMode?: 'idle' | 'walk'
+    locomotionTimeMs?: number
+    attackTimeMs?: number
     equipment?: Partial<Record<MatrixEquipmentSlot, MatrixEquipmentPiece | null>>
   },
 ) {
@@ -276,20 +279,23 @@ export function drawMatrixCharacter(
   const groupLeft = options.actorX - (totalWidth * options.pixelSize) / 2
   const groupTop = options.actorFeetY - totalHeight * options.pixelSize
 
-  const idleBreath = Math.sin(options.timeMs / 280)
-  const walkPhase = (options.timeMs / 1000) * 7
+  const locomotionTimeMs = options.locomotionTimeMs ?? options.timeMs
+  const idleBreath = Math.sin(locomotionTimeMs / 280)
+  const walkPhase = (locomotionTimeMs / 1000) * 7
   const swing = Math.sin(walkPhase)
   const swingOpposite = Math.sin(walkPhase + Math.PI)
 
   const attackDurationMs = Math.max(1, options.attackDurationMs ?? DEFAULT_ATTACK_DURATION_MS)
   const activeWeaponType = options.equipment?.mainHand?.weaponType
+  const attackTimeMs = options.attackTimeMs ?? options.timeMs
   const attackPose =
     options.mode === 'attack'
       ? activeWeaponType === 'sword'
-        ? resolveSwordAttackPose(options.timeMs / attackDurationMs, options.facing)
-        : resolveUnarmedAttackPose(options.timeMs / attackDurationMs, options.facing)
+        ? resolveSwordAttackPose(attackTimeMs / attackDurationMs, options.facing)
+        : resolveUnarmedAttackPose(attackTimeMs / attackDurationMs, options.facing)
       : null
-  const currentMode: MatrixCharacterMode = options.mode === 'attack' ? 'idle' : options.mode
+  const currentMode: MatrixCharacterMode =
+    options.mode === 'attack' ? (options.attackLocomotionMode === 'walk' ? 'walk' : 'idle') : options.mode
   const torsoBob = currentMode === 'idle' ? idleBreath * 0.38 : Math.sin(walkPhase * 2) * 0.9
   const torsoOffsetX = attackPose ? attackPose.torsoDx : 0
   const headBobBase = currentMode === 'idle' ? idleBreath * 0.38 - 0.7 : Math.sin(walkPhase * 2 + 0.4) * 0.8 - 0.7
