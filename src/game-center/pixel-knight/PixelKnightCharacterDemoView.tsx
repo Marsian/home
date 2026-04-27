@@ -196,9 +196,19 @@ export default function PixelKnightCharacterDemoView() {
 
       drawGround(ctx, elapsed)
 
+      const idleBreath = Math.sin(elapsed / 280)
+      const shadowPulse = 0.96 + (modeRef.current === 'idle' ? idleBreath * 0.025 : 0)
       ctx.fillStyle = 'rgba(18,28,16,0.22)'
       ctx.beginPath()
-      ctx.ellipse(actorX, actorFeetY + 10, 72, 18, 0, 0, Math.PI * 2)
+      ctx.ellipse(
+        actorX,
+        actorFeetY + 4 + (modeRef.current === 'idle' ? idleBreath * 0.8 : 0),
+        72 * shadowPulse,
+        18 + (modeRef.current === 'idle' ? idleBreath * 0.35 : 0),
+        0,
+        0,
+        Math.PI * 2,
+      )
       ctx.fill()
 
       if (ready && manifestRef.current) {

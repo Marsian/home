@@ -139,10 +139,11 @@ function CharacterSelectKnightCanvas() {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       ctx.imageSmoothingEnabled = false
 
-      const shadowPulse = 0.92 + Math.sin(elapsed / 300) * 0.04
+      const idleBreath = Math.sin(elapsed / 280)
+      const shadowPulse = 0.94 + idleBreath * 0.035
       ctx.fillStyle = 'rgba(23, 18, 11, 0.34)'
       ctx.beginPath()
-      ctx.ellipse(256, 430, 132 * shadowPulse, 24, 0, 0, Math.PI * 2)
+      ctx.ellipse(256, 414 + idleBreath * 1.2, 108 * shadowPulse, 27 + idleBreath * 0.55, 0, 0, Math.PI * 2)
       ctx.fill()
 
       drawMatrixCharacter(ctx, selectKnightManifest, {
