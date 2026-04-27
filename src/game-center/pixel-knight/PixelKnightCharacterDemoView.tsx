@@ -314,6 +314,18 @@ export default function PixelKnightCharacterDemoView() {
                 </Button>
                 <Button
                   type="button"
+                  variant={mode === 'static' ? 'default' : 'outline'}
+                  onClick={() => setMode('static')}
+                  className={
+                    mode === 'static'
+                      ? 'bg-[#b8773d] text-[#fff5df] hover:bg-[#9a6331]'
+                      : 'border-[#455037]/18 bg-[#f7efd7]/70 text-[#243019] hover:bg-[#fff7df]'
+                  }
+                >
+                  Static
+                </Button>
+                <Button
+                  type="button"
                   variant={mode === 'idle' ? 'default' : 'outline'}
                   onClick={() => setMode('idle')}
                   className={

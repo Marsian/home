@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import characterSelectBg from '@/game-center/pixel-knight/assets/ui/character-select-bg-clean.png'
 
 import type { PreloadProgress } from '../types'
 
@@ -12,8 +13,16 @@ export function LoadingOverlay({ progress, error, onRetry }: LoadingOverlayProps
   const percent = Math.round(progress.ratio * 100)
 
   return (
-    <div className="absolute inset-0 z-40 flex items-center justify-center bg-[linear-gradient(180deg,rgba(29,41,31,0.7),rgba(12,16,13,0.84))] backdrop-blur-[2px]">
-      <div className="w-[min(82vw,440px)] rounded-[1.8rem] border border-[#f7e1a4]/28 bg-[#1c261f]/94 p-6 text-[#f7f0d5] shadow-[0_24px_70px_rgba(0,0,0,0.42)]">
+    <div className="absolute inset-0 z-40 flex items-center justify-center overflow-hidden bg-[#7ec1e7]">
+      <img
+        src={characterSelectBg}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover"
+        draggable={false}
+        style={{ imageRendering: 'pixelated' }}
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(29,41,31,0.22),rgba(12,16,13,0.46))]" />
+      <div className="relative z-10 w-[min(82vw,440px)] rounded-[1.8rem] border border-[#f7e1a4]/28 bg-[#1c261f]/94 p-6 text-[#f7f0d5] shadow-[0_24px_70px_rgba(0,0,0,0.42)]">
         <div className="flex items-end justify-between gap-4">
           <div>
             <div className="text-[0.72rem] tracking-[0.34em] text-[#f9c76a]/78 uppercase">Pixel Knight</div>
@@ -61,4 +70,3 @@ export function LoadingOverlay({ progress, error, onRetry }: LoadingOverlayProps
     </div>
   )
 }
-

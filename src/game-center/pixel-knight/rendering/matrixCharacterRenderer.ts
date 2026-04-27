@@ -1,5 +1,5 @@
 export type MatrixFacing = 'left' | 'right'
-export type MatrixCharacterMode = 'idle' | 'walk' | 'attack'
+export type MatrixCharacterMode = 'static' | 'idle' | 'walk' | 'attack'
 export type MatrixPartKey = 'head' | 'torso' | 'leftArm' | 'rightArm' | 'leftLeg' | 'rightLeg'
 export type MatrixEquipmentSlot = 'mainHand' | 'offHand' | 'helmet' | 'armor'
 export type MatrixWeaponType = 'sword'
@@ -279,7 +279,7 @@ export function drawMatrixCharacter(
   const groupLeft = options.actorX - (totalWidth * options.pixelSize) / 2
   const groupTop = options.actorFeetY - totalHeight * options.pixelSize
 
-  const locomotionTimeMs = options.locomotionTimeMs ?? options.timeMs
+  const locomotionTimeMs = options.mode === 'static' ? 0 : options.locomotionTimeMs ?? options.timeMs
   const idleBreath = Math.sin(locomotionTimeMs / 280)
   const walkPhase = (locomotionTimeMs / 1000) * 7
   const swing = Math.sin(walkPhase)
@@ -296,9 +296,11 @@ export function drawMatrixCharacter(
       : null
   const currentMode: MatrixCharacterMode =
     options.mode === 'attack' ? (options.attackLocomotionMode === 'walk' ? 'walk' : 'idle') : options.mode
-  const torsoBob = currentMode === 'idle' ? idleBreath * 0.38 : Math.sin(walkPhase * 2) * 0.9
+  const torsoBob =
+    currentMode === 'static' ? 0 : currentMode === 'idle' ? idleBreath * 0.38 : Math.sin(walkPhase * 2) * 0.9
   const torsoOffsetX = attackPose ? attackPose.torsoDx : 0
-  const headBobBase = currentMode === 'idle' ? idleBreath * 0.38 - 0.7 : Math.sin(walkPhase * 2 + 0.4) * 0.8 - 0.7
+  const headBobBase =
+    currentMode === 'static' ? 0 : currentMode === 'idle' ? idleBreath * 0.38 - 0.7 : Math.sin(walkPhase * 2 + 0.4) * 0.8 - 0.7
   const headBob = headBobBase + (attackPose ? attackPose.headDy : 0)
   const leftLegPhase = currentMode === 'walk' ? swing : 0
   const rightLegPhase = currentMode === 'walk' ? swingOpposite : 0
