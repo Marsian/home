@@ -47,10 +47,12 @@ import type {
   BaseClassId,
   DungeonSelectState,
   ItemInstance,
+  MapHotspot,
   PixelKnightHudState,
   PixelKnightProfile,
   PreloadProgress,
   RunResult,
+  VillageHotspotKind,
 } from './types'
 import { LoadingOverlay } from './ui/LoadingOverlay'
 
@@ -63,6 +65,7 @@ const initialPreload: PreloadProgress = {
 
 const defaultHud: PixelKnightHudState = {
   phase: 'boot',
+  mapKind: 'village',
   dungeonName: '村庄大厅',
   difficultyLabel: '普通',
   objectiveLabel: '准备中',
@@ -76,6 +79,8 @@ const defaultHud: PixelKnightHudState = {
   minimapRows: [],
   playerCell: { x: 0, y: 0 },
   portalCell: { x: 0, y: 0 },
+  hotspots: [],
+  nearbyHotspot: null,
   recentLoot: [],
   cooldowns: {
     basic: 0,
@@ -234,7 +239,8 @@ export default function PixelKnightView() {
   })
   const [inventoryOpen, setInventoryOpen] = useState(false)
   const [lastResult, setLastResult] = useState<RunResult | null>(null)
-  const [homeStage, setHomeStage] = useState<'character' | 'lobby'>('character')
+  const [homeStage, setHomeStage] = useState<'character' | 'village'>('character')
+  const [activeVillagePanel, setActiveVillagePanel] = useState<VillageHotspotKind | null>(null)
 
   useEffect(() => {
     savePixelKnightProfile(profile)
@@ -257,6 +263,10 @@ export default function PixelKnightView() {
     if (!host) return
     const game = new PixelKnightGame(host, {
       onHud: (state) => setHud(state),
+      onHotspotInteract: (hotspot: MapHotspot) => {
+        setInventoryOpen(false)
+        setActiveVillagePanel(hotspot.kind)
+      },
       onRunComplete: (result) => {
         setLastResult(result)
         setProfile((current) => applyPixelKnightRunResult(current, result))
@@ -312,6 +322,7 @@ export default function PixelKnightView() {
       stats: playerStats,
     })
     setPhase('playing')
+    setActiveVillagePanel(null)
     setInventoryOpen(false)
   }
 
@@ -350,9 +361,10 @@ export default function PixelKnightView() {
 
   const backToHome = () => {
     gameRef.current?.stopToHome()
-    setHomeStage('character')
+    setHomeStage('village')
     setPhase('home')
     setInventoryOpen(false)
+    setActiveVillagePanel(null)
   }
 
   const confirmKnightSelection = () => {
@@ -364,7 +376,9 @@ export default function PixelKnightView() {
         shield: current.equipment.shield ?? createStarterShield(),
       },
     }))
-    setHomeStage('lobby')
+    gameRef.current?.enterVillage(playerStats)
+    setHomeStage('village')
+    setActiveVillagePanel(null)
   }
 
   const showingCharacterSelect = phase === 'home' && homeStage === 'character'
@@ -546,13 +560,22 @@ export default function PixelKnightView() {
               </div>
             ) : null}
 
-            {phase === 'home' && homeStage === 'lobby' ? (
+            {phase === 'home' && homeStage === 'village' && activeVillagePanel === 'portal' ? (
               <div className="absolute inset-0 z-30 flex items-center justify-center bg-[radial-gradient(circle_at_top,rgba(248,222,156,0.16),transparent_24%),linear-gradient(180deg,rgba(9,12,10,0.22),rgba(7,10,8,0.58))] p-4">
                 <div className="grid w-full max-w-5xl gap-4 lg:grid-cols-[1.1fr_0.9fr]">
                   <div className="rounded-[1.8rem] border border-[#f3d48f]/16 bg-[#172019]/86 p-5 backdrop-blur-[3px]">
                     <div className="text-[0.72rem] tracking-[0.3em] text-[#efd9a2]/72 uppercase">Start Run</div>
-                    <div className="mt-2 text-[clamp(2rem,4vw,3.2rem)] font-black tracking-[0.08em] text-[#fbf4dd]">
-                      村庄大厅
+                    <div className="mt-2 flex items-start justify-between gap-3">
+                      <div className="text-[clamp(2rem,4vw,3.2rem)] font-black tracking-[0.08em] text-[#fbf4dd]">
+                        传送门
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveVillagePanel(null)}
+                        className="rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-sm text-[#d6dfcd]"
+                      >
+                        关闭
+                      </button>
                     </div>
                     <div className="mt-4 grid gap-3">
                       {dungeons.map((dungeon) => {
@@ -681,7 +704,20 @@ export default function PixelKnightView() {
               </div>
             ) : null}
 
-            {phase === 'playing' || hud.phase === 'paused' ? (
+            {phase === 'home' && homeStage === 'village' && activeVillagePanel && activeVillagePanel !== 'portal' ? (
+              <VillageSystemPanel
+                kind={activeVillagePanel}
+                profile={profile}
+                playerStats={playerStats}
+                onClose={() => setActiveVillagePanel(null)}
+                onOpenInventory={() => {
+                  setActiveVillagePanel(null)
+                  setInventoryOpen(true)
+                }}
+              />
+            ) : null}
+
+            {(phase === 'home' && homeStage === 'village') || phase === 'playing' || hud.phase === 'paused' ? (
               <>
                 <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-wrap items-start justify-between gap-3 p-4">
                   <div className="min-w-[260px] rounded-[1.2rem] border border-white/10 bg-black/34 px-4 py-3 backdrop-blur-[2px]">
@@ -690,22 +726,26 @@ export default function PixelKnightView() {
                       <span>{hud.difficultyLabel}</span>
                     </div>
                     <div className="mt-2 flex justify-between gap-3 text-sm text-[#f7efd8]">
-                      <span>{hud.portalNearby ? '传送点可交互' : '探索中'}</span>
+                      <span>{hud.nearbyHotspot ? '地标可交互' : hud.mapKind === 'village' ? '村庄漫游' : '探索中'}</span>
                       <span>{hud.encounterLabel}</span>
                     </div>
                     <div className="mt-1 text-xs text-[#dccb9c]">{hud.objectiveLabel}</div>
-                    <div className="mt-3 h-3 overflow-hidden rounded-full border border-[#f3d48f]/14 bg-black/25">
-                      <div
-                        className="h-full bg-[linear-gradient(90deg,#f5d275,#f7f0b1,#9ce59f)]"
-                        style={{ width: `${hud.maxHealth ? (hud.health / hud.maxHealth) * 100 : 0}%` }}
-                      />
-                    </div>
-                    <div className="mt-2 flex justify-between text-sm text-[#f6f0d6]">
-                      <span>
-                        HP {Math.max(0, Math.round(hud.health))}/{Math.round(hud.maxHealth)}
-                      </span>
-                      <span>{formatTime(hud.elapsedMs)}</span>
-                    </div>
+                    {hud.mapKind === 'dungeon' ? (
+                      <>
+                        <div className="mt-3 h-3 overflow-hidden rounded-full border border-[#f3d48f]/14 bg-black/25">
+                          <div
+                            className="h-full bg-[linear-gradient(90deg,#f5d275,#f7f0b1,#9ce59f)]"
+                            style={{ width: `${hud.maxHealth ? (hud.health / hud.maxHealth) * 100 : 0}%` }}
+                          />
+                        </div>
+                        <div className="mt-2 flex justify-between text-sm text-[#f6f0d6]">
+                          <span>
+                            HP {Math.max(0, Math.round(hud.health))}/{Math.round(hud.maxHealth)}
+                          </span>
+                          <span>{formatTime(hud.elapsedMs)}</span>
+                        </div>
+                      </>
+                    ) : null}
                   </div>
 
                   <div className="flex items-start gap-2">
@@ -720,14 +760,16 @@ export default function PixelKnightView() {
                       <Package2 className="mr-2 inline size-4" />
                       背包
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => gameRef.current?.setPaused(hud.phase !== 'paused')}
-                      className="pointer-events-auto rounded-[1rem] border border-white/10 bg-black/34 px-4 py-3 text-sm text-[#f6f0d6] backdrop-blur-[2px]"
-                    >
-                      {hud.phase === 'paused' ? <Play className="mr-2 inline size-4" /> : <Pause className="mr-2 inline size-4" />}
-                      {hud.phase === 'paused' ? '继续' : '暂停'}
-                    </button>
+                    {hud.mapKind === 'dungeon' ? (
+                      <button
+                        type="button"
+                        onClick={() => gameRef.current?.setPaused(hud.phase !== 'paused')}
+                        className="pointer-events-auto rounded-[1rem] border border-white/10 bg-black/34 px-4 py-3 text-sm text-[#f6f0d6] backdrop-blur-[2px]"
+                      >
+                        {hud.phase === 'paused' ? <Play className="mr-2 inline size-4" /> : <Pause className="mr-2 inline size-4" />}
+                        {hud.phase === 'paused' ? '继续' : '暂停'}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
 
@@ -739,10 +781,11 @@ export default function PixelKnightView() {
                         {(hud.recentLoot.length ? hud.recentLoot : ['保持移动，围着敌人切入，再用旋风清场。']).map((entry) => (
                           <div key={entry}>{entry}</div>
                         ))}
-                        {hud.portalNearby ? <div className="text-[#a8f6ff]">靠近传送点，按 `F` 返回村庄。</div> : null}
+                        {hud.nearbyHotspot ? <div className="text-[#a8f6ff]">{hud.nearbyHotspot.prompt}</div> : null}
+                        {hud.portalNearby && hud.mapKind === 'dungeon' ? <div className="text-[#a8f6ff]">靠近传送点，按 `F` 返回村庄。</div> : null}
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                    {hud.mapKind === 'dungeon' ? <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                       {[
                         ['LMB', '斩击', hud.cooldowns.basic],
                         ['RMB', '旋风', hud.cooldowns.whirlwind],
@@ -760,7 +803,7 @@ export default function PixelKnightView() {
                           <div className="mt-1 text-xs text-[#d8cba4]">{Number(cd) > 0 ? `${Math.ceil(Number(cd) / 100) / 10}s` : 'Ready'}</div>
                         </div>
                       ))}
-                    </div>
+                    </div> : null}
                   </div>
                 </div>
               </>
@@ -900,6 +943,84 @@ export default function PixelKnightView() {
   )
 }
 
+function VillageSystemPanel({
+  kind,
+  profile,
+  playerStats,
+  onClose,
+  onOpenInventory,
+}: {
+  kind: VillageHotspotKind
+  profile: PixelKnightProfile
+  playerStats: ReturnType<typeof derivePixelKnightStats>
+  onClose: () => void
+  onOpenInventory: () => void
+}) {
+  const content: Record<VillageHotspotKind, { title: string; eyebrow: string; body: string; action?: string }> = {
+    portal: { title: '传送门', eyebrow: 'Portal', body: '选择副本入口。' },
+    shop: {
+      title: '旅店商铺',
+      eyebrow: 'Shop',
+      body: `店主把基础补给摆在最显眼的位置。你现在有 ${profile.gold} 金币；完整购买与回购系统下一阶段接入。`,
+      action: '查看背包',
+    },
+    stash: {
+      title: '储藏箱',
+      eyebrow: 'Stash',
+      body: `仓库已接入当前存档，共有 ${profile.stash.length} 件暂存战利品。`,
+      action: '打开仓库',
+    },
+    blacksmith: {
+      title: '铁匠铺',
+      eyebrow: 'Blacksmith',
+      body: `铁砧边还留着余温。当前攻击 ${playerStats.attack}、护甲 ${playerStats.armor}；强化系统先保留入口。`,
+    },
+    'notice-board': {
+      title: '公告板',
+      eyebrow: 'Notice',
+      body: '村里的第一条告示：沿北侧主路前往传送门，完成晨曦草原探索后带回战利品。',
+    },
+    gemsmith: {
+      title: '宝石匠',
+      eyebrow: 'Gemsmith',
+      body: '镶嵌和宝石系统已预留站位，等装备循环更完整后开放。',
+    },
+  }
+  const panel = content[kind]
+
+  return (
+    <div className="absolute inset-0 z-30 flex items-center justify-center bg-[linear-gradient(180deg,rgba(23,32,22,0.28),rgba(9,12,9,0.68))] p-4">
+      <div className="w-full max-w-md rounded-[1.8rem] border border-[#f3d48f]/16 bg-[#172019]/94 p-5 text-[#f7f0d5] shadow-[0_24px_70px_rgba(0,0,0,0.42)]">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[0.72rem] tracking-[0.3em] text-[#efd9a2]/72 uppercase">{panel.eyebrow}</div>
+            <h2 className="mt-2 text-3xl font-black tracking-[0.06em]">{panel.title}</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-sm text-[#d6dfcd]"
+          >
+            关闭
+          </button>
+        </div>
+        <p className="mt-4 rounded-[1.1rem] border border-white/10 bg-white/6 px-4 py-4 text-sm leading-6 text-[#e4dcc0]">
+          {panel.body}
+        </p>
+        {panel.action ? (
+          <Button
+            type="button"
+            onClick={onOpenInventory}
+            className="mt-4 h-11 rounded-full bg-[#f3d48f] px-5 text-[#2e2414] hover:bg-[#ffe2a6]"
+          >
+            {panel.action}
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
 function HomeStat({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-[1rem] border border-white/10 bg-white/5 px-3 py-3">
@@ -926,10 +1047,29 @@ function MiniMap({ hud }: { hud: PixelKnightHudState }) {
     <svg viewBox={`0 0 ${rows[0].length} ${rows.length}`} className="h-[108px] w-[192px] overflow-hidden rounded-[0.8rem]">
       {rows.map((row, y) =>
         row.split('').map((cell, x) => {
-          const fill = cell === '#' ? '#33473a' : '#d6dfb6'
+          const fill =
+            cell === '#'
+              ? '#33473a'
+              : cell === 'p'
+                ? '#e5cf8f'
+                : cell === 'r'
+                  ? '#b8814d'
+                  : cell === 'P'
+                    ? '#7ae4ff'
+                    : '#9acb6c'
           return <rect key={`${x}-${y}`} x={x} y={y} width="1" height="1" fill={fill} />
         }),
       )}
+      {hud.hotspots.map((hotspot) => (
+        <rect
+          key={hotspot.id}
+          x={hotspot.cell.x}
+          y={hotspot.cell.y}
+          width="1"
+          height="1"
+          fill={hotspot.kind === 'portal' ? '#7ae4ff' : '#ffd56f'}
+        />
+      ))}
       <rect x={hud.portalCell.x} y={hud.portalCell.y} width="1" height="1" fill="#7ae4ff" />
       <rect x={hud.playerCell.x} y={hud.playerCell.y} width="1" height="1" fill="#ffde7a" />
     </svg>

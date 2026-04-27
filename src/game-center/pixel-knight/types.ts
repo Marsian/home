@@ -19,6 +19,31 @@ export type GamePhase = 'boot' | 'loading' | 'home' | 'playing' | 'paused' | 're
 
 export type FacingDirection = 'left' | 'right'
 
+export type PixelKnightMapKind = 'village' | 'dungeon'
+
+export type PixelKnightMapTile = '#' | '.' | 'S' | 'P' | 'g' | 'r' | 'p' | 'w'
+
+export type VillageHotspotKind = 'portal' | 'shop' | 'stash' | 'blacksmith' | 'notice-board' | 'gemsmith'
+
+export type MapHotspot = {
+  id: string
+  kind: VillageHotspotKind
+  label: string
+  prompt: string
+  cell: { x: number; y: number }
+  radius: number
+}
+
+export type MapDef = {
+  id: string
+  kind: PixelKnightMapKind
+  name: string
+  rows: string[]
+  start: { x: number; y: number }
+  portal?: { x: number; y: number }
+  hotspots?: MapHotspot[]
+}
+
 export type ItemRarity = 'common' | 'magic' | 'rare' | 'legendary' | 'set'
 
 export type StatKey =
@@ -151,6 +176,7 @@ export type PixelKnightSpriteMeta = {
 
 export type PixelKnightHudState = {
   phase: GamePhase
+  mapKind: PixelKnightMapKind
   dungeonName: string
   difficultyLabel: string
   objectiveLabel: string
@@ -164,6 +190,8 @@ export type PixelKnightHudState = {
   minimapRows: string[]
   playerCell: { x: number; y: number }
   portalCell: { x: number; y: number }
+  hotspots: MapHotspot[]
+  nearbyHotspot: MapHotspot | null
   recentLoot: string[]
   cooldowns: Record<string, number>
 }
@@ -186,6 +214,7 @@ export type RunResult = {
 
 export type PixelKnightGameCallbacks = {
   onHud: (state: PixelKnightHudState) => void
+  onHotspotInteract: (hotspot: MapHotspot) => void
   onRunComplete: (result: RunResult) => void
   onError: (message: string) => void
 }

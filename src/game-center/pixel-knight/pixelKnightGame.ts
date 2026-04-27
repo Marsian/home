@@ -2,7 +2,7 @@ import { difficultyConfigs, generateLootItems, getDungeonById, skills } from './
 import knightManifestData from '@/game-center/pixel-knight/assets/characters/knight.json'
 import shieldMatrixData from '@/game-center/pixel-knight/assets/equipment/off-hand/wood-shield.json'
 import swordMatrixData from '@/game-center/pixel-knight/assets/equipment/main-hand/iron-sword.json'
-import { getPixelKnightHeroSpriteAsset } from './game/preload'
+import { getPixelKnightHeroSpriteAsset, getPixelKnightVillageSpritesheetAsset } from './game/preload'
 import {
   drawMatrixCharacter,
   type MatrixCharacterMode,
@@ -15,6 +15,8 @@ import type {
   DifficultyTier,
   DungeonId,
   FacingDirection,
+  MapDef,
+  MapHotspot,
   PixelKnightGameCallbacks,
   PixelKnightHudState,
   PlayerDerivedStats,
@@ -84,7 +86,7 @@ type ActiveRun = {
   rewardXp: number
   rewardGold: number
   rewardMaterials: number
-  maze: string[]
+  map: MapDef
   portalCell: { x: number; y: number }
 }
 
@@ -93,6 +95,8 @@ const HEIGHT = 540
 const TILE = 60
 const WORLD_COLS = 48
 const WORLD_ROWS = 27
+const VILLAGE_COLS = 28
+const VILLAGE_ROWS = 20
 const PORTAL_RADIUS = 30
 const MATRIX_PLAYER_PIXEL_SIZE = 3
 const MATRIX_ATTACK_DURATION_MS = 420
@@ -122,6 +126,10 @@ function randomBetween(min: number, max: number) {
 
 function makeGrid() {
   return Array.from({ length: WORLD_ROWS }, () => Array.from({ length: WORLD_COLS }, () => '#'))
+}
+
+function makeVillageGrid() {
+  return Array.from({ length: VILLAGE_ROWS }, () => Array.from({ length: VILLAGE_COLS }, () => 'g'))
 }
 
 function carveRect(grid: string[][], x: number, y: number, w: number, h: number, fill = '.') {
@@ -193,12 +201,122 @@ function buildMaze(dungeonId: DungeonId) {
 
   grid[start.y][start.x] = 'S'
   grid[portal.y][portal.x] = 'P'
-  return { rows: grid.map((row) => row.join('')), start, portal }
+  return {
+    id: dungeonId,
+    kind: 'dungeon',
+    name: getDungeonById(dungeonId).name,
+    rows: grid.map((row) => row.join('')),
+    start,
+    portal,
+    hotspots: [],
+  } satisfies MapDef
 }
 
-function isWall(maze: string[], col: number, row: number) {
-  if (row < 0 || row >= maze.length || col < 0 || col >= maze[0].length) return true
-  return maze[row][col] === '#'
+function buildStarterVillage() {
+  const grid = makeVillageGrid()
+  const start = { x: 14, y: 17 }
+
+  for (let col = 0; col < VILLAGE_COLS; col += 1) {
+    grid[0][col] = '#'
+    grid[VILLAGE_ROWS - 1][col] = '#'
+  }
+  for (let row = 0; row < VILLAGE_ROWS; row += 1) {
+    grid[row][0] = '#'
+    grid[row][VILLAGE_COLS - 1] = '#'
+  }
+
+  const paintRect = (x: number, y: number, w: number, h: number, fill: string) => {
+    for (let row = y; row < y + h; row += 1) {
+      for (let col = x; col < x + w; col += 1) {
+        if (row >= 0 && row < VILLAGE_ROWS && col >= 0 && col < VILLAGE_COLS) grid[row][col] = fill
+      }
+    }
+  }
+  const paintPath = (points: Array<[number, number]>, width = 3) => {
+    const half = Math.floor(width / 2)
+    for (let index = 1; index < points.length; index += 1) {
+      const [fromX, fromY] = points[index - 1]
+      const [toX, toY] = points[index]
+      if (fromX === toX) {
+        for (let row = Math.min(fromY, toY); row <= Math.max(fromY, toY); row += 1) {
+          paintRect(fromX - half, row - half, width, width, 'r')
+        }
+      } else if (fromY === toY) {
+        for (let col = Math.min(fromX, toX); col <= Math.max(fromX, toX); col += 1) {
+          paintRect(col - half, fromY - half, width, width, 'r')
+        }
+      }
+    }
+  }
+
+  paintRect(10, 5, 8, 6, 'p')
+  paintPath([
+    [14, 17],
+    [14, 13],
+    [14, 8],
+    [14, 3],
+  ])
+  paintPath([
+    [14, 8],
+    [7, 8],
+    [5, 12],
+  ])
+  paintPath([
+    [14, 8],
+    [21, 8],
+    [23, 12],
+  ])
+  paintPath([
+    [14, 10],
+    [9, 16],
+  ], 2)
+  paintPath([
+    [14, 10],
+    [20, 15],
+  ], 2)
+
+  const blockers: Array<[number, number, number, number]> = [
+    [3, 10, 4, 3],
+    [3, 13, 5, 2],
+    [20, 10, 5, 3],
+    [21, 13, 4, 2],
+    [19, 4, 5, 3],
+    [4, 4, 4, 3],
+    [8, 15, 3, 2],
+    [19, 15, 3, 2],
+    [11, 2, 6, 1],
+    [25, 5, 1, 7],
+    [2, 5, 1, 7],
+  ]
+  for (const blocker of blockers) paintRect(...blocker, '#')
+  grid[start.y][start.x] = 'S'
+  grid[3][14] = 'P'
+
+  const hotspots: MapHotspot[] = [
+    { id: 'village-portal', kind: 'portal', label: '传送门', prompt: '按 F：选择副本', cell: { x: 14, y: 3 }, radius: 88 },
+    { id: 'village-shop', kind: 'shop', label: '旅店商铺', prompt: '按 F：购买补给', cell: { x: 8, y: 12 }, radius: 82 },
+    { id: 'village-stash', kind: 'stash', label: '储藏箱', prompt: '按 F：打开仓库', cell: { x: 10, y: 16 }, radius: 74 },
+    { id: 'village-blacksmith', kind: 'blacksmith', label: '铁匠铺', prompt: '按 F：查看强化', cell: { x: 21, y: 7 }, radius: 82 },
+    { id: 'village-notice', kind: 'notice-board', label: '公告板', prompt: '按 F：查看告示', cell: { x: 8, y: 7 }, radius: 76 },
+    { id: 'village-gemsmith', kind: 'gemsmith', label: '宝石匠', prompt: '按 F：预留功能', cell: { x: 23, y: 12 }, radius: 78 },
+  ]
+
+  return {
+    id: 'starter-village',
+    kind: 'village',
+    name: '晨铃新手村',
+    rows: grid.map((row) => row.join('')),
+    start,
+    portal: { x: 20, y: 5 },
+    hotspots,
+  } satisfies MapDef
+}
+
+const starterVillage = buildStarterVillage()
+
+function isWall(mapRows: string[], col: number, row: number) {
+  if (row < 0 || row >= mapRows.length || col < 0 || col >= mapRows[0].length) return true
+  return mapRows[row][col] === '#'
 }
 
 function circleRectIntersects(circleX: number, circleY: number, radius: number, rectX: number, rectY: number, rectW: number, rectH: number) {
@@ -209,7 +327,7 @@ function circleRectIntersects(circleX: number, circleY: number, radius: number, 
   return dx * dx + dy * dy < radius * radius
 }
 
-function collidesWithWalls(maze: string[], x: number, y: number, radius: number) {
+function collidesWithWalls(mapRows: string[], x: number, y: number, radius: number) {
   const minCol = Math.floor((x - radius) / TILE)
   const maxCol = Math.floor((x + radius) / TILE)
   const minRow = Math.floor((y - radius) / TILE)
@@ -217,7 +335,7 @@ function collidesWithWalls(maze: string[], x: number, y: number, radius: number)
 
   for (let row = minRow; row <= maxRow; row += 1) {
     for (let col = minCol; col <= maxCol; col += 1) {
-      if (!isWall(maze, col, row)) continue
+      if (!isWall(mapRows, col, row)) continue
       if (circleRectIntersects(x, y, radius, col * TILE, row * TILE, TILE, TILE)) return true
     }
   }
@@ -228,11 +346,11 @@ function worldFromCell(cell: { x: number; y: number }) {
   return { x: cell.x * TILE + TILE / 2, y: cell.y * TILE + TILE / 2 }
 }
 
-function randomWalkableCell(maze: string[], blocked: Array<{ x: number; y: number }>) {
+function randomWalkableCell(mapRows: string[], blocked: Array<{ x: number; y: number }>) {
   const floorCells: Array<{ x: number; y: number }> = []
-  for (let row = 0; row < maze.length; row += 1) {
-    for (let col = 0; col < maze[row].length; col += 1) {
-      const value = maze[row][col]
+  for (let row = 0; row < mapRows.length; row += 1) {
+    for (let col = 0; col < mapRows[row].length; col += 1) {
+      const value = mapRows[row][col]
       if (value === '#' || value === 'S' || value === 'P') continue
       const tooClose = blocked.some((cell) => Math.abs(cell.x - col) + Math.abs(cell.y - row) < 4)
       if (!tooClose) floorCells.push({ x: col, y: row })
@@ -241,7 +359,7 @@ function randomWalkableCell(maze: string[], blocked: Array<{ x: number; y: numbe
   return floorCells[Math.floor(Math.random() * floorCells.length)]
 }
 
-function spawnEnemyClusters(maze: string[], dungeonId: DungeonId, difficulty: DifficultyTier) {
+function spawnEnemyClusters(mapRows: string[], dungeonId: DungeonId, difficulty: DifficultyTier) {
   const difficultyConfig = difficultyConfigs[difficulty]
   const start = { x: 3, y: 3 }
   const portal = { x: 44, y: 23 }
@@ -249,7 +367,7 @@ function spawnEnemyClusters(maze: string[], dungeonId: DungeonId, difficulty: Di
   const enemies: EnemyState[] = []
 
   for (let clusterIndex = 0; clusterIndex < clusterCount; clusterIndex += 1) {
-    const center = randomWalkableCell(maze, [start, portal])
+    const center = randomWalkableCell(mapRows, [start, portal])
     const clusterSize = 2 + Math.floor(Math.random() * 3)
     const rangedCluster = Math.random() > 0.52
     const baseKindPool: EnemyKind[] = rangedCluster ? ['needlebat', 'sunpriest'] : ['mossling', 'vinebrute']
@@ -260,8 +378,8 @@ function spawnEnemyClusters(maze: string[], dungeonId: DungeonId, difficulty: Di
         x: center.x + Math.floor(randomBetween(-2, 3)),
         y: center.y + Math.floor(randomBetween(-2, 3)),
       }
-      if (isWall(maze, candidate.x, candidate.y)) continue
-      if (maze[candidate.y][candidate.x] === 'S' || maze[candidate.y][candidate.x] === 'P') continue
+      if (isWall(mapRows, candidate.x, candidate.y)) continue
+      if (mapRows[candidate.y][candidate.x] === 'S' || mapRows[candidate.y][candidate.x] === 'P') continue
 
       const elite = memberIndex === 0 && clusterIndex >= 2 && Math.random() > 0.68
       const melee = clusterKind === 'mossling' || clusterKind === 'vinebrute'
@@ -307,6 +425,7 @@ export class PixelKnightGame {
   private encounterLabel = '待机'
   private objectiveLabel = '准备中'
   private portalNearby = false
+  private nearbyHotspot: MapHotspot | null = null
 
   constructor(host: HTMLDivElement, callbacks: PixelKnightGameCallbacks) {
     this.host = host
@@ -337,6 +456,7 @@ export class PixelKnightGame {
     window.addEventListener('keyup', this.onKeyUp)
 
     this.phase = 'home'
+    this.enterVillage()
     this.emitHud()
     this.animationFrame = requestAnimationFrame(this.loop)
   }
@@ -352,8 +472,8 @@ export class PixelKnightGame {
       rewardXp: 0,
       rewardGold: 0,
       rewardMaterials: 0,
-      maze: built.rows,
-      portalCell: built.portal,
+      map: built,
+      portalCell: built.portal ?? { x: 0, y: 0 },
     }
     this.player = {
       x: startPos.x,
@@ -383,6 +503,7 @@ export class PixelKnightGame {
     this.lootFeed = ['探索迷宫，靠近尽头的传送点后按 F 返回村庄。']
     this.pauseRequested = false
     this.portalNearby = false
+    this.nearbyHotspot = null
     this.encounterLabel = '迷宫探索'
     this.objectiveLabel = '穿越迷宫并带着战利品撤离'
     this.phase = 'playing'
@@ -397,13 +518,50 @@ export class PixelKnightGame {
   }
 
   stopToHome() {
-    this.phase = 'home'
     this.run = null
-    this.player = null
     this.enemies = []
     this.projectiles = []
     this.trailSegments = []
     this.portalNearby = false
+    this.enterVillage()
+    this.emitHud()
+  }
+
+  enterVillage(stats?: PlayerDerivedStats) {
+    const startPos = this.player && this.phase === 'home' ? { x: this.player.x, y: this.player.y } : worldFromCell(starterVillage.start)
+    this.run = null
+    this.enemies = []
+    this.projectiles = []
+    this.trailSegments = []
+    this.player = {
+      x: startPos.x,
+      y: startPos.y,
+      radius: 18,
+      health: stats?.maxHealth ?? this.player?.maxHealth ?? 160,
+      maxHealth: stats?.maxHealth ?? this.player?.maxHealth ?? 160,
+      armor: stats?.armor ?? this.player?.armor ?? 18,
+      invulnerableMs: 0,
+      dashGuardMs: 0,
+      blessingMs: 0,
+      whirlMs: 0,
+      attackCooldownMs: 0,
+      shieldCooldownMs: 0,
+      holyCooldownMs: 0,
+      blessingCooldownMs: 0,
+      dodgeCooldownMs: 0,
+      whirlwindCooldownMs: 0,
+      moving: false,
+      attackAnimMs: 0,
+      attackAnimElapsedMs: 0,
+      locomotionAnimElapsedMs: this.player?.locomotionAnimElapsedMs ?? 0,
+    }
+    this.phase = 'home'
+    this.pauseRequested = false
+    this.portalNearby = false
+    this.encounterLabel = '新手村'
+    this.objectiveLabel = '在村庄中移动，靠近地标后按 F 互动'
+    this.lootFeed = ['欢迎来到晨铃新手村。北侧传送门可以进入副本。']
+    this.updateVillageHotspot()
     this.emitHud()
   }
 
@@ -446,6 +604,13 @@ export class PixelKnightGame {
       return
     }
     this.keys.add(event.code)
+    if (this.phase === 'home') {
+      if (event.code === 'KeyF' && this.nearbyHotspot) {
+        event.preventDefault()
+        this.callbacks.onHotspotInteract(this.nearbyHotspot)
+      }
+      return
+    }
     if (this.phase !== 'playing') return
     if (event.code === 'KeyF') {
       event.preventDefault()
@@ -490,7 +655,11 @@ export class PixelKnightGame {
       .filter((segment) => segment.lifeMs > 0)
 
     if (this.phase === 'paused' || this.pauseRequested) return
-    if (this.phase === 'home' || this.phase === 'boot') return
+    if (this.phase === 'home') {
+      this.updateVillage(dt)
+      return
+    }
+    if (this.phase === 'boot') return
     if (!this.player || !this.run) return
 
     this.player.attackCooldownMs = Math.max(0, this.player.attackCooldownMs - dt)
@@ -574,7 +743,7 @@ export class PixelKnightGame {
       }))
       .filter((projectile) => {
         if (projectile.lifeMs <= 0 || !this.run) return false
-        if (collidesWithWalls(this.run.maze, projectile.x, projectile.y, projectile.radius)) return false
+        if (collidesWithWalls(this.run.map.rows, projectile.x, projectile.y, projectile.radius)) return false
         if (projectile.from === 'enemy') {
           if (this.player && distance(projectile, this.player) <= projectile.radius + this.player.radius) {
             this.damagePlayer(projectile.damage)
@@ -603,21 +772,22 @@ export class PixelKnightGame {
   }
 
   private tryMovePlayer(dx: number, dy: number) {
-    if (!this.player || !this.run) return
-    const maxX = this.run.maze[0].length * TILE - this.player.radius
-    const maxY = this.run.maze.length * TILE - this.player.radius
+    const map = this.getActiveMap()
+    if (!this.player || !map) return
+    const maxX = map.rows[0].length * TILE - this.player.radius
+    const maxY = map.rows.length * TILE - this.player.radius
     const nextX = clamp(this.player.x + dx, this.player.radius, maxX)
-    if (!collidesWithWalls(this.run.maze, nextX, this.player.y, this.player.radius)) this.player.x = nextX
+    if (!collidesWithWalls(map.rows, nextX, this.player.y, this.player.radius)) this.player.x = nextX
     const nextY = clamp(this.player.y + dy, this.player.radius, maxY)
-    if (!collidesWithWalls(this.run.maze, this.player.x, nextY, this.player.radius)) this.player.y = nextY
+    if (!collidesWithWalls(map.rows, this.player.x, nextY, this.player.radius)) this.player.y = nextY
   }
 
   private tryMoveEnemy(enemy: EnemyState, dx: number, dy: number) {
     if (!this.run) return
     const nextX = enemy.x + dx
     const nextY = enemy.y + dy
-    if (!collidesWithWalls(this.run.maze, nextX, enemy.y, enemy.radius)) enemy.x = nextX
-    if (!collidesWithWalls(this.run.maze, enemy.x, nextY, enemy.radius)) enemy.y = nextY
+    if (!collidesWithWalls(this.run.map.rows, nextX, enemy.y, enemy.radius)) enemy.x = nextX
+    if (!collidesWithWalls(this.run.map.rows, enemy.x, nextY, enemy.radius)) enemy.y = nextY
   }
 
   private useBasicAttack() {
@@ -788,10 +958,45 @@ export class PixelKnightGame {
     this.lootFeed = [text, ...this.lootFeed].slice(0, 5)
   }
 
+  private getActiveMap() {
+    return this.run?.map ?? (this.phase === 'home' ? starterVillage : null)
+  }
+
+  private updateVillage(dt: number) {
+    if (!this.player) return
+    this.player.locomotionAnimElapsedMs += dt
+    const input: Vector2 = {
+      x: (this.keys.has('KeyD') ? 1 : 0) - (this.keys.has('KeyA') ? 1 : 0),
+      y: (this.keys.has('KeyS') ? 1 : 0) - (this.keys.has('KeyW') ? 1 : 0),
+    }
+    const move = normalize(input)
+    this.player.moving = Math.abs(move.x) > 0 || Math.abs(move.y) > 0
+    this.tryMovePlayer(move.x * 150 * (dt / 1000), move.y * 150 * (dt / 1000))
+    this.updateVillageHotspot()
+    this.emitHud()
+  }
+
+  private updateVillageHotspot() {
+    if (!this.player) {
+      this.nearbyHotspot = null
+      return
+    }
+    const hotspots = starterVillage.hotspots ?? []
+    const nearby = hotspots
+      .map((hotspot) => ({ hotspot, dist: distance(this.player as Vector2, worldFromCell(hotspot.cell)) }))
+      .filter(({ hotspot, dist }) => dist <= hotspot.radius)
+      .sort((a, b) => a.dist - b.dist)[0]?.hotspot
+    this.nearbyHotspot = nearby ?? null
+    this.portalNearby = this.nearbyHotspot?.kind === 'portal'
+    this.encounterLabel = this.nearbyHotspot ? this.nearbyHotspot.label : '新手村'
+    this.objectiveLabel = this.nearbyHotspot?.prompt ?? '在村庄中移动，靠近地标后按 F 互动'
+  }
+
   private getCamera() {
-    if (!this.player || !this.run) return { x: 0, y: 0 }
-    const worldWidth = this.run.maze[0].length * TILE
-    const worldHeight = this.run.maze.length * TILE
+    const map = this.getActiveMap()
+    if (!this.player || !map) return { x: 0, y: 0 }
+    const worldWidth = map.rows[0].length * TILE
+    const worldHeight = map.rows.length * TILE
     return {
       x: clamp(this.player.x - WIDTH / 2, 0, Math.max(0, worldWidth - WIDTH)),
       y: clamp(this.player.y - HEIGHT / 2, 0, Math.max(0, worldHeight - HEIGHT)),
@@ -858,12 +1063,14 @@ export class PixelKnightGame {
   }
 
   private emitHud() {
+    const map = this.getActiveMap()
     const playerCell = this.player
       ? { x: Math.floor(this.player.x / TILE), y: Math.floor(this.player.y / TILE) }
       : { x: 0, y: 0 }
     const state: PixelKnightHudState = {
       phase: this.phase,
-      dungeonName: this.run ? getDungeonById(this.run.dungeonId).name : '村庄大厅',
+      mapKind: map?.kind ?? 'village',
+      dungeonName: this.run ? getDungeonById(this.run.dungeonId).name : starterVillage.name,
       difficultyLabel: this.run ? difficultyConfigs[this.run.difficulty].label : '准备中',
       objectiveLabel: this.objectiveLabel,
       encounterLabel: this.encounterLabel,
@@ -873,9 +1080,11 @@ export class PixelKnightGame {
       elapsedMs: this.run ? performance.now() - this.run.startedAt : 0,
       blessingActive: (this.player?.blessingMs ?? 0) > 0,
       portalNearby: this.portalNearby,
-      minimapRows: this.run?.maze ?? [],
+      minimapRows: map?.rows ?? [],
       playerCell,
-      portalCell: this.run?.portalCell ?? { x: 0, y: 0 },
+      portalCell: this.run?.portalCell ?? starterVillage.portal ?? { x: 0, y: 0 },
+      hotspots: map?.hotspots ?? [],
+      nearbyHotspot: this.nearbyHotspot,
       recentLoot: this.lootFeed,
       cooldowns: {
         basic: this.player?.attackCooldownMs ?? 0,
@@ -894,7 +1103,12 @@ export class PixelKnightGame {
     const ctx = this.ctx
     ctx.clearRect(0, 0, WIDTH, HEIGHT)
 
-    if (this.phase === 'home' || this.phase === 'boot' || this.phase === 'results') {
+    if (this.phase === 'home') {
+      this.renderVillageScene(ctx)
+      return
+    }
+
+    if (this.phase === 'boot' || this.phase === 'results') {
       this.renderIdleScene(ctx)
       return
     }
@@ -906,9 +1120,9 @@ export class PixelKnightGame {
     ctx.fillStyle = palette.sky
     ctx.fillRect(0, 0, WIDTH, HEIGHT)
 
-    for (let row = 0; row < this.run.maze.length; row += 1) {
-      for (let col = 0; col < this.run.maze[row].length; col += 1) {
-        const tile = this.run.maze[row][col]
+    for (let row = 0; row < this.run.map.rows.length; row += 1) {
+      for (let col = 0; col < this.run.map.rows[row].length; col += 1) {
+        const tile = this.run.map.rows[row][col]
         const screenX = col * TILE - camera.x
         const screenY = row * TILE - camera.y
         if (screenX + TILE < 0 || screenX > WIDTH || screenY + TILE < 0 || screenY > HEIGHT) continue
@@ -999,6 +1213,204 @@ export class PixelKnightGame {
     }
   }
 
+  private renderVillageScene(ctx: CanvasRenderingContext2D) {
+    const map = starterVillage
+    const camera = this.getCamera()
+    const sheet = getPixelKnightVillageSpritesheetAsset()
+    ctx.fillStyle = '#b8d88a'
+    ctx.fillRect(0, 0, WIDTH, HEIGHT)
+
+    for (let row = 0; row < map.rows.length; row += 1) {
+      for (let col = 0; col < map.rows[row].length; col += 1) {
+        const tile = map.rows[row][col]
+        const screenX = col * TILE - camera.x
+        const screenY = row * TILE - camera.y
+        if (screenX + TILE < 0 || screenX > WIDTH || screenY + TILE < 0 || screenY > HEIGHT) continue
+        this.renderVillageTile(ctx, tile, screenX, screenY, col, row, sheet)
+      }
+    }
+
+    this.renderVillageLandmark(ctx, 'shop', 8, 12, camera, sheet)
+    this.renderVillageLandmark(ctx, 'notice-board', 8, 7, camera, sheet)
+    this.renderVillageLandmark(ctx, 'portal', 14, 3, camera, sheet)
+    this.renderVillageLandmark(ctx, 'blacksmith', 21, 7, camera, sheet)
+    this.renderVillageLandmark(ctx, 'gemsmith', 23, 12, camera, sheet)
+    this.renderVillageLandmark(ctx, 'stash', 10, 16, camera, sheet)
+
+    if (this.player) {
+      const x = this.player.x - camera.x
+      const y = this.player.y - camera.y
+      const facing = this.getFacingDirection(camera)
+      this.renderMatrixPlayer(ctx, x, y, facing, this.player)
+    }
+
+    if (this.nearbyHotspot && this.player) {
+      const hotspotPos = worldFromCell(this.nearbyHotspot.cell)
+      ctx.fillStyle = 'rgba(30,20,11,0.72)'
+      ctx.fillRect(hotspotPos.x - camera.x - 90, hotspotPos.y - camera.y - 78, 180, 32)
+      ctx.strokeStyle = '#f0d078'
+      ctx.lineWidth = 2
+      ctx.strokeRect(hotspotPos.x - camera.x - 90, hotspotPos.y - camera.y - 78, 180, 32)
+      ctx.fillStyle = '#fff0bc'
+      ctx.font = '800 16px sans-serif'
+      ctx.fillText(this.nearbyHotspot.prompt, hotspotPos.x - camera.x - 72, hotspotPos.y - camera.y - 56)
+    }
+  }
+
+  private renderVillageTile(
+    ctx: CanvasRenderingContext2D,
+    tile: string,
+    x: number,
+    y: number,
+    col: number,
+    row: number,
+    sheet: HTMLImageElement | null,
+  ) {
+    if (tile === '#') {
+      ctx.fillStyle = '#90c667'
+      ctx.fillRect(x, y, TILE, TILE)
+      if (col === 0 || row === 0 || row === VILLAGE_ROWS - 1 || col === VILLAGE_COLS - 1) {
+        ctx.fillStyle = '#70492d'
+        ctx.fillRect(x, y + TILE - 14, TILE, 14)
+        ctx.fillStyle = '#9d6a3f'
+        ctx.fillRect(x + 6, y + 8, 10, TILE - 18)
+        ctx.fillRect(x + TILE - 16, y + 8, 10, TILE - 18)
+      } else if ((col + row) % 3 === 0) {
+        this.drawVillageDecoration(ctx, sheet, x, y, col, row)
+      }
+      return
+    }
+    ctx.fillStyle = tile === 'p' ? '#d7c38a' : tile === 'r' ? '#b9824e' : '#96c768'
+    ctx.fillRect(x, y, TILE, TILE)
+    if (tile === 'p') {
+      ctx.strokeStyle = 'rgba(80,58,38,0.22)'
+      ctx.lineWidth = 2
+      ctx.strokeRect(x + 6, y + 6, TILE - 12, TILE - 12)
+    } else if (tile === 'r') {
+      ctx.fillStyle = 'rgba(78,48,28,0.16)'
+      ctx.fillRect(x + 8, y + 16, TILE - 16, 6)
+      ctx.fillRect(x + 18, y + 38, TILE - 24, 5)
+    } else {
+      ctx.fillStyle = (col + row) % 3 === 0 ? 'rgba(255,244,176,0.12)' : 'rgba(56,98,49,0.12)'
+      ctx.fillRect(x + 8, y + 10, 8, 8)
+      ctx.fillRect(x + 38, y + 35, 6, 6)
+      if ((col * 5 + row * 7) % 11 === 0) this.drawVillageDecoration(ctx, sheet, x, y, col, row)
+    }
+  }
+
+  private drawVillageDecoration(
+    ctx: CanvasRenderingContext2D,
+    sheet: HTMLImageElement | null,
+    x: number,
+    y: number,
+    variantX = 0,
+    variantY = 0,
+  ) {
+    if (!sheet) return
+    const variants = [
+      { x: 617, y: 825, w: 92, h: 102 },
+      { x: 759, y: 850, w: 74, h: 80 },
+      { x: 868, y: 844, w: 71, h: 86 },
+      { x: 992, y: 819, w: 80, h: 112 },
+    ]
+    const source = variants[Math.abs((variantX * 7 + variantY * 3) % variants.length)]
+    const size = 24 + Math.abs((variantX * 5 + variantY * 9) % 14)
+    ctx.save()
+    ctx.globalAlpha = 0.9
+    ctx.imageSmoothingEnabled = false
+    ctx.drawImage(sheet, source.x, source.y, source.w, source.h, x + TILE - size - 4, y + TILE - size - 4, size, size)
+    ctx.restore()
+  }
+
+  private drawVillageLandmarkSprite(
+    ctx: CanvasRenderingContext2D,
+    sheet: HTMLImageElement | null,
+    kind: MapHotspot['kind'],
+    x: number,
+    y: number,
+  ) {
+    if (!sheet) return false
+    const atlas: Record<MapHotspot['kind'], { x: number; y: number; w: number; h: number; dw: number; dh: number }> = {
+      portal: { x: 782, y: 18, w: 293, h: 306, dw: 172, dh: 178 },
+      shop: { x: 1170, y: 31, w: 320, h: 270, dw: 178, dh: 150 },
+      stash: { x: 549, y: 351, w: 307, h: 244, dw: 160, dh: 128 },
+      blacksmith: { x: 902, y: 352, w: 274, h: 252, dw: 156, dh: 138 },
+      'notice-board': { x: 1222, y: 353, w: 254, h: 247, dw: 148, dh: 132 },
+      gemsmith: { x: 1111, y: 807, w: 94, h: 122, dw: 72, dh: 96 },
+    }
+    const source = atlas[kind]
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+    ctx.drawImage(sheet, source.x, source.y, source.w, source.h, x - source.dw / 2, y - source.dh / 2, source.dw, source.dh)
+    ctx.restore()
+    return true
+  }
+
+  private renderVillageLandmark(
+    ctx: CanvasRenderingContext2D,
+    kind: MapHotspot['kind'],
+    cellX: number,
+    cellY: number,
+    camera: Vector2,
+    sheet: HTMLImageElement | null,
+  ) {
+    const x = cellX * TILE - camera.x
+    const y = cellY * TILE - camera.y
+    if (x + 160 < 0 || x - 80 > WIDTH || y + 140 < 0 || y - 80 > HEIGHT) return
+    const drewSprite = this.drawVillageLandmarkSprite(ctx, sheet, kind, x + TILE / 2, y + TILE / 2)
+    if (drewSprite) return
+
+    if (kind === 'portal') {
+      ctx.fillStyle = '#544231'
+      ctx.fillRect(x - 44, y + 30, 88, 20)
+      ctx.strokeStyle = '#66e8ff'
+      ctx.lineWidth = 8
+      ctx.beginPath()
+      ctx.arc(x + 30, y + 26, 34, Math.PI * 0.62, Math.PI * 2.38)
+      ctx.stroke()
+      ctx.fillStyle = 'rgba(102,232,255,0.32)'
+      ctx.beginPath()
+      ctx.arc(x + 30, y + 26, 23, 0, Math.PI * 2)
+      ctx.fill()
+      return
+    }
+
+    if (kind === 'shop' || kind === 'blacksmith' || kind === 'gemsmith') {
+      const roof = kind === 'shop' ? '#d88d3d' : kind === 'blacksmith' ? '#7f5750' : '#5b88a8'
+      ctx.fillStyle = '#6c4428'
+      ctx.fillRect(x - 62, y - 24, 124, 78)
+      ctx.fillStyle = roof
+      ctx.fillRect(x - 74, y - 52, 148, 36)
+      ctx.fillStyle = '#f3d27f'
+      ctx.fillRect(x - 20, y + 5, 40, 49)
+      ctx.fillStyle = '#2d2218'
+      ctx.fillRect(x - 52, y - 3, 28, 24)
+      ctx.fillRect(x + 25, y - 3, 28, 24)
+      if (kind === 'blacksmith') {
+        ctx.fillStyle = '#ff9b43'
+        ctx.fillRect(x + 48, y + 34, 24, 20)
+      }
+      return
+    }
+
+    if (kind === 'stash') {
+      ctx.fillStyle = '#5c3723'
+      ctx.fillRect(x - 36, y + 4, 72, 44)
+      ctx.fillStyle = '#9a6235'
+      ctx.fillRect(x - 30, y - 4, 60, 24)
+      ctx.fillStyle = '#e0b05e'
+      ctx.fillRect(x - 4, y + 4, 8, 42)
+      return
+    }
+
+    ctx.fillStyle = '#5c3923'
+    ctx.fillRect(x - 36, y - 30, 72, 54)
+    ctx.fillStyle = '#e9d7a2'
+    ctx.fillRect(x - 28, y - 22, 56, 38)
+    ctx.fillStyle = '#5c3923'
+    ctx.fillRect(x - 6, y + 22, 12, 42)
+  }
+
   private renderIdleScene(ctx: CanvasRenderingContext2D) {
     const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT)
     gradient.addColorStop(0, '#e8d4a5')
@@ -1026,6 +1438,6 @@ export class PixelKnightGame {
     ctx.font = '900 50px sans-serif'
     ctx.fillText('PIXEL KNIGHT', 56, HEIGHT - 54)
     ctx.font = '600 18px sans-serif'
-    ctx.fillText('Fixed maze maps, random enemy clusters, portal escape.', 60, HEIGHT - 24)
+    ctx.fillText('Move freely, meet village landmarks, enter dungeons through the portal.', 60, HEIGHT - 24)
   }
 }

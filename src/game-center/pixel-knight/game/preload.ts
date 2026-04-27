@@ -1,9 +1,11 @@
 import { dungeons, legendaryPowers, setBonuses, skills } from '../content/data'
+import starterVillageSpritesheetUrl from '@/game-center/pixel-knight/assets/village/starter-village-spritesheet-alpha.png'
 import type { PixelKnightSpriteMeta, PreloadProgress } from '../types'
 
 let cachedPromise: Promise<void> | null = null
 let warmLoaded = false
 let heroKnightSpriteAsset: { image: HTMLImageElement; meta: PixelKnightSpriteMeta } | null = null
+let villageSpritesheetAsset: HTMLImageElement | null = null
 
 const heroKnightSpriteSrc = '/images/pixel-knight/characters/hero-knight-a1-no-scarf.png'
 const heroKnightMetaSrc = '/images/pixel-knight/characters/hero-knight-a1-no-scarf.meta.json'
@@ -12,7 +14,7 @@ const preloadSteps = [
   { label: '正在点亮圣殿', wait: 160 },
   { label: '正在整理战利品', wait: 200 },
   { label: '正在描绘骑士帧动画', wait: 170 },
-  { label: '正在唤醒敌人素材', wait: 180 },
+  { label: '正在铺设新手村地砖', wait: 180 },
   { label: '正在装配掉落图标', wait: 160 },
   { label: '正在校准副本配置', wait: 190 },
   { label: '正在装入技能与词条表', wait: 180 },
@@ -68,6 +70,10 @@ export function getPixelKnightHeroSpriteAsset() {
   return heroKnightSpriteAsset
 }
 
+export function getPixelKnightVillageSpritesheetAsset() {
+  return villageSpritesheetAsset
+}
+
 export async function preloadGameData() {
   validateStaticData()
   return { dungeons, skills, legendaryPowers, setBonuses }
@@ -77,6 +83,7 @@ export function clearPixelKnightPreloadCache() {
   cachedPromise = null
   warmLoaded = false
   heroKnightSpriteAsset = null
+  villageSpritesheetAsset = null
 }
 
 export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress) => void) {
@@ -94,6 +101,9 @@ export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress)
       }
       if (index === 2) {
         await preloadHeroKnightSprite()
+      }
+      if (index === 3) {
+        villageSpritesheetAsset = await loadImage(starterVillageSpritesheetUrl)
       }
       if (index === 5) {
         await preloadGameData()
