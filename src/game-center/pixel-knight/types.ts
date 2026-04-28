@@ -25,6 +25,19 @@ export type PixelKnightMapTile = '#' | '.' | 'S' | 'P' | 'g' | 'r' | 'p' | 'w'
 
 export type VillageHotspotKind = 'portal' | 'shop' | 'stash' | 'blacksmith' | 'notice-board' | 'gemsmith'
 
+export type VillageDecorKind =
+  | 'bush-berry'
+  | 'bush-flower'
+  | 'bush-leafy'
+  | 'grass-patch-flowers'
+  | 'grass-patch-large'
+  | 'grass-patch-rock'
+  | 'pine-small'
+  | 'signpost-single'
+  | 'signpost-double'
+
+export type VillageSceneLayer = 'back' | 'front'
+
 export type MapHotspot = {
   id: string
   kind: VillageHotspotKind
@@ -42,6 +55,31 @@ export type MapDef = {
   start: { x: number; y: number }
   portal?: { x: number; y: number }
   hotspots?: MapHotspot[]
+}
+
+export type VillageLandmarkPlacement = {
+  kind: VillageHotspotKind
+  cell: { x: number; y: number }
+  layer?: VillageSceneLayer
+  drawScale?: number
+  drawOffset?: { x: number; y: number }
+  footprint?: { offsetX: number; offsetY: number; width: number; height: number }
+}
+
+export type VillageDecorPlacement = {
+  id: string
+  kind: VillageDecorKind
+  cell: { x: number; y: number }
+  layer?: VillageSceneLayer
+}
+
+export type VillageTerrainPatch = {
+  id: string
+  assetId: string
+  x: number
+  y: number
+  width: number
+  height: number
 }
 
 export type ItemRarity = 'common' | 'magic' | 'rare' | 'legendary' | 'set'

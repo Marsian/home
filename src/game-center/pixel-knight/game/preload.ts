@@ -1,11 +1,11 @@
 import { dungeons, legendaryPowers, setBonuses, skills } from '../content/data'
-import starterVillageSpritesheetUrl from '@/game-center/pixel-knight/assets/village/starter-village-spritesheet-alpha.png'
+import { type VillageAssetId, villageAssetSources } from '../rendering/villageAssets'
 import type { PixelKnightSpriteMeta, PreloadProgress } from '../types'
 
 let cachedPromise: Promise<void> | null = null
 let warmLoaded = false
 let heroKnightSpriteAsset: { image: HTMLImageElement; meta: PixelKnightSpriteMeta } | null = null
-let villageSpritesheetAsset: HTMLImageElement | null = null
+let villageAssetCache: Record<VillageAssetId, HTMLImageElement> | null = null
 
 const heroKnightSpriteSrc = '/images/pixel-knight/characters/hero-knight-a1-no-scarf.png'
 const heroKnightMetaSrc = '/images/pixel-knight/characters/hero-knight-a1-no-scarf.meta.json'
@@ -70,8 +70,8 @@ export function getPixelKnightHeroSpriteAsset() {
   return heroKnightSpriteAsset
 }
 
-export function getPixelKnightVillageSpritesheetAsset() {
-  return villageSpritesheetAsset
+export function getPixelKnightVillageAsset(id: VillageAssetId) {
+  return villageAssetCache?.[id] ?? null
 }
 
 export async function preloadGameData() {
@@ -83,7 +83,7 @@ export function clearPixelKnightPreloadCache() {
   cachedPromise = null
   warmLoaded = false
   heroKnightSpriteAsset = null
-  villageSpritesheetAsset = null
+  villageAssetCache = null
 }
 
 export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress) => void) {
@@ -103,7 +103,13 @@ export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress)
         await preloadHeroKnightSprite()
       }
       if (index === 3) {
-        villageSpritesheetAsset = await loadImage(starterVillageSpritesheetUrl)
+        const entries = await Promise.all(
+          (Object.entries(villageAssetSources) as Array<[VillageAssetId, string]>).map(async ([id, src]) => {
+            const image = await loadImage(src)
+            return [id, image] as const
+          }),
+        )
+        villageAssetCache = Object.fromEntries(entries) as Record<VillageAssetId, HTMLImageElement>
       }
       if (index === 5) {
         await preloadGameData()

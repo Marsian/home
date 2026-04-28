@@ -297,6 +297,7 @@ export default function PixelKnightView() {
           if (!cancelled) setPreload(progress)
         })
         if (cancelled) return
+        gameRef.current?.invalidateVillageTerrainCache()
         setProfile((current) => ({ ...current, hasCompletedInitialLoad: true }))
         setHomeStage('character')
         setPhase('home')
@@ -333,6 +334,7 @@ export default function PixelKnightView() {
     setPreload(initialPreload)
     void preloadPixelKnightAssets((progress) => setPreload(progress))
       .then(() => {
+        gameRef.current?.invalidateVillageTerrainCache()
         setProfile((current) => ({ ...current, hasCompletedInitialLoad: true }))
         setHomeStage('character')
         setPhase('home')
