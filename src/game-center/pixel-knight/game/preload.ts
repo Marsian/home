@@ -1,5 +1,6 @@
 import { dungeons, legendaryPowers, setBonuses, skills } from '../content/data'
-import { type VillageAssetId, villageAssetSources } from '../rendering/villageAssets'
+import { starterVillageLandmarks, starterVillageTerrainPatches } from './maps/starterVillage'
+import { resolveLandmarkAsset, type VillageAssetId, villageAssetSources } from '../rendering/villageAssets'
 import type { PixelKnightSpriteMeta, PreloadProgress } from '../types'
 
 let cachedPromise: Promise<void> | null = null
@@ -11,14 +12,10 @@ const heroKnightSpriteSrc = '/images/pixel-knight/characters/hero-knight-a1-no-s
 const heroKnightMetaSrc = '/images/pixel-knight/characters/hero-knight-a1-no-scarf.meta.json'
 
 const preloadSteps = [
-  { label: '正在点亮圣殿', wait: 160 },
-  { label: '正在整理战利品', wait: 200 },
-  { label: '正在描绘骑士帧动画', wait: 170 },
-  { label: '正在铺设新手村地砖', wait: 180 },
-  { label: '正在装配掉落图标', wait: 160 },
-  { label: '正在校准副本配置', wait: 190 },
-  { label: '正在装入技能与词条表', wait: 180 },
-]
+  { label: '正在校准副本与词条表', wait: 220 },
+  { label: '正在描绘骑士帧动画', wait: 190 },
+  { label: '正在铺设新手村地砖', wait: 220 },
+] as const
 
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms))
@@ -41,6 +38,7 @@ function loadImage(src: string) {
 }
 
 async function preloadHeroKnightSprite() {
+  if (heroKnightSpriteAsset) return
   const image = await loadImage(heroKnightSpriteSrc)
   let meta: PixelKnightSpriteMeta
 
@@ -64,6 +62,38 @@ async function preloadHeroKnightSprite() {
   }
 
   heroKnightSpriteAsset = { image, meta }
+}
+
+function getStarterVillageRequiredAssets(): VillageAssetId[] {
+  const ids = new Set<VillageAssetId>()
+
+  for (const patch of starterVillageTerrainPatches) {
+    ids.add(patch.assetId as VillageAssetId)
+  }
+
+  for (const landmark of starterVillageLandmarks) {
+    ids.add(resolveLandmarkAsset(landmark.kind))
+  }
+
+  return [...ids]
+}
+
+async function preloadVillageAssets(required: VillageAssetId[]) {
+  const missing = required.filter((id) => !villageAssetCache?.[id])
+  if (!missing.length) return
+
+  const entries = await Promise.all(
+    missing.map(async (id) => {
+      const src = villageAssetSources[id]
+      const image = await loadImage(src)
+      return [id, image] as const
+    }),
+  )
+
+  villageAssetCache = {
+    ...(villageAssetCache ?? ({} as Record<VillageAssetId, HTMLImageElement>)),
+    ...(Object.fromEntries(entries) as Record<VillageAssetId, HTMLImageElement>),
+  }
 }
 
 export function getPixelKnightHeroSpriteAsset() {
@@ -90,31 +120,18 @@ export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress)
   const run = async () => {
     const params = new URLSearchParams(window.location.search)
     const shouldFail = params.get('pixelKnightPreloadFail') === '1'
+    const requiredVillageAssets = getStarterVillageRequiredAssets()
 
     for (let index = 0; index < preloadSteps.length; index += 1) {
       const step = preloadSteps[index]
       if (shouldFail && index === 2) {
         throw new Error('素材图集未能成功解压，请重试。')
       }
-      if (index === 0) {
-        validateStaticData()
-      }
-      if (index === 2) {
-        await preloadHeroKnightSprite()
-      }
-      if (index === 3) {
-        const entries = await Promise.all(
-          (Object.entries(villageAssetSources) as Array<[VillageAssetId, string]>).map(async ([id, src]) => {
-            const image = await loadImage(src)
-            return [id, image] as const
-          }),
-        )
-        villageAssetCache = Object.fromEntries(entries) as Record<VillageAssetId, HTMLImageElement>
-      }
-      if (index === 5) {
-        await preloadGameData()
-      }
-      await sleep(warmLoaded ? Math.max(45, step.wait * 0.34) : step.wait)
+      if (index === 0) await preloadGameData()
+      if (index === 1) await preloadHeroKnightSprite()
+      if (index === 2) await preloadVillageAssets(requiredVillageAssets)
+
+      await sleep(warmLoaded ? Math.max(35, step.wait * 0.22) : step.wait)
       onProgress({
         loaded: index + 1,
         total: preloadSteps.length,
@@ -125,11 +142,8 @@ export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress)
     warmLoaded = true
   }
 
-  if (!cachedPromise || !warmLoaded) {
-    cachedPromise = run()
-  } else {
-    cachedPromise = run()
-  }
+  if (warmLoaded && cachedPromise) return cachedPromise
+  cachedPromise = run()
 
   return cachedPromise
 }

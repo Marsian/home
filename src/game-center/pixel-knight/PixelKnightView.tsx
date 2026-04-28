@@ -34,7 +34,7 @@ import {
   skills,
   slotLabel,
 } from './content/data'
-import { clearPixelKnightPreloadCache, preloadGameData, preloadPixelKnightAssets } from './game/preload'
+import { clearPixelKnightPreloadCache, preloadPixelKnightAssets } from './game/preload'
 import { PixelKnightGame } from './pixelKnightGame'
 import {
   applyPixelKnightRunResult,
@@ -58,9 +58,9 @@ import { LoadingOverlay } from './ui/LoadingOverlay'
 
 const initialPreload: PreloadProgress = {
   loaded: 0,
-  total: 7,
+  total: 3,
   ratio: 0,
-  label: '正在点亮圣殿',
+  label: '正在校准副本与词条表',
 }
 
 const defaultHud: PixelKnightHudState = {
@@ -292,7 +292,6 @@ export default function PixelKnightView() {
       setLoadError(null)
       setPreload(initialPreload)
       try {
-        await preloadGameData()
         await preloadPixelKnightAssets((progress) => {
           if (!cancelled) setPreload(progress)
         })
