@@ -1,3 +1,9 @@
+import armorData from '@/game-center/pixel-knight/assets/equipment/armor/iron-armor.json'
+import clothCapData from '@/game-center/pixel-knight/assets/equipment/helmet/cloth-cap.json'
+import ironHelmetData from '@/game-center/pixel-knight/assets/equipment/helmet/iron-helmet.json'
+import swordData from '@/game-center/pixel-knight/assets/equipment/main-hand/iron-sword.json'
+import shieldData from '@/game-center/pixel-knight/assets/equipment/off-hand/wood-shield.json'
+
 import type {
   DifficultyConfig,
   DifficultyTier,
@@ -7,6 +13,7 @@ import type {
   ItemInstance,
   LegendaryPowerDef,
   PixelKnightProfile,
+  RenderableEquipmentAssetId,
   SetBonusDef,
   SkillDef,
 } from '../types'
@@ -168,28 +175,41 @@ export const setBonuses: SetBonusDef[] = [
   { id: 'dawn-guard-4', name: '守卫套装 4 件', pieces: 4, description: '盾击附带范围爆炸，祝福期间伤害提高。' },
 ]
 
-const itemSlotNames: Record<EquipmentSlot, string[]> = {
-  weapon: ['铁剑', '骑士长剑', '重剑'],
-  shield: ['木盾', '骑士盾', '塔盾'],
-  helmet: ['布帽', '铁盔', '护面盔'],
-  armor: ['铁甲', '链甲', '板甲'],
-  gloves: ['铆钉手套', '圣印护手', '迅击臂甲'],
-  boots: ['巡游靴', '流光长靴', '石阶战靴'],
-  amulet: ['牧晨吊坠', '辉环护符', '矿心坠饰'],
-  'ring-left': ['旅途指环', '黎明圆环', '枝晶指环'],
-  'ring-right': ['曙环戒', '云羽戒', '琥珀戒圈'],
+export type RenderableEquipmentCatalogEntry = {
+  assetId: RenderableEquipmentAssetId
+  slot: Extract<EquipmentSlot, 'helmet' | 'armor' | 'mainHand' | 'offHand'>
+  name: string
+}
+
+export const renderableEquipmentCatalog: RenderableEquipmentCatalogEntry[] = [
+  { assetId: 'cloth-cap', slot: 'helmet', name: clothCapData.name },
+  { assetId: 'iron-helmet', slot: 'helmet', name: ironHelmetData.name },
+  { assetId: 'iron-armor', slot: 'armor', name: armorData.name },
+  { assetId: 'iron-sword', slot: 'mainHand', name: swordData.name },
+  { assetId: 'wood-shield', slot: 'offHand', name: shieldData.name },
+]
+
+export const renderableEquipmentAssetIds = renderableEquipmentCatalog.map((entry) => entry.assetId)
+
+const renderableEquipmentByAssetId = Object.fromEntries(
+  renderableEquipmentCatalog.map((entry) => [entry.assetId, entry]),
+) as Record<RenderableEquipmentAssetId, RenderableEquipmentCatalogEntry>
+
+const renderableLootCatalog = renderableEquipmentCatalog.filter((entry) => entry.assetId !== 'iron-sword' && entry.assetId !== 'wood-shield')
+
+export function isRenderableEquipmentAssetId(value: unknown): value is RenderableEquipmentAssetId {
+  return typeof value === 'string' && renderableEquipmentAssetIds.includes(value as RenderableEquipmentAssetId)
 }
 
 const slotStatWeights: Record<EquipmentSlot, number> = {
-  weapon: 1.4,
-  shield: 1.05,
+  mainHand: 1.4,
+  offHand: 1.05,
   helmet: 0.84,
   armor: 1,
   gloves: 0.72,
   boots: 0.72,
   amulet: 0.88,
-  'ring-left': 0.64,
-  'ring-right': 0.64,
+  ring: 0.64,
 }
 
 const setPiecesBySlot: Partial<Record<EquipmentSlot, string>> = {
@@ -220,14 +240,14 @@ function rollStatBucket(level: number, slot: EquipmentSlot, rarity: ItemInstance
             : 2.5
 
   const stats: ItemInstance['stats'] = {}
-  if (slot === 'weapon') {
+  if (slot === 'mainHand') {
     stats.attack = baseAttack + Math.round(6 * rarityBonus)
     stats.critChance = 0.02 * rarityBonus
     stats.skillPower = Math.round(level * 0.45 * rarityBonus)
-  } else if (slot === 'shield') {
+  } else if (slot === 'offHand') {
     stats.armor = baseArmor + Math.round(7 * rarityBonus)
     stats.vitality = baseVitality + Math.round(4 * rarityBonus)
-  } else if (slot === 'amulet' || slot.startsWith('ring')) {
+  } else if (slot === 'amulet' || slot === 'ring') {
     stats.critChance = 0.01 * (1 + rarityBonus)
     stats.critDamage = 0.04 * rarityBonus
     stats.attack = Math.round(level * 0.8 * rarityBonus)
@@ -261,8 +281,9 @@ export function createStarterSword(): ItemInstance {
   const stats = { attack: 8, critChance: 0.02, skillPower: 2 }
   return {
     id: 'starter-sword',
-    name: '短剑',
-    slot: 'weapon',
+    assetId: 'iron-sword',
+    name: renderableEquipmentByAssetId['iron-sword'].name,
+    slot: 'mainHand',
     rarity: 'common',
     itemLevel: 1,
     stats,
@@ -275,13 +296,35 @@ export function createStarterShield(): ItemInstance {
   const stats = { armor: 9, vitality: 7 }
   return {
     id: 'starter-shield',
-    name: '木盾',
-    slot: 'shield',
+    assetId: 'wood-shield',
+    name: renderableEquipmentByAssetId['wood-shield'].name,
+    slot: 'offHand',
     rarity: 'common',
     itemLevel: 1,
     stats,
     score: computeItemScore(stats),
     description: '基础木盾，提供稳定防护。',
+  }
+}
+
+export function createCatalogItem(
+  assetId: RenderableEquipmentAssetId,
+  itemLevel: number,
+  rarity: ItemInstance['rarity'],
+  idPrefix: string,
+): ItemInstance {
+  const catalogEntry = renderableEquipmentByAssetId[assetId]
+  const stats = rollStatBucket(itemLevel, catalogEntry.slot, rarity)
+  return {
+    id: `${idPrefix}-${assetId}`,
+    assetId,
+    name: catalogEntry.name,
+    slot: catalogEntry.slot,
+    rarity,
+    itemLevel,
+    stats,
+    score: computeItemScore(stats),
+    description: '当前 demo 已有点阵素材，可实时显示在角色身上。',
   }
 }
 
@@ -295,17 +338,18 @@ export function createInitialProfile(): PixelKnightProfile {
     materials: 0,
     completedRuns: 0,
     equipment: {
-      weapon: createStarterSword(),
-      shield: createStarterShield(),
+      mainHand: createStarterSword(),
+      offHand: createStarterShield(),
       helmet: null,
       armor: null,
-      gloves: null,
-      boots: null,
       amulet: null,
-      'ring-left': null,
-      'ring-right': null,
+      ring: null,
     },
-    stash: [],
+    stash: [
+      createCatalogItem('cloth-cap', 1, 'common', 'initial'),
+      createCatalogItem('iron-armor', 1, 'common', 'initial'),
+      createCatalogItem('iron-helmet', 1, 'magic', 'initial'),
+    ],
     unlockedDifficultiesByDungeon: {
       sunmeadow: ['normal'],
       'vine-ruins': ['normal'],
@@ -338,11 +382,11 @@ export function generateLootItems(
             : rarityRoll > 0.56
               ? 'magic'
               : 'common'
-    const slots = Object.keys(itemSlotNames) as EquipmentSlot[]
-    const slot = randomFrom(slots)
+    const catalogEntry = randomFrom(renderableLootCatalog)
+    const slot = catalogEntry.slot
     const itemLevel = Math.max(1, playerLevel + (difficultyOrder.indexOf(difficulty) + 1) * 2)
     const stats = rollStatBucket(itemLevel, slot, rarity)
-    const baseName = randomFrom(itemSlotNames[slot])
+    const baseName = catalogEntry.name
     let setId: string | undefined
     let legendaryPowerId: string | undefined
     let description: string | undefined
@@ -371,6 +415,7 @@ export function generateLootItems(
 
     return {
       id: `${dungeonId}-${difficulty}-${slot}-${Date.now()}-${index}-${Math.round(Math.random() * 9999)}`,
+      assetId: catalogEntry.assetId,
       name,
       slot,
       rarity,
@@ -425,10 +470,10 @@ export function rarityTone(rarity: ItemInstance['rarity']) {
 
 export function slotLabel(slot: EquipmentSlot) {
   switch (slot) {
-    case 'weapon':
-      return '武器'
-    case 'shield':
-      return '盾牌'
+    case 'mainHand':
+      return '主手'
+    case 'offHand':
+      return '副手'
     case 'helmet':
       return '头盔'
     case 'armor':
@@ -439,9 +484,7 @@ export function slotLabel(slot: EquipmentSlot) {
       return '靴子'
     case 'amulet':
       return '项链'
-    case 'ring-left':
-      return '左戒'
-    case 'ring-right':
-      return '右戒'
+    case 'ring':
+      return '戒指'
   }
 }

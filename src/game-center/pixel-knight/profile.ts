@@ -1,10 +1,86 @@
 import {
+  createCatalogItem,
   experienceToNextLevel,
+  isRenderableEquipmentAssetId,
   nextDifficulty,
   PIXEL_KNIGHT_STORAGE_KEY,
   createInitialProfile,
 } from './content/data'
-import type { ItemInstance, PixelKnightProfile, PlayerDerivedStats, RunResult } from './types'
+import type { EquipmentSlot, ItemInstance, PixelKnightProfile, PlayerDerivedStats, RenderableEquipmentAssetId, RunResult } from './types'
+
+type LegacyEquipmentSlot = EquipmentSlot | 'weapon' | 'shield' | 'ring-left' | 'ring-right'
+
+const equipmentSlotOrder: EquipmentSlot[] = [
+  'mainHand',
+  'offHand',
+  'helmet',
+  'armor',
+  'amulet',
+  'ring',
+]
+
+const renderableSlots = ['mainHand', 'offHand', 'helmet', 'armor'] satisfies EquipmentSlot[]
+
+const slotByAssetId: Record<RenderableEquipmentAssetId, EquipmentSlot> = {
+  'cloth-cap': 'helmet',
+  'iron-helmet': 'helmet',
+  'iron-armor': 'armor',
+  'iron-sword': 'mainHand',
+  'wood-shield': 'offHand',
+}
+
+function normalizeRenderableItem(item: ItemInstance | null | undefined, fallbackSlot?: EquipmentSlot): ItemInstance | null {
+  if (!item) return null
+  let assetId: RenderableEquipmentAssetId | undefined = isRenderableEquipmentAssetId(item.assetId) ? item.assetId : undefined
+  const legacyId = item.id
+  const legacySlot = item.slot as LegacyEquipmentSlot
+  if (!assetId && (legacyId === 'starter-sword' || legacySlot === 'mainHand' || legacySlot === 'weapon')) assetId = 'iron-sword'
+  if (!assetId && (legacyId === 'starter-shield' || legacySlot === 'offHand' || legacySlot === 'shield')) assetId = 'wood-shield'
+  if (!assetId) return null
+
+  const slot = slotByAssetId[assetId]
+  if (fallbackSlot && renderableSlots.includes(fallbackSlot as never) && fallbackSlot !== slot) return null
+  return { ...item, assetId, slot }
+}
+
+function appendMissingDemoItems(stash: ItemInstance[], equipment: PixelKnightProfile['equipment']) {
+  const existingAssetIds = new Set(
+    [
+      ...stash.map((item) => item.assetId),
+      ...Object.values(equipment).map((item) => item?.assetId),
+    ].filter(Boolean),
+  )
+  const seedAssets: RenderableEquipmentAssetId[] = ['cloth-cap', 'iron-armor', 'iron-helmet']
+  const additions = seedAssets
+    .filter((assetId) => !existingAssetIds.has(assetId))
+    .map((assetId) => createCatalogItem(assetId, 1, assetId === 'iron-helmet' ? 'magic' : 'common', 'migration'))
+  return [...stash, ...additions]
+}
+
+function normalizePixelKnightProfile(profile: PixelKnightProfile): PixelKnightProfile {
+  const legacyEquipment = profile.equipment as Partial<Record<LegacyEquipmentSlot, ItemInstance | null>>
+  const migrated: PixelKnightProfile['equipment'] = {
+    mainHand: normalizeRenderableItem(legacyEquipment.mainHand ?? legacyEquipment.weapon, 'mainHand'),
+    offHand: normalizeRenderableItem(legacyEquipment.offHand ?? legacyEquipment.shield, 'offHand'),
+    helmet: normalizeRenderableItem(legacyEquipment.helmet, 'helmet'),
+    armor: normalizeRenderableItem(legacyEquipment.armor, 'armor'),
+    amulet: null,
+    ring: null,
+  }
+
+  const stash = appendMissingDemoItems(
+    profile.stash
+      .map((item) => normalizeRenderableItem(item))
+      .filter((item): item is ItemInstance => Boolean(item)),
+    migrated,
+  )
+
+  return {
+    ...profile,
+    equipment: Object.fromEntries(equipmentSlotOrder.map((slot) => [slot, migrated[slot] ?? null])),
+    stash,
+  }
+}
 
 export function loadPixelKnightProfile() {
   if (typeof window === 'undefined') return createInitialProfile()
@@ -13,7 +89,7 @@ export function loadPixelKnightProfile() {
   try {
     const parsed = JSON.parse(stored) as PixelKnightProfile
     if (parsed?.version !== 1) return createInitialProfile()
-    return parsed
+    return normalizePixelKnightProfile(parsed)
   } catch {
     return createInitialProfile()
   }
@@ -100,4 +176,3 @@ export function pixelKnightItemStatLine(item: ItemInstance) {
   ].filter(Boolean)
   return bits.slice(0, 3).join(' · ')
 }
-

@@ -102,9 +102,16 @@ const PORTAL_RADIUS = 30
 const MATRIX_PLAYER_PIXEL_SIZE = 3
 const MATRIX_ATTACK_DURATION_MS = 420
 const matrixKnightManifest = knightManifestData as MatrixManifest
-const matrixKnightEquipment: Partial<Record<MatrixEquipmentSlot, MatrixEquipmentPiece | null>> = {
+type MatrixEquipmentLoadout = Partial<Record<MatrixEquipmentSlot, MatrixEquipmentPiece | null>>
+
+const defaultMatrixKnightEquipment: MatrixEquipmentLoadout = {
   mainHand: swordMatrixData as MatrixEquipmentPiece,
   offHand: shieldMatrixData as MatrixEquipmentPiece,
+}
+
+type EnterVillageConfig = {
+  stats?: PlayerDerivedStats
+  equipment?: MatrixEquipmentLoadout
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -325,6 +332,7 @@ export class PixelKnightGame {
   private nearbyHotspot: MapHotspot | null = null
   private lastHomeHudSignature: string | null = null
   private villageTerrainCache: HTMLCanvasElement | null = null
+  private matrixEquipment: MatrixEquipmentLoadout = { ...defaultMatrixKnightEquipment }
 
   constructor(host: HTMLDivElement, callbacks: PixelKnightGameCallbacks) {
     this.host = host
@@ -361,7 +369,20 @@ export class PixelKnightGame {
     this.animationFrame = requestAnimationFrame(this.loop)
   }
 
-  startRun(config: { dungeonId: DungeonId; difficulty: DifficultyTier; stats: PlayerDerivedStats }) {
+  setEquipment(equipment?: MatrixEquipmentLoadout) {
+    this.matrixEquipment = {
+      ...defaultMatrixKnightEquipment,
+      ...equipment,
+    }
+  }
+
+  startRun(config: {
+    dungeonId: DungeonId
+    difficulty: DifficultyTier
+    stats: PlayerDerivedStats
+    equipment?: MatrixEquipmentLoadout
+  }) {
+    this.setEquipment(config.equipment)
     const built = buildMaze(config.dungeonId)
     const startPos = worldFromCell(built.start)
     this.run = {
@@ -427,7 +448,9 @@ export class PixelKnightGame {
     this.emitHud()
   }
 
-  enterVillage(stats?: PlayerDerivedStats) {
+  enterVillage(config?: EnterVillageConfig) {
+    if (config?.equipment) this.setEquipment(config.equipment)
+    const stats = config?.stats
     const startPos = this.player && this.phase === 'home' ? { x: this.player.x, y: this.player.y } : worldFromCell(starterVillage.start)
     this.run = null
     this.enemies = []
@@ -974,7 +997,7 @@ export class PixelKnightGame {
       attackLocomotionMode: player.moving ? 'walk' : 'idle',
       locomotionTimeMs: player.locomotionAnimElapsedMs,
       attackTimeMs: player.attackAnimElapsedMs,
-      equipment: matrixKnightEquipment,
+      equipment: this.matrixEquipment,
     })
   }
 

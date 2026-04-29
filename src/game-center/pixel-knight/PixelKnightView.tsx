@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, Database, Package2, Pause, Play, Swords } from 'lucide-react'
+import { ArrowLeft, Database, Pause, Play, Swords } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -7,6 +7,9 @@ import { cn } from '@/lib/utils'
 import knightManifestData from '@/game-center/pixel-knight/assets/characters/knight.json'
 import swordMatrixData from '@/game-center/pixel-knight/assets/equipment/main-hand/iron-sword.json'
 import shieldMatrixData from '@/game-center/pixel-knight/assets/equipment/off-hand/wood-shield.json'
+import armorMatrixData from '@/game-center/pixel-knight/assets/equipment/armor/iron-armor.json'
+import clothCapMatrixData from '@/game-center/pixel-knight/assets/equipment/helmet/cloth-cap.json'
+import helmetMatrixData from '@/game-center/pixel-knight/assets/equipment/helmet/iron-helmet.json'
 import characterSelectBg from '@/game-center/pixel-knight/assets/ui/character-select-bg-clean.png'
 import buttonDisabledFrame from '@/game-center/pixel-knight/assets/ui/character-select/button-disabled.png'
 import buttonPrimaryFrame from '@/game-center/pixel-knight/assets/ui/character-select/button-primary.png'
@@ -14,6 +17,32 @@ import characterCardFocusedFrame from '@/game-center/pixel-knight/assets/ui/char
 import characterCardNormalFrame from '@/game-center/pixel-knight/assets/ui/character-select/character-card-normal.png'
 import characterCardSelectedFrame from '@/game-center/pixel-knight/assets/ui/character-select/character-card-selected.png'
 import titleBarFrame from '@/game-center/pixel-knight/assets/ui/character-select/title-bar.png'
+import closeButtonFrame from '@/game-center/pixel-knight/assets/ui/inventory/close-button-v2.png'
+import hudBackpackButton from '@/game-center/pixel-knight/assets/ui/inventory/hud-backpack-button-v2.png'
+import hudBlueFill from '@/game-center/pixel-knight/assets/ui/inventory/hud-blue-fill-core-v2.png'
+import hudHealthFrame from '@/game-center/pixel-knight/assets/ui/inventory/hud-status-frame-v2.png'
+import hudHealthFrameFront from '@/game-center/pixel-knight/assets/ui/inventory/hud-status-frame-front-v2.png'
+import hudHpFill from '@/game-center/pixel-knight/assets/ui/inventory/hud-hp-fill-core-v2.png'
+import hudMinimapFrame from '@/game-center/pixel-knight/assets/ui/inventory/hud-minimap-frame-v2.png'
+import hudPauseButton from '@/game-center/pixel-knight/assets/ui/inventory/hud-pause-button-v2.png'
+import hudPromptPlaque from '@/game-center/pixel-knight/assets/ui/inventory/hud-prompt-plaque-v2.png'
+import inventoryBgFrame from '@/game-center/pixel-knight/assets/ui/inventory/inventory-bg-v2.png'
+import inventoryGridPanel from '@/game-center/pixel-knight/assets/ui/inventory/inventory-grid-6x6-v2.png'
+import inventorySlotFrame from '@/game-center/pixel-knight/assets/ui/inventory/inventory-slot-v2.png'
+import placeholderAmuletIcon from '@/game-center/pixel-knight/assets/ui/inventory/placeholders/amulet.png'
+import placeholderArmorIcon from '@/game-center/pixel-knight/assets/ui/inventory/placeholders/armor.png'
+import placeholderHelmetIcon from '@/game-center/pixel-knight/assets/ui/inventory/placeholders/helmet.png'
+import placeholderMainHandIcon from '@/game-center/pixel-knight/assets/ui/inventory/placeholders/main-hand.png'
+import placeholderOffHandIcon from '@/game-center/pixel-knight/assets/ui/inventory/placeholders/off-hand.png'
+import placeholderRingIcon from '@/game-center/pixel-knight/assets/ui/inventory/placeholders/ring.png'
+import statArmorIcon from '@/game-center/pixel-knight/assets/ui/inventory/stats/armor.png'
+import statAttackIcon from '@/game-center/pixel-knight/assets/ui/inventory/stats/attack.png'
+import statCritChanceIcon from '@/game-center/pixel-knight/assets/ui/inventory/stats/crit-chance.png'
+import statCritDamageIcon from '@/game-center/pixel-knight/assets/ui/inventory/stats/crit-damage.png'
+import statGoldIcon from '@/game-center/pixel-knight/assets/ui/inventory/stats/gold.png'
+import statHealthIcon from '@/game-center/pixel-knight/assets/ui/inventory/stats/health.png'
+import statMoveSpeedIcon from '@/game-center/pixel-knight/assets/ui/inventory/stats/move-speed.png'
+import statSkillIcon from '@/game-center/pixel-knight/assets/ui/inventory/stats/skill.png'
 import {
   drawMatrixCharacter,
   type MatrixEquipmentPiece,
@@ -46,11 +75,13 @@ import {
 import type {
   BaseClassId,
   DungeonSelectState,
+  EquipmentSlot,
   ItemInstance,
   MapHotspot,
   PixelKnightHudState,
   PixelKnightProfile,
   PreloadProgress,
+  RenderableEquipmentAssetId,
   RunResult,
   VillageHotspotKind,
 } from './types'
@@ -103,6 +134,39 @@ const selectKnightManifest = knightManifestData as MatrixManifest
 const selectKnightEquipment: Partial<Record<MatrixEquipmentSlot, MatrixEquipmentPiece | null>> = {
   mainHand: swordMatrixData as MatrixEquipmentPiece,
   offHand: shieldMatrixData as MatrixEquipmentPiece,
+}
+
+type MatrixEquipmentLoadout = Partial<Record<MatrixEquipmentSlot, MatrixEquipmentPiece | null>>
+
+const equipmentSlotOrder: EquipmentSlot[] = [
+  'helmet',
+  'armor',
+  'mainHand',
+  'offHand',
+  'amulet',
+  'ring',
+]
+
+const matrixEquipmentByAssetId: Record<RenderableEquipmentAssetId, MatrixEquipmentPiece> = {
+  'cloth-cap': clothCapMatrixData as MatrixEquipmentPiece,
+  'iron-helmet': helmetMatrixData as unknown as MatrixEquipmentPiece,
+  'iron-armor': armorMatrixData as unknown as MatrixEquipmentPiece,
+  'iron-sword': swordMatrixData as MatrixEquipmentPiece,
+  'wood-shield': shieldMatrixData as MatrixEquipmentPiece,
+}
+
+function resolveMatrixEquipment(item: ItemInstance | null | undefined) {
+  if (!item?.assetId) return null
+  return matrixEquipmentByAssetId[item.assetId] ?? null
+}
+
+function resolveProfileMatrixEquipment(profile: PixelKnightProfile): MatrixEquipmentLoadout {
+  return {
+    mainHand: resolveMatrixEquipment(profile.equipment.mainHand),
+    offHand: resolveMatrixEquipment(profile.equipment.offHand),
+    helmet: resolveMatrixEquipment(profile.equipment.helmet),
+    armor: resolveMatrixEquipment(profile.equipment.armor),
+  }
 }
 
 const characterSelectEntries: Array<{
@@ -222,6 +286,61 @@ function CharacterSelectAvatarCanvas() {
   )
 }
 
+function InventoryCharacterCanvas({ profile }: { profile: PixelKnightProfile }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    let disposed = false
+    let frameId = 0
+    let lastTs = performance.now()
+    let elapsed = 0
+
+    const equipment = resolveProfileMatrixEquipment(profile)
+
+    const render = (timestamp: number) => {
+      if (disposed) return
+      const dt = Math.min(34, timestamp - lastTs)
+      lastTs = timestamp
+      elapsed += dt
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.imageSmoothingEnabled = false
+      drawMatrixCharacter(ctx, selectKnightManifest, {
+        actorX: 256,
+        actorFeetY: 500,
+        pixelSize: 10,
+        facing: 'right',
+        mode: 'idle',
+        timeMs: elapsed,
+        equipment,
+      })
+
+      frameId = requestAnimationFrame(render)
+    }
+
+    frameId = requestAnimationFrame(render)
+    return () => {
+      disposed = true
+      cancelAnimationFrame(frameId)
+    }
+  }, [profile.equipment.armor, profile.equipment.helmet, profile.equipment.mainHand, profile.equipment.offHand])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={512}
+      height={560}
+      className="pointer-events-none absolute left-1/2 top-[7%] h-[78%] w-auto -translate-x-1/2"
+      style={{ imageRendering: 'pixelated' }}
+    />
+  )
+}
+
 export default function PixelKnightView() {
   const navigate = useNavigate()
   const hostRef = useRef<HTMLDivElement>(null)
@@ -313,13 +432,19 @@ export default function PixelKnightView() {
   }, [])
 
   const playerStats = useMemo(() => derivePixelKnightStats(profile), [profile])
+  const gameEquipment = useMemo(() => resolveProfileMatrixEquipment(profile), [profile])
   const xpRatio = profile.experience / experienceToNextLevel(profile.level)
+
+  useEffect(() => {
+    gameRef.current?.setEquipment(gameEquipment)
+  }, [gameEquipment])
 
   const startRun = () => {
     gameRef.current?.startRun({
       dungeonId: selected.dungeonId,
       difficulty: selected.selectedDifficulty,
       stats: playerStats,
+      equipment: gameEquipment,
     })
     setPhase('playing')
     setActiveVillagePanel(null)
@@ -360,6 +485,21 @@ export default function PixelKnightView() {
     })
   }
 
+  const unequipItem = (slot: EquipmentSlot) => {
+    setProfile((current) => {
+      const existing = current.equipment[slot] ?? null
+      if (!existing) return current
+      return {
+        ...current,
+        equipment: {
+          ...current.equipment,
+          [slot]: null,
+        },
+        stash: [...current.stash, existing],
+      }
+    })
+  }
+
   const backToHome = () => {
     gameRef.current?.stopToHome()
     setHomeStage('village')
@@ -369,15 +509,19 @@ export default function PixelKnightView() {
   }
 
   const confirmKnightSelection = () => {
-    setProfile((current) => ({
-      ...current,
+    const nextProfile: PixelKnightProfile = {
+      ...profile,
       equipment: {
-        ...current.equipment,
-        weapon: current.equipment.weapon ?? createStarterSword(),
-        shield: current.equipment.shield ?? createStarterShield(),
+        ...profile.equipment,
+        mainHand: profile.equipment.mainHand ?? createStarterSword(),
+        offHand: profile.equipment.offHand ?? createStarterShield(),
       },
-    }))
-    gameRef.current?.enterVillage(playerStats)
+    }
+    setProfile(nextProfile)
+    gameRef.current?.enterVillage({
+      stats: derivePixelKnightStats(nextProfile),
+      equipment: resolveProfileMatrixEquipment(nextProfile),
+    })
     setHomeStage('village')
     setActiveVillagePanel(null)
   }
@@ -412,7 +556,7 @@ export default function PixelKnightView() {
               className="border-[#314635]/18 bg-[#f7efd7]/70 text-[#193123] hover:bg-[#fff5dc]"
             >
               <Link to="/games/pixel-knight/character-demo">
-                <Package2 />
+                <Swords />
                 角色 Demo
               </Link>
             </Button>
@@ -628,10 +772,16 @@ export default function PixelKnightView() {
                       <button
                         type="button"
                         onClick={() => setInventoryOpen((current) => !current)}
-                        className="rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-sm text-[#d6dfcd]"
+                        className="relative h-12 w-12 transition hover:scale-105 active:scale-95"
+                        aria-label="打开背包"
                       >
-                        <Package2 className="mr-1 inline size-4" />
-                        背包
+                        <img
+                          src={hudBackpackButton}
+                          alt=""
+                          className="h-full w-full object-contain"
+                          draggable={false}
+                          style={{ imageRendering: 'pixelated' }}
+                        />
                       </button>
                     </div>
 
@@ -721,71 +871,78 @@ export default function PixelKnightView() {
             {(phase === 'home' && homeStage === 'village') || phase === 'playing' || hud.phase === 'paused' ? (
               <>
                 <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-wrap items-start justify-between gap-3 p-4">
-                  <div className="min-w-[260px] rounded-[1.2rem] border border-white/10 bg-black/34 px-4 py-3 backdrop-blur-[2px]">
-                    <div className="flex items-center justify-between gap-4 text-xs tracking-[0.2em] uppercase text-[#b8ccaf]">
-                      <span>{hud.dungeonName}</span>
-                      <span>{hud.difficultyLabel}</span>
-                    </div>
-                    <div className="mt-2 flex justify-between gap-3 text-sm text-[#f7efd8]">
-                      <span>{hud.nearbyHotspot ? '地标可交互' : hud.mapKind === 'village' ? '村庄漫游' : '探索中'}</span>
-                      <span>{hud.encounterLabel}</span>
-                    </div>
-                    <div className="mt-1 text-xs text-[#dccb9c]">{hud.objectiveLabel}</div>
-                    {hud.mapKind === 'dungeon' ? (
-                      <>
-                        <div className="mt-3 h-3 overflow-hidden rounded-full border border-[#f3d48f]/14 bg-black/25">
-                          <div
-                            className="h-full bg-[linear-gradient(90deg,#f5d275,#f7f0b1,#9ce59f)]"
-                            style={{ width: `${hud.maxHealth ? (hud.health / hud.maxHealth) * 100 : 0}%` }}
-                          />
-                        </div>
-                        <div className="mt-2 flex justify-between text-sm text-[#f6f0d6]">
-                          <span>
-                            HP {Math.max(0, Math.round(hud.health))}/{Math.round(hud.maxHealth)}
-                          </span>
-                          <span>{formatTime(hud.elapsedMs)}</span>
-                        </div>
-                      </>
-                    ) : null}
-                  </div>
+                  <HudHealth state={hud} fallbackMaxHealth={playerStats.maxHealth} />
 
                   <div className="flex items-start gap-2">
-                    <div className="pointer-events-none rounded-[1.2rem] border border-white/10 bg-black/34 p-3 backdrop-blur-[2px]">
+                    <div className="pointer-events-none relative h-[168px] w-[168px] sm:h-[196px] sm:w-[196px]">
                       <MiniMap hud={hud} />
+                      <img
+                        src={hudMinimapFrame}
+                        alt=""
+                        className="absolute inset-0 z-10 h-full w-full object-fill"
+                        draggable={false}
+                        style={{ imageRendering: 'pixelated' }}
+                      />
+                      <div className="absolute left-[24%] right-[24%] top-[5%] z-20 truncate text-center text-[0.58rem] font-black tracking-[0.08em] text-[#2c1c0e] sm:text-xs">
+                        {hud.dungeonName}
+                      </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setInventoryOpen((current) => !current)}
-                      className="pointer-events-auto rounded-[1rem] border border-white/10 bg-black/34 px-4 py-3 text-sm text-[#f6f0d6] backdrop-blur-[2px]"
+                      className="pointer-events-auto relative mt-[12px] h-14 w-14 transition hover:scale-105 active:scale-95"
+                      aria-label="打开背包"
                     >
-                      <Package2 className="mr-2 inline size-4" />
-                      背包
+                      <img
+                        src={hudBackpackButton}
+                        alt=""
+                        className="absolute inset-0 h-full w-full object-fill"
+                        draggable={false}
+                        style={{ imageRendering: 'pixelated' }}
+                      />
                     </button>
                     {hud.mapKind === 'dungeon' ? (
                       <button
                         type="button"
                         onClick={() => gameRef.current?.setPaused(hud.phase !== 'paused')}
-                        className="pointer-events-auto rounded-[1rem] border border-white/10 bg-black/34 px-4 py-3 text-sm text-[#f6f0d6] backdrop-blur-[2px]"
+                        className="pointer-events-auto relative h-14 w-14 transition hover:scale-105 active:scale-95"
+                        aria-label={hud.phase === 'paused' ? '继续' : '暂停'}
                       >
-                        {hud.phase === 'paused' ? <Play className="mr-2 inline size-4" /> : <Pause className="mr-2 inline size-4" />}
-                        {hud.phase === 'paused' ? '继续' : '暂停'}
+                        <img
+                          src={hudPauseButton}
+                          alt=""
+                          className="absolute inset-0 h-full w-full object-contain"
+                          draggable={false}
+                          style={{ imageRendering: 'pixelated' }}
+                        />
+                        {hud.phase === 'paused' ? (
+                          <Play className="absolute left-1/2 top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 text-[#f8e0a6]" />
+                        ) : (
+                          <Pause className="absolute left-1/2 top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 text-[#f8e0a6]" />
+                        )}
                       </button>
                     ) : null}
                   </div>
                 </div>
 
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 p-4">
-                  <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-                    <div className="rounded-[1.4rem] border border-white/10 bg-black/34 px-4 py-3 backdrop-blur-[2px]">
-                      <div className="text-[0.72rem] tracking-[0.28em] text-[#b8ccaf] uppercase">Run Feed</div>
-                      <div className="mt-2 space-y-1 text-sm text-[#f2ead2]">
-                        {(hud.recentLoot.length ? hud.recentLoot : ['保持移动，围着敌人切入，再用旋风清场。']).map((entry) => (
-                          <div key={entry}>{entry}</div>
-                        ))}
-                        {hud.nearbyHotspot ? <div className="text-[#a8f6ff]">{hud.nearbyHotspot.prompt}</div> : null}
-                        {hud.portalNearby && hud.mapKind === 'dungeon' ? <div className="text-[#a8f6ff]">靠近传送点，按 `F` 返回村庄。</div> : null}
+                  <div className="flex flex-col items-center gap-3">
+                    {(hud.nearbyHotspot || (hud.portalNearby && hud.mapKind === 'dungeon')) ? (
+                      <div className="relative h-[54px] w-[min(360px,86vw)]">
+                        <img
+                          src={hudPromptPlaque}
+                          alt=""
+                          className="absolute inset-0 h-full w-full object-fill"
+                          draggable={false}
+                          style={{ imageRendering: 'pixelated' }}
+                        />
+                        <div className="absolute inset-x-[10%] top-1/2 -translate-y-1/2 truncate text-center text-sm font-black text-[#2f1f10]">
+                          {hud.nearbyHotspot
+                            ? hud.nearbyHotspot.prompt
+                            : '靠近传送点，按 F 返回村庄'}
+                        </div>
                       </div>
-                    </div>
+                    ) : null}
                     {hud.mapKind === 'dungeon' ? <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                       {[
                         ['LMB', '斩击', hud.cooldowns.basic],
@@ -875,67 +1032,13 @@ export default function PixelKnightView() {
             ) : null}
 
             {inventoryOpen ? (
-              <div className="absolute inset-y-0 right-0 z-30 w-full max-w-[420px] border-l border-white/10 bg-[linear-gradient(180deg,rgba(18,24,20,0.95),rgba(10,14,11,0.98))] p-4 shadow-[-16px_0_48px_rgba(0,0,0,0.32)]">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-[0.72rem] tracking-[0.3em] text-[#c8d7c8]/72 uppercase">Inventory</div>
-                    <div className="mt-1 text-2xl font-black tracking-[0.06em] text-[#fbf4dd]">骑士装备</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setInventoryOpen(false)}
-                    className="rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-sm text-[#d6dfcd]"
-                  >
-                    关闭
-                  </button>
-                </div>
-
-                <div className="mt-4 grid gap-2 text-sm">
-                  <div className="rounded-[1.2rem] border border-white/10 bg-white/6 px-4 py-3 text-[#d8d0b7]">
-                    Lv.{profile.level} · 攻击 {playerStats.attack} · 护甲 {playerStats.armor} · 金币 {profile.gold}
-                  </div>
-                </div>
-
-                <div className="mt-4 grid max-h-[calc(100%-8rem)] gap-3 overflow-y-auto pr-1">
-                  {(Object.entries(profile.equipment) as Array<[keyof PixelKnightProfile['equipment'], ItemInstance | null | undefined]>).map(([slot, item]) => (
-                    <div key={slot} className="rounded-[1.2rem] border border-white/10 bg-white/6 px-4 py-3">
-                      <div className="text-[0.72rem] tracking-[0.24em] text-[#c8d7c8] uppercase">{slotLabel(slot as never)}</div>
-                      <div className={cn('mt-2 text-sm font-black', item ? rarityTone(item.rarity) : 'text-[#fbf4dd]')}>
-                        {item?.name ?? '未装备'}
-                      </div>
-                      <div className="mt-1 text-sm text-[#d9e2d0]">
-                        {item ? pixelKnightItemStatLine(item) : '从战利品中点击即可装备。'}
-                      </div>
-                    </div>
-                  ))}
-
-                  <div className="rounded-[1.2rem] border border-white/10 bg-white/6 px-4 py-3">
-                    <div className="text-[0.72rem] tracking-[0.24em] text-[#c8d7c8] uppercase">Backpack</div>
-                    <div className="mt-3 space-y-3">
-                      {profile.stash.length ? (
-                        profile.stash.map((item) => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => equipItem(item)}
-                            className="w-full rounded-[1rem] border border-white/10 bg-black/18 px-3 py-3 text-left transition hover:bg-black/28"
-                          >
-                            <div className={cn('text-sm font-black', rarityTone(item.rarity))}>{item.name}</div>
-                            <div className="mt-1 text-xs tracking-[0.18em] text-[#cad8c9] uppercase">
-                              {rarityLabel(item.rarity)} · {slotLabel(item.slot)}
-                            </div>
-                            <div className="mt-2 text-sm text-[#f2ead2]">{pixelKnightItemStatLine(item)}</div>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="rounded-[1rem] border border-dashed border-white/12 px-3 py-5 text-sm text-[#c0cfbf]">
-                          还没有战利品，先去打一趟副本。
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <InventoryOverlay
+                profile={profile}
+                playerStats={playerStats}
+                onClose={() => setInventoryOpen(false)}
+                onEquipItem={equipItem}
+                onUnequipItem={unequipItem}
+              />
             ) : null}
           </div>
         </section>
@@ -1022,6 +1125,64 @@ function VillageSystemPanel({
   )
 }
 
+function HudHealth({
+  state,
+  fallbackMaxHealth,
+}: {
+  state: PixelKnightHudState
+  fallbackMaxHealth: number
+}) {
+  const maxHealth = state.maxHealth || fallbackMaxHealth
+  const health = state.maxHealth ? state.health : maxHealth
+  const ratio = maxHealth ? Math.max(0, Math.min(1, health / maxHealth)) : 0
+
+  return (
+    <div className="relative aspect-[22/7] w-[clamp(13.75rem,29vw,22rem)] max-w-[calc(100vw-2rem)]">
+      <img
+        src={hudHealthFrame}
+        alt=""
+        className="absolute inset-0 z-0 h-full w-full object-fill"
+        draggable={false}
+        style={{ imageRendering: 'pixelated' }}
+      />
+      <div className="absolute left-[33.84%] right-[5.18%] top-[24.6%] z-10 h-[26.19%] overflow-hidden">
+        <img
+          src={hudHpFill}
+          alt=""
+          className="h-full w-full object-fill"
+          draggable={false}
+          style={{
+            clipPath: `inset(0 ${100 - ratio * 100}% 0 0)`,
+            imageRendering: 'pixelated',
+          }}
+        />
+      </div>
+      <div className="absolute left-[33.84%] right-[5.18%] top-[60.71%] z-10 h-[22.22%] overflow-hidden">
+        <img
+          src={hudBlueFill}
+          alt=""
+          className="h-full max-w-none object-fill"
+          draggable={false}
+          style={{ width: '100%', imageRendering: 'pixelated' }}
+        />
+      </div>
+      <img
+        src={hudHealthFrameFront}
+        alt=""
+        className="absolute inset-0 z-20 h-full w-full object-fill"
+        draggable={false}
+        style={{ imageRendering: 'pixelated' }}
+      />
+      <div className="absolute left-[33.84%] right-[5.18%] top-[30.8%] z-30 flex h-[14%] items-center justify-center text-[clamp(0.48rem,0.95vw,0.75rem)] font-black tracking-[0.08em] text-[#fff2c8]">
+        HP {Math.max(0, Math.round(health))}/{Math.round(maxHealth)}
+      </div>
+      <div className="absolute left-[33.84%] right-[5.18%] top-[66.5%] z-30 flex h-[14%] items-center justify-center text-[clamp(0.48rem,0.95vw,0.75rem)] font-black tracking-[0.08em] text-[#d8f6ff]">
+        MP 100/100
+      </div>
+    </div>
+  )
+}
+
 function HomeStat({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-[1rem] border border-white/10 bg-white/5 px-3 py-3">
@@ -1040,39 +1201,311 @@ function ResultStat({ label, value }: { label: string; value: string }) {
   )
 }
 
-function MiniMap({ hud }: { hud: PixelKnightHudState }) {
-  const rows = hud.minimapRows
-  if (!rows.length) return <div className="h-[108px] w-[192px]" />
+function InventoryOverlay({
+  profile,
+  playerStats,
+  onClose,
+  onEquipItem,
+  onUnequipItem,
+}: {
+  profile: PixelKnightProfile
+  playerStats: ReturnType<typeof derivePixelKnightStats>
+  onClose: () => void
+  onEquipItem: (item: ItemInstance) => void
+  onUnequipItem: (slot: EquipmentSlot) => void
+}) {
+  const inventoryCells = Array.from({ length: 36 }, (_, index) => profile.stash[index] ?? null)
+  const stats: Array<[string, string | number, string]> = [
+    ['攻击', playerStats.attack, statAttackIcon],
+    ['护甲', playerStats.armor, statArmorIcon],
+    ['生命', playerStats.maxHealth, statHealthIcon],
+    ['暴击', `${Math.round(playerStats.critChance * 100)}%`, statCritChanceIcon],
+    ['暴伤', `${Math.round(playerStats.critDamage * 100)}%`, statCritDamageIcon],
+    ['技能', playerStats.skillPower, statSkillIcon],
+    ['移速', playerStats.moveSpeed, statMoveSpeedIcon],
+    ['金币', profile.gold, statGoldIcon],
+  ]
 
   return (
-    <svg viewBox={`0 0 ${rows[0].length} ${rows.length}`} className="h-[108px] w-[192px] overflow-hidden rounded-[0.8rem]">
-      {rows.map((row, y) =>
-        row.split('').map((cell, x) => {
-          const fill =
-            cell === '#'
-              ? '#33473a'
-              : cell === 'p'
-                ? '#e5cf8f'
-                : cell === 'r'
-                  ? '#b8814d'
-                  : cell === 'P'
-                    ? '#7ae4ff'
-                    : '#9acb6c'
-          return <rect key={`${x}-${y}`} x={x} y={y} width="1" height="1" fill={fill} />
-        }),
+    <div className="absolute inset-0 z-40 overflow-hidden bg-[#11150f]/82 p-3 text-[#f7ecd0] sm:p-5">
+      <img
+        src={inventoryBgFrame}
+        alt=""
+        className="absolute left-[2%] top-[3%] h-[94%] w-[96%] object-fill opacity-95"
+        draggable={false}
+        style={{ imageRendering: 'pixelated' }}
+      />
+
+      <div className="relative h-full w-full">
+        <div className="absolute left-[7%] top-[6%] text-lg font-black tracking-[0.18em] text-[#f6dfac] sm:text-2xl">
+          骑士背包
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-[5%] top-[6%] z-10 h-11 w-11 transition hover:scale-105 active:scale-95 sm:h-14 sm:w-14"
+          aria-label="关闭背包"
+        >
+          <img
+            src={closeButtonFrame}
+            alt=""
+            className="h-full w-full object-contain"
+            draggable={false}
+            style={{ imageRendering: 'pixelated' }}
+          />
+        </button>
+
+        <div className="absolute left-[6%] top-[13%] h-[63%] w-[55%]">
+          <InventoryCharacterCanvas profile={profile} />
+          {equipmentSlotOrder.map((slot) => (
+            <EquipmentSlotButton
+              key={slot}
+              slot={slot}
+              item={profile.equipment[slot] ?? null}
+              onUnequipItem={onUnequipItem}
+            />
+          ))}
+        </div>
+
+        <div className="absolute left-[12.5%] top-[67%] grid w-[42%] grid-cols-4 gap-x-1.5 gap-y-1 text-[#f3dfb5] lg:gap-x-2 lg:gap-y-1.5">
+          {stats.map(([label, value, icon]) => (
+            <div key={label} className="flex min-w-0 items-center gap-1 lg:gap-1.5">
+              <img
+                src={icon}
+                alt=""
+                className="h-4 w-4 shrink-0 object-contain sm:h-5 sm:w-5 lg:h-6 lg:w-6 xl:h-7 xl:w-7"
+                draggable={false}
+                style={{ imageRendering: 'pixelated' }}
+              />
+              <div className="min-w-0">
+                <div className="truncate text-[0.48rem] font-black tracking-[0.08em] text-[#c2a778] sm:text-[0.56rem] lg:text-[0.68rem] xl:text-xs">{label}</div>
+                <div className="truncate text-[0.66rem] font-black leading-none sm:text-xs lg:text-sm xl:text-base">{value}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <section className="absolute right-[5%] top-[17%] h-[68%] w-[33%]">
+          <img
+            src={inventoryGridPanel}
+            alt=""
+            className="absolute inset-0 h-full w-full object-fill"
+            draggable={false}
+            style={{ imageRendering: 'pixelated' }}
+          />
+          <div className="absolute left-[9%] right-[9%] top-[9%] bottom-[9%] grid grid-cols-6 grid-rows-6 gap-[1.5%]">
+            {inventoryCells.map((item, index) => (
+              <InventoryItemCell
+                key={item?.id ?? `empty-${index}`}
+                item={item}
+                onEquipItem={onEquipItem}
+              />
+            ))}
+          </div>
+        </section>
+      </div>
+    </div>
+  )
+}
+
+function EquipmentSlotButton({
+  slot,
+  item,
+  onUnequipItem,
+}: {
+  slot: EquipmentSlot
+  item: ItemInstance | null
+  onUnequipItem: (slot: EquipmentSlot) => void
+}) {
+  const positions: Record<EquipmentSlot, string> = {
+    amulet: 'left-[9%] top-[10%]',
+    ring: 'left-[9%] top-[35%]',
+    mainHand: 'left-[9%] top-[60%]',
+    helmet: 'left-[75%] top-[10%]',
+    armor: 'left-[75%] top-[35%]',
+    offHand: 'left-[75%] top-[60%]',
+    gloves: 'left-0 top-0',
+    boots: 'left-0 top-0',
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => item && onUnequipItem(slot)}
+      disabled={!item}
+      className={cn(
+        'group absolute aspect-square w-[14%] min-w-[52px] disabled:cursor-default',
+        positions[slot],
       )}
-      {hud.hotspots.map((hotspot) => (
-        <rect
-          key={hotspot.id}
-          x={hotspot.cell.x}
-          y={hotspot.cell.y}
-          width="1"
-          height="1"
-          fill={hotspot.kind === 'portal' ? '#7ae4ff' : '#ffd56f'}
-        />
-      ))}
-      <rect x={hud.portalCell.x} y={hud.portalCell.y} width="1" height="1" fill="#7ae4ff" />
-      <rect x={hud.playerCell.x} y={hud.playerCell.y} width="1" height="1" fill="#ffde7a" />
-    </svg>
+      aria-label={item ? `卸下${item.name}` : `${slotLabel(slot)}未装备`}
+    >
+      <img
+        src={inventorySlotFrame}
+        alt=""
+        className="absolute inset-0 h-full w-full object-fill"
+        draggable={false}
+        style={{ imageRendering: 'pixelated' }}
+      />
+      {item ? (
+        <MatrixEquipmentPreview item={item} className="absolute inset-[18%] h-[64%] w-[64%]" />
+      ) : (
+        <EquipmentSlotPlaceholder slot={slot} />
+      )}
+      {item ? (
+        <span className="absolute inset-0 hidden border-2 border-[#ffd36d] group-hover:block group-focus-visible:block" />
+      ) : null}
+      {item ? <EquipmentTooltip item={item} slot={slot} /> : null}
+    </button>
+  )
+}
+
+function EquipmentSlotPlaceholder({ slot }: { slot: EquipmentSlot }) {
+  const placeholderBySlot: Partial<Record<EquipmentSlot, string>> = {
+    helmet: placeholderHelmetIcon,
+    armor: placeholderArmorIcon,
+    mainHand: placeholderMainHandIcon,
+    offHand: placeholderOffHandIcon,
+    amulet: placeholderAmuletIcon,
+    ring: placeholderRingIcon,
+  }
+
+  return (
+    <img
+      src={placeholderBySlot[slot] ?? placeholderAmuletIcon}
+      alt=""
+      className="pointer-events-none absolute inset-[19%] h-[62%] w-[62%] object-contain opacity-80"
+      draggable={false}
+      style={{ imageRendering: 'pixelated' }}
+    />
+  )
+}
+
+function EquipmentTooltip({ item, slot }: { item: ItemInstance; slot: EquipmentSlot }) {
+  const statLine = pixelKnightItemStatLine(item)
+
+  return (
+    <div className="pointer-events-none absolute left-1/2 top-0 z-30 hidden w-44 -translate-x-1/2 -translate-y-[108%] border-2 border-[#6f4b27] bg-[#21170f]/95 px-3 py-2 text-left shadow-[0_6px_0_rgba(20,10,4,0.45)] group-hover:block group-focus-visible:block">
+      <div className="truncate text-sm font-black text-[#ffe0a3]">{item.name}</div>
+      <div className="mt-1 text-[0.58rem] font-black tracking-[0.12em] text-[#bfa06d] uppercase">
+        {slotLabel(slot)} · Lv.{item.itemLevel} · {rarityLabel(item.rarity)}
+      </div>
+      {statLine ? <div className="mt-2 text-xs font-bold leading-snug text-[#f4d7a0]">{statLine}</div> : null}
+    </div>
+  )
+}
+
+function MatrixEquipmentPreview({ item, className }: { item: ItemInstance; className?: string }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const piece = resolveMatrixEquipment(item)
+    if (!canvas || !piece) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const entries = piece.parts
+      ? Object.values(piece.parts).sort((a, b) => {
+          const rank = (layer?: 'back' | 'base' | 'front') => (layer === 'back' ? 0 : layer === 'front' ? 2 : 1)
+          return rank(a.layer) - rank(b.layer)
+        })
+      : piece.size && piece.points
+        ? [{ size: piece.size, points: piece.points }]
+        : []
+    if (!entries.length) return
+
+    const width = Math.max(...entries.map((entry) => entry.size[0]))
+    const height = Math.max(...entries.map((entry) => entry.size[1]))
+    const pixel = Math.max(2, Math.floor(56 / Math.max(width, height)))
+    canvas.width = width * pixel
+    canvas.height = height * pixel
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.imageSmoothingEnabled = false
+    for (const entry of entries) {
+      for (const point of entry.points) {
+        ctx.fillStyle = point.color
+        ctx.fillRect(point.x * pixel, point.y * pixel, pixel, pixel)
+      }
+    }
+  }, [item])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className={cn('pointer-events-none object-contain', className)}
+      style={{ imageRendering: 'pixelated' }}
+    />
+  )
+}
+
+function InventoryItemCell({
+  item,
+  onEquipItem,
+}: {
+  item: ItemInstance | null
+  onEquipItem: (item: ItemInstance) => void
+}) {
+  if (!item) return <div className="relative" />
+
+  return (
+    <button
+      type="button"
+      onClick={() => onEquipItem(item)}
+      className="group relative min-h-0"
+      aria-label={`装备${item.name}`}
+    >
+      <span className="absolute -top-[calc(2%+3px)] bottom-[2%] left-[calc(2%-2px)] right-[2%] hidden border-2 border-[#ffd36d] group-hover:block group-focus-visible:block" />
+      <MatrixEquipmentPreview item={item} className="absolute inset-[16%] h-[68%] w-[68%]" />
+      <div className="absolute bottom-[4%] right-[10%] text-[0.48rem] font-black text-[#f3dfb5] sm:text-[0.58rem]">
+        {item.itemLevel}
+      </div>
+      <EquipmentTooltip item={item} slot={item.slot} />
+    </button>
+  )
+}
+
+function MiniMap({ hud }: { hud: PixelKnightHudState }) {
+  const rows = hud.minimapRows
+  const mapWindowClass = 'absolute left-[7.2%] right-[7.2%] top-[18.6%] bottom-[6.6%] z-0 overflow-hidden bg-[#91c76d]'
+  if (!rows.length) return <div className={mapWindowClass} />
+
+  return (
+    <div className={mapWindowClass}>
+      <svg
+        viewBox={`0 0 ${rows[0].length} ${rows.length}`}
+        className="absolute inset-0 h-full w-full"
+        preserveAspectRatio="none"
+      >
+        <rect x="0" y="0" width={rows[0].length} height={rows.length} fill="#91c76d" />
+        {rows.map((row, y) =>
+          row.split('').map((cell, x) => {
+            const fill =
+              cell === '#'
+                ? '#33473a'
+                : cell === 'p'
+                  ? '#e5cf8f'
+                  : cell === 'r'
+                    ? '#b8814d'
+                    : cell === 'P'
+                      ? '#7ae4ff'
+                      : '#9acb6c'
+            return <rect key={`${x}-${y}`} x={x} y={y} width="1" height="1" fill={fill} />
+          }),
+        )}
+        {hud.hotspots.map((hotspot) => (
+          <rect
+            key={hotspot.id}
+            x={hotspot.cell.x}
+            y={hotspot.cell.y}
+            width="1"
+            height="1"
+            fill={hotspot.kind === 'portal' ? '#7ae4ff' : '#ffd56f'}
+          />
+        ))}
+        <rect x={hud.portalCell.x} y={hud.portalCell.y} width="1" height="1" fill="#7ae4ff" />
+        <rect x={hud.playerCell.x} y={hud.playerCell.y} width="1" height="1" fill="#ffde7a" />
+      </svg>
+    </div>
   )
 }

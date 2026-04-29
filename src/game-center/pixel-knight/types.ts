@@ -3,15 +3,21 @@ export type BaseClassId = 'knight' | 'archer' | 'mage'
 export type DifficultyTier = 'normal' | 'hard' | 'master' | 'legend'
 
 export type EquipmentSlot =
-  | 'weapon'
-  | 'shield'
+  | 'mainHand'
+  | 'offHand'
   | 'helmet'
   | 'armor'
   | 'gloves'
   | 'boots'
   | 'amulet'
-  | 'ring-left'
-  | 'ring-right'
+  | 'ring'
+
+export type RenderableEquipmentAssetId =
+  | 'cloth-cap'
+  | 'iron-helmet'
+  | 'iron-armor'
+  | 'iron-sword'
+  | 'wood-shield'
 
 export type DungeonId = 'sunmeadow' | 'vine-ruins' | 'crystal-cavern'
 
@@ -150,6 +156,7 @@ export type SetBonusDef = {
 
 export type ItemInstance = {
   id: string
+  assetId?: RenderableEquipmentAssetId
   name: string
   slot: EquipmentSlot
   rarity: ItemRarity
