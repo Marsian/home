@@ -2,7 +2,7 @@ import { difficultyConfigs, generateLootItems, getDungeonById, skills } from './
 import knightManifestData from '@/game-center/pixel-knight/assets/characters/knight.json'
 import shieldMatrixData from '@/game-center/pixel-knight/assets/equipment/off-hand/wood-shield.json'
 import swordMatrixData from '@/game-center/pixel-knight/assets/equipment/main-hand/iron-sword.json'
-import { getPixelKnightHeroSpriteAsset, getPixelKnightVillageAsset } from './game/preload'
+import { getPixelKnightVillageAsset } from './game/preload'
 import { starterVillageLandmarks, starterVillageMap, starterVillageTerrainPatches } from './game/maps/starterVillage'
 import { getVillageAssetMeta, resolveLandmarkAsset } from './rendering/villageAssets'
 import type { VillageAssetId } from './rendering/villageAssets'
@@ -948,31 +948,6 @@ export class PixelKnightGame {
     return worldMouseX < this.player.x - 4 ? 'left' : 'right'
   }
 
-  private renderHeroSprite(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    facing: FacingDirection,
-    scale = 1,
-  ) {
-    const asset = getPixelKnightHeroSpriteAsset()
-    if (!asset) return false
-
-    const { image, meta } = asset
-    const drawWidth = meta.frameWidth * scale
-    const drawHeight = meta.frameHeight * scale
-    const pivotX = meta.pivot.x * scale
-    const pivotY = meta.pivot.y * scale
-
-    ctx.save()
-    ctx.imageSmoothingEnabled = false
-    ctx.translate(Math.round(x), Math.round(y))
-    if (facing === 'left') ctx.scale(-1, 1)
-    ctx.drawImage(image, 0, 0, meta.frameWidth, meta.frameHeight, -pivotX, -pivotY, drawWidth, drawHeight)
-    ctx.restore()
-    return true
-  }
-
   private resolvePlayerMatrixMode(player: PlayerState): MatrixCharacterMode {
     if (player.attackAnimMs > 0) return 'attack'
     return player.moving ? 'walk' : 'idle'
@@ -1338,13 +1313,11 @@ export class PixelKnightGame {
       ctx.fillRect(70 + index * 68, 112 + (index % 2) * 54, 8, 8)
     }
     ctx.fillStyle = '#f2ddaa'
-    if (!this.renderHeroSprite(ctx, 215, 356, 'right', 5)) {
-      ctx.fillRect(170, 220, 70, 54)
-      ctx.fillStyle = '#2f5e4f'
-      ctx.fillRect(160, 270, 96, 88)
-      ctx.fillStyle = '#f0f1e2'
-      ctx.fillRect(242, 238, 28, 82)
-    }
+    ctx.fillRect(170, 220, 70, 54)
+    ctx.fillStyle = '#2f5e4f'
+    ctx.fillRect(160, 270, 96, 88)
+    ctx.fillStyle = '#f0f1e2'
+    ctx.fillRect(242, 238, 28, 82)
 
     ctx.fillStyle = 'rgba(18,24,20,0.24)'
     ctx.fillRect(0, HEIGHT - 118, WIDTH, 118)

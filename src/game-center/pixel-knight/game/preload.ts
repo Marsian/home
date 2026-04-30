@@ -1,19 +1,14 @@
 import { dungeons, legendaryPowers, setBonuses, skills } from '../content/data'
 import { starterVillageLandmarks, starterVillageTerrainPatches } from './maps/starterVillage'
 import { resolveLandmarkAsset, type VillageAssetId, villageAssetSources } from '../rendering/villageAssets'
-import type { PixelKnightSpriteMeta, PreloadProgress } from '../types'
+import type { PreloadProgress } from '../types'
 
 let cachedPromise: Promise<void> | null = null
 let warmLoaded = false
-let heroKnightSpriteAsset: { image: HTMLImageElement; meta: PixelKnightSpriteMeta } | null = null
 let villageAssetCache: Record<VillageAssetId, HTMLImageElement> | null = null
-
-const heroKnightSpriteSrc = '/images/pixel-knight/characters/hero-knight-a1-no-scarf.png'
-const heroKnightMetaSrc = '/images/pixel-knight/characters/hero-knight-a1-no-scarf.meta.json'
 
 const preloadSteps = [
   { label: '正在校准副本与词条表', wait: 220 },
-  { label: '正在描绘骑士帧动画', wait: 190 },
   { label: '正在铺设新手村地砖', wait: 220 },
 ] as const
 
@@ -35,33 +30,6 @@ function loadImage(src: string) {
     image.onerror = () => reject(new Error(`贴图加载失败：${src}`))
     image.src = src
   })
-}
-
-async function preloadHeroKnightSprite() {
-  if (heroKnightSpriteAsset) return
-  const image = await loadImage(heroKnightSpriteSrc)
-  let meta: PixelKnightSpriteMeta
-
-  try {
-    const metaResponse = await fetch(heroKnightMetaSrc)
-    if (!metaResponse.ok) throw new Error('missing-meta')
-    meta = (await metaResponse.json()) as PixelKnightSpriteMeta
-  } catch {
-    // Fallback: keep runtime robust even when external meta is not available yet.
-    meta = {
-      assetFamily: 'hero-knight',
-      version: 'fallback-1',
-      frameWidth: image.naturalWidth,
-      frameHeight: image.naturalHeight,
-      directions: ['right', 'left'],
-      animations: { idle: { frames: [0], fps: 1 } },
-      pivot: { x: Math.round(image.naturalWidth * 0.5), y: Math.round(image.naturalHeight * 0.84) },
-      selectedDirection: 'right',
-      backupDirection: 'left',
-    }
-  }
-
-  heroKnightSpriteAsset = { image, meta }
 }
 
 function getStarterVillageRequiredAssets(): VillageAssetId[] {
@@ -96,10 +64,6 @@ async function preloadVillageAssets(required: VillageAssetId[]) {
   }
 }
 
-export function getPixelKnightHeroSpriteAsset() {
-  return heroKnightSpriteAsset
-}
-
 export function getPixelKnightVillageAsset(id: VillageAssetId) {
   return villageAssetCache?.[id] ?? null
 }
@@ -112,7 +76,6 @@ export async function preloadGameData() {
 export function clearPixelKnightPreloadCache() {
   cachedPromise = null
   warmLoaded = false
-  heroKnightSpriteAsset = null
   villageAssetCache = null
 }
 
@@ -124,12 +87,11 @@ export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress)
 
     for (let index = 0; index < preloadSteps.length; index += 1) {
       const step = preloadSteps[index]
-      if (shouldFail && index === 2) {
+      if (shouldFail && index === 1) {
         throw new Error('素材图集未能成功解压，请重试。')
       }
       if (index === 0) await preloadGameData()
-      if (index === 1) await preloadHeroKnightSprite()
-      if (index === 2) await preloadVillageAssets(requiredVillageAssets)
+      if (index === 1) await preloadVillageAssets(requiredVillageAssets)
 
       await sleep(warmLoaded ? Math.max(35, step.wait * 0.22) : step.wait)
       onProgress({
