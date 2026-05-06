@@ -13,6 +13,8 @@ const PixelKnightDataView = lazy(() => import('../game-center/pixel-knight/Pixel
 const PixelKnightCharacterDemoView = lazy(() => import('../game-center/pixel-knight/PixelKnightCharacterDemoView'))
 const PixelKnightPixelEditorFilesView = lazy(() => import('../game-center/pixel-knight/PixelKnightPixelEditorFilesView'))
 const PixelKnightPixelEditorView = lazy(() => import('../game-center/pixel-knight/PixelKnightPixelEditorView'))
+const PixelKnightMapEditorFilesView = lazy(() => import('../game-center/pixel-knight/PixelKnightMapEditorFilesView'))
+const PixelKnightMapEditorView = lazy(() => import('../game-center/pixel-knight/PixelKnightMapEditorView'))
 const FruitNinjaBladeLabView = lazy(() => import('../game-center/fruit-ninja/FruitNinjaBladeLabView'))
 const FruitGalleryView = lazy(() => import('../game-center/fruit-ninja/FruitGalleryView'))
 const FruitGallerySlicedView = lazy(() => import('../game-center/fruit-ninja/FruitGallerySlicedView'))
@@ -44,6 +46,8 @@ export default function AppRouter() {
           <Route path="/games/pixel-knight/character-demo" element={<PixelKnightCharacterDemoView />} />
           <Route path="/games/pixel-knight/pixel-editor" element={<PixelKnightPixelEditorFilesView />} />
           <Route path="/games/pixel-knight/pixel-editor/edit" element={<PixelKnightPixelEditorView />} />
+          <Route path="/games/pixel-knight/map-editor" element={<PixelKnightMapEditorFilesView />} />
+          <Route path="/games/pixel-knight/map-editor/edit" element={<PixelKnightMapEditorView />} />
           {/* Back-compat: old direct entry */}
           <Route path="/tank90" element={<Navigate to="/games/tank90" replace />} />
         </Route>

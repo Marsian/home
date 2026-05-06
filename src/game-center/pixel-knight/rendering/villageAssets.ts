@@ -34,9 +34,11 @@ import terrainDirtFieldUrl from '@/game-center/pixel-knight/assets/village/terra
 import terrainBrickRoadHorizontalUrl from '@/game-center/pixel-knight/assets/village/terrain/terrain-brick-road-horizontal.png'
 import terrainBrickRoadVerticalUrl from '@/game-center/pixel-knight/assets/village/terrain/terrain-brick-road-vertical.png'
 import terrainGrassFieldUrl from '@/game-center/pixel-knight/assets/village/terrain/terrain-grass-field.png'
+import starterVillageV7BackdropUrl from '@/game-center/pixel-knight/assets/village/v7-front/full/starter-village-front-small-plaza-all-roads-connected.png'
 import type { MapHotspot, VillageDecorKind } from '../types'
 
 export type VillageAssetId =
+  | 'starter-village-v7-backdrop'
   | 'terrain-grass-field'
   | 'terrain-dirt-field'
   | 'terrain-brick-road-vertical'
@@ -83,6 +85,7 @@ type VillageAssetMeta = {
 }
 
 export const villageAssetRegistry: Record<VillageAssetId, VillageAssetMeta> = {
+  'starter-village-v7-backdrop': { src: starterVillageV7BackdropUrl, width: 1254, height: 1254, anchorX: 0, anchorY: 0 },
   'terrain-grass-field': { src: terrainGrassFieldUrl, width: 480, height: 480, anchorX: 240, anchorY: 240 },
   'terrain-dirt-field': { src: terrainDirtFieldUrl, width: 480, height: 480, anchorX: 240, anchorY: 240 },
   'terrain-brick-road-vertical': {

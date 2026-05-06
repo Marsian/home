@@ -95,7 +95,7 @@ type ActiveRun = {
 
 const WIDTH = 960
 const HEIGHT = 540
-const TILE = 60
+const TILE = 16
 const WORLD_COLS = 48
 const WORLD_ROWS = 27
 const PORTAL_RADIUS = 30
@@ -332,6 +332,7 @@ export class PixelKnightGame {
   private nearbyHotspot: MapHotspot | null = null
   private lastHomeHudSignature: string | null = null
   private villageTerrainCache: HTMLCanvasElement | null = null
+  private villageBackdropCache: HTMLCanvasElement | null = null
   private matrixEquipment: MatrixEquipmentLoadout = { ...defaultMatrixKnightEquipment }
 
   constructor(host: HTMLDivElement, callbacks: PixelKnightGameCallbacks) {
@@ -364,6 +365,7 @@ export class PixelKnightGame {
 
     this.phase = 'home'
     this.villageTerrainCache = null
+    this.villageBackdropCache = null
     this.enterVillage()
     this.emitHud()
     this.animationFrame = requestAnimationFrame(this.loop)
@@ -481,6 +483,7 @@ export class PixelKnightGame {
     this.phase = 'home'
     this.pauseRequested = false
     this.portalNearby = false
+    this.villageBackdropCache = null
     this.encounterLabel = '新手村'
     this.objectiveLabel = '在村庄中移动，靠近地标后按 F 互动'
     this.lootFeed = ['欢迎来到晨铃新手村。北侧传送门可以进入副本。']
@@ -491,6 +494,7 @@ export class PixelKnightGame {
   /** Terrain cache can bake before village PNGs finish preloading — drop canvas so next frame rebuilds once assets exist. */
   invalidateVillageTerrainCache() {
     this.villageTerrainCache = null
+    this.villageBackdropCache = null
   }
 
   dispose() {
@@ -503,6 +507,7 @@ export class PixelKnightGame {
     window.removeEventListener('keydown', this.onKeyDown)
     window.removeEventListener('keyup', this.onKeyUp)
     this.villageTerrainCache = null
+    this.villageBackdropCache = null
   }
 
   private onMouseMove = (event: MouseEvent) => {
@@ -765,7 +770,12 @@ export class PixelKnightGame {
     const worldMouse = { x: this.mouse.x + camera.x, y: this.mouse.y + camera.y }
     const direction = normalize({ x: worldMouse.x - this.player.x, y: worldMouse.y - this.player.y })
     this.tryMovePlayer(direction.x * 52, direction.y * 52)
-    this.applyAreaDamage(this.player.x + direction.x * 26, this.player.y + direction.y * 26, 64, this.run.stats.attack * 2.4)
+    this.applyAreaDamage(
+      this.player.x + direction.x * 26,
+      this.player.y + direction.y * 26,
+      64,
+      this.run.stats.attack * 2.4,
+    )
     if (this.run.stats.activeLegendaryPowers.includes('shield-nova') || this.run.stats.setPieces >= 4) {
       this.applyAreaDamage(this.player.x, this.player.y, 104, this.run.stats.attack * 1.25)
     }
@@ -786,7 +796,12 @@ export class PixelKnightGame {
     }
     this.tryMovePlayer(direction.x * 112, direction.y * 112)
     this.player.invulnerableMs = 220
-    this.applyAreaDamage(this.player.x, this.player.y, 54, this.run.stats.attack * 1.85 + this.run.stats.skillPower * 0.9)
+    this.applyAreaDamage(
+      this.player.x,
+      this.player.y,
+      54,
+      this.run.stats.attack * 1.85 + this.run.stats.skillPower * 0.9,
+    )
   }
 
   private useBlessing() {
@@ -1156,12 +1171,7 @@ export class PixelKnightGame {
 
   private renderVillageScene(ctx: CanvasRenderingContext2D) {
     const camera = this.getCamera()
-    this.renderVillageTerrainPatches(ctx, camera)
-
-    const playerWorldY = this.player?.y ?? Number.POSITIVE_INFINITY
-    const landmarksBehind = starterVillageLandmarks.filter((landmark) => worldFromCell(landmark.cell).y <= playerWorldY + 6)
-    const landmarksFront = starterVillageLandmarks.filter((landmark) => worldFromCell(landmark.cell).y > playerWorldY + 6)
-    this.renderVillageLandmarkLayer(ctx, camera, landmarksBehind)
+    this.renderVillageBackdrop(ctx, camera)
 
     if (this.player) {
       const x = this.player.x - camera.x
@@ -1169,7 +1179,6 @@ export class PixelKnightGame {
       const facing = this.getFacingDirection(camera)
       this.renderMatrixPlayer(ctx, x, y, facing, this.player)
     }
-    this.renderVillageLandmarkLayer(ctx, camera, landmarksFront)
 
     if (this.nearbyHotspot && this.player) {
       const hotspotPos = worldFromCell(this.nearbyHotspot.cell)
@@ -1226,6 +1235,44 @@ export class PixelKnightGame {
       this.paintVillageTerrainPatchWorld(bctx, patch)
     }
     this.villageTerrainCache = canvas
+  }
+
+  private bakeVillageBackdropCacheIfNeeded() {
+    if (this.villageBackdropCache) return
+    const image = getPixelKnightVillageAsset('starter-village-v7-backdrop')
+    if (!image?.naturalWidth) return
+    const map = this.getActiveMap()
+    if (!map || map.id !== 'starter-village') return
+
+    const worldWidth = map.rows[0].length * TILE
+    const worldHeight = map.rows.length * TILE
+    const padX = Math.max(0, Math.floor((worldWidth - image.naturalWidth) / 2))
+    const padY = Math.max(0, Math.floor((worldHeight - image.naturalHeight) / 2))
+
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.ceil(worldWidth)
+    canvas.height = Math.ceil(worldHeight)
+    const bctx = canvas.getContext('2d')
+    if (!bctx) return
+    bctx.imageSmoothingEnabled = false
+    bctx.clearRect(0, 0, canvas.width, canvas.height)
+    bctx.drawImage(image, padX, padY)
+    this.villageBackdropCache = canvas
+  }
+
+  private renderVillageBackdrop(ctx: CanvasRenderingContext2D, camera: Vector2) {
+    this.bakeVillageBackdropCacheIfNeeded()
+    const cache = this.villageBackdropCache
+    if (!cache) return
+    const sx = camera.x
+    const sy = camera.y
+    const sw = Math.min(WIDTH, Math.max(0, cache.width - camera.x))
+    const sh = Math.min(HEIGHT, Math.max(0, cache.height - camera.y))
+    if (sw <= 0 || sh <= 0) return
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+    ctx.drawImage(cache, sx, sy, sw, sh, 0, 0, sw, sh)
+    ctx.restore()
   }
 
   /** World-coordinate fill: repeat at intrinsic pixel size (seam-aligned); stretches if pattern unavailable. */

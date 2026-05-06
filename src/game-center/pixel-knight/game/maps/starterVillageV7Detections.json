@@ -1,0 +1,33 @@
+{
+  "image": {
+    "path": "src/game-center/pixel-knight/assets/village/v7-front/full/starter-village-front-small-plaza-all-roads-connected.png",
+    "width": 1254,
+    "height": 1254
+  },
+  "notes": [
+    "These boxes are produced from multimodal visual inspection of the v7 full background.",
+    "Coordinates are in source-image pixels: x,y,w,h.",
+    "Use as initial ground truth for later atom re-slicing, footprint/base collision, and occlusion ordering."
+  ],
+  "objects": [
+    { "id": "building-inn-top-center", "kind": "building", "bbox": [425, 60, 410, 330] },
+    { "id": "building-blacksmith-left", "kind": "building", "bbox": [90, 235, 330, 280] },
+    { "id": "building-house-right", "kind": "building", "bbox": [835, 245, 340, 270] },
+    { "id": "building-house-bottom-left", "kind": "building", "bbox": [85, 700, 340, 285] },
+    { "id": "building-house-bottom-right", "kind": "building", "bbox": [835, 710, 340, 285] },
+
+    { "id": "plaza-area", "kind": "plaza", "bbox": [300, 445, 660, 430] },
+    { "id": "portal-disk", "kind": "portal", "bbox": [507, 592, 240, 240] },
+    { "id": "chest", "kind": "stash", "bbox": [740, 548, 140, 115] },
+    { "id": "notice-board", "kind": "notice-board", "bbox": [375, 720, 280, 170] },
+
+    { "id": "torch-nw", "kind": "torch", "bbox": [315, 515, 46, 70] },
+    { "id": "torch-ne", "kind": "torch", "bbox": [895, 515, 46, 70] },
+    { "id": "torch-sw", "kind": "torch", "bbox": [315, 815, 46, 70] },
+    { "id": "torch-se", "kind": "torch", "bbox": [895, 815, 46, 70] },
+
+    { "id": "entrance-pillar-left", "kind": "pillar", "bbox": [470, 1010, 120, 190] },
+    { "id": "entrance-pillar-right", "kind": "pillar", "bbox": [660, 1010, 120, 190] }
+  ]
+}
+

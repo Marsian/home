@@ -134,6 +134,7 @@ export function getPixelKnightVillageAsset(id: VillageAssetId) {
   return villageAssetCache?.[id] ?? null
 }
 
+
 export async function preloadGameData() {
   validateStaticData()
   return { dungeons, skills, legendaryPowers, setBonuses }

@@ -276,7 +276,7 @@ export default function PixelKnightCharacterDemoView() {
           <div>
             <div className="text-[0.72rem] tracking-[0.34em] text-[#637044] uppercase">Pixel Knight Prototype</div>
             <h1 className="mt-1 text-[clamp(2rem,5vw,3.8rem)] leading-none font-black tracking-[0.08em] text-[#28321b] uppercase">
-              点阵角色 Demo
+              点阵角色
             </h1>
           </div>
           <div className="flex gap-2">

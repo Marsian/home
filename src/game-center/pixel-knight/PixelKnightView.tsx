@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, Database, Pause, Play, Swords } from 'lucide-react'
+import { ArrowLeft, Database, Map, Pause, Play, Swords } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -557,7 +557,18 @@ export default function PixelKnightView() {
             >
               <Link to="/games/pixel-knight/character-demo">
                 <Swords />
-                角色 Demo
+                角色
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              asChild
+              className="border-[#314635]/18 bg-[#f7efd7]/70 text-[#193123] hover:bg-[#fff5dc]"
+            >
+              <Link to="/games/pixel-knight/map-editor">
+                <Map />
+                地图
               </Link>
             </Button>
             <Button
@@ -874,7 +885,7 @@ export default function PixelKnightView() {
                   <HudHealth state={hud} fallbackMaxHealth={playerStats.maxHealth} />
 
                   <div className="flex items-start gap-2">
-                    <div className="pointer-events-none relative h-[168px] w-[168px] sm:h-[196px] sm:w-[196px]">
+                    <div className="pointer-events-none relative aspect-square w-[clamp(7.25rem,14vw,13.5rem)] max-w-[calc(100vw-2rem)]">
                       <MiniMap hud={hud} />
                       <img
                         src={hudMinimapFrame}
@@ -883,7 +894,7 @@ export default function PixelKnightView() {
                         draggable={false}
                         style={{ imageRendering: 'pixelated' }}
                       />
-                      <div className="absolute left-[24%] right-[24%] top-[5%] z-20 truncate text-center text-[0.58rem] font-black tracking-[0.08em] text-[#2c1c0e] sm:text-xs">
+                      <div className="absolute left-[24%] right-[24%] top-[5%] z-20 truncate text-center text-[clamp(0.58rem,0.95vw,0.75rem)] font-black tracking-[0.08em] text-[#2c1c0e]">
                         {hud.dungeonName}
                       </div>
                     </div>
