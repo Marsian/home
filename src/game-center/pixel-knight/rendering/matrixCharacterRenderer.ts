@@ -14,7 +14,7 @@ export type MatrixPart = {
 export type MatrixManifest = {
   anchorPart: 'torso'
   pixelScale: number
-  parts: Record<MatrixPartKey, MatrixPart>
+  parts: Record<MatrixPartKey, MatrixPart> & { hair?: MatrixPart }
 }
 
 type MatrixEquipmentAnchor =
@@ -63,24 +63,27 @@ const equipmentAnchorsBySlot: Record<MatrixEquipmentSlot, MatrixEquipmentAnchor>
   mainHand: {
     type: 'part',
     part: 'rightArm',
-    offset: [0, 0],
+    offset: [-1, -2],
     rotateWithPart: true,
-    pivot: [1, 9],
+    pivot: [2, 10],
   },
   offHand: {
     type: 'part',
     part: 'leftArm',
-    offset: [0, 0],
+    offset: [1, -1.5],
     rotateWithPart: true,
-    pivot: [7, 7],
+    pivot: [7, 10],
   },
 }
 
 function resolvePartRotationPivot(partKey: MatrixPartKey, part: MatrixPart, facing: MatrixFacing): [number, number] {
   const basePivotX = part.size[0] / 2
   const mirroredPivotX = facing === 'right' ? basePivotX : part.size[0] - basePivotX
-  if (partKey === 'leftArm' || partKey === 'rightArm') return [mirroredPivotX, 0.6]
-  if (partKey === 'leftLeg' || partKey === 'rightLeg') return [mirroredPivotX, 0.5]
+  if (partKey === 'leftArm') return [part.size[0] - 1.15, 1.1]
+  if (partKey === 'rightArm') return [1.15, 1.1]
+  if (partKey === 'leftLeg' || partKey === 'rightLeg') {
+    return [mirroredPivotX, 0.5]
+  }
   return [mirroredPivotX, part.size[1] / 2]
 }
 
@@ -154,12 +157,83 @@ function resolveSwordAttackPose(progress: number, facing: MatrixFacing): AttackP
   }
 }
 
+function positiveModulo(value: number, divisor: number) {
+  return ((value % divisor) + divisor) % divisor
+}
+
+function resolveWalkArmArcOffset(screenSide: 'left' | 'right', cycle: number) {
+  const orbitCenter = { x: 12, y: 4.5 }
+  const neutralPivot = {
+    x: screenSide === 'left' ? 6.85 : 17.15,
+    y: 18.1,
+  }
+  const radiusX = neutralPivot.x - orbitCenter.x
+  const radiusY = neutralPivot.y - orbitCenter.y
+  const radius = Math.hypot(radiusX, radiusY)
+  const baseAngle = Math.atan2(radiusY, radiusX)
+  const outwardDirection = screenSide === 'left' ? 1 : -1
+  const outwardAngle = 0.2 * outwardDirection
+  const inwardAngle = -0.72 * outwardDirection
+  const arcProgress = cycle < 0.5 ? cycle * 2 : 2 - cycle * 2
+  const angle = baseAngle + lerp(inwardAngle, outwardAngle, arcProgress)
+  const currentPivot = {
+    x: orbitCenter.x + Math.cos(angle) * radius,
+    y: orbitCenter.y + Math.sin(angle) * radius,
+  }
+  const tangentAngle = Math.atan2(currentPivot.y - orbitCenter.y, currentPivot.x - orbitCenter.x) - Math.PI / 2
+
+  return {
+    x: currentPivot.x - neutralPivot.x,
+    y: currentPivot.y - neutralPivot.y,
+    angle: tangentAngle,
+  }
+}
+
+function resolveWalkLegOffset(phase: number) {
+  const liftY = (1 - Math.abs(phase)) * 0.18
+
+  return {
+    x: phase * 0.32,
+    y: liftY,
+    angle: phase * 0.84,
+    phase,
+  }
+}
+
 function buildCompositeBounds(parts: MatrixManifest['parts']) {
-  const partKeys = Object.keys(parts) as MatrixPartKey[]
-  const xs = partKeys.map((key) => parts[key].offset[0])
-  const ys = partKeys.map((key) => parts[key].offset[1])
-  const xe = partKeys.map((key) => parts[key].offset[0] + parts[key].size[0])
-  const ye = partKeys.map((key) => parts[key].offset[1] + parts[key].size[1])
+  const partKeys = Object.keys(parts) as (MatrixPartKey | 'hair')[]
+  const xs: number[] = []
+  const ys: number[] = []
+  const xe: number[] = []
+  const ye: number[] = []
+
+  for (const key of partKeys) {
+    const part = parts[key]
+    if (!part) continue
+
+    // Prefer computing bounds from actual pixels so empty padding rows/cols in `size`
+    // don't affect how the character is positioned relative to `actorFeetY`.
+    if (part.points.length > 0) {
+      for (const point of part.points) {
+        const x = part.offset[0] + point.x
+        const y = part.offset[1] + point.y
+        xs.push(x)
+        ys.push(y)
+        xe.push(x + 1)
+        ye.push(y + 1)
+      }
+      continue
+    }
+
+    xs.push(part.offset[0])
+    ys.push(part.offset[1])
+    xe.push(part.offset[0] + part.size[0])
+    ye.push(part.offset[1] + part.size[1])
+  }
+
+  if (xs.length === 0 || ys.length === 0 || xe.length === 0 || ye.length === 0) {
+    return { minX: 0, minY: 0, maxX: 1, maxY: 1 }
+  }
   return {
     minX: Math.min(...xs),
     minY: Math.min(...ys),
@@ -280,10 +354,11 @@ export function drawMatrixCharacter(
   const groupTop = options.actorFeetY - totalHeight * options.pixelSize
 
   const locomotionTimeMs = options.mode === 'static' ? 0 : options.locomotionTimeMs ?? options.timeMs
+  const forward = options.facing === 'right' ? 1 : -1
   const idleBreath = Math.sin(locomotionTimeMs / 280)
-  const walkPhase = (locomotionTimeMs / 1000) * 7
-  const swing = Math.sin(walkPhase)
-  const swingOpposite = Math.sin(walkPhase + Math.PI)
+  // Mirror the gait when the actor is mirrored.
+  const walkPhase = (locomotionTimeMs / 1000) * 7 * forward
+  const walkCycle = positiveModulo(walkPhase / (Math.PI * 2), 1)
 
   const attackDurationMs = Math.max(1, options.attackDurationMs ?? DEFAULT_ATTACK_DURATION_MS)
   const activeWeaponType = options.equipment?.mainHand?.weaponType
@@ -302,23 +377,51 @@ export function drawMatrixCharacter(
   const headBobBase =
     currentMode === 'static' ? 0 : currentMode === 'idle' ? idleBreath * 0.38 - 0.7 : Math.sin(walkPhase * 2 + 0.4) * 0.8 - 0.7
   const headBob = headBobBase + (attackPose ? attackPose.headDy : 0)
-  const leftLegPhase = currentMode === 'walk' ? swing : 0
-  const rightLegPhase = currentMode === 'walk' ? swingOpposite : 0
-  const legStanceInset = 0.35
-  const leftLegX = legStanceInset
-  const rightLegX = -legStanceInset
-  const legLift = currentMode === 'walk' ? 0.2 : 0
-  const leftLegY = Math.max(0, -leftLegPhase) * legLift
-  const rightLegY = Math.max(0, -rightLegPhase) * legLift
-  const maxLegAngle = Math.PI / 4
-  const leftLegAngle = currentMode === 'walk' ? leftLegPhase * maxLegAngle : 0
-  const rightLegAngle = currentMode === 'walk' ? rightLegPhase * maxLegAngle : 0
-  const leftArmXBase = currentMode === 'walk' ? swingOpposite * 0.38 : 0
-  const rightArmXBase = currentMode === 'walk' ? swing * 0.38 : 0
-  const leftArmYBase =
-    options.mode === 'attack' ? 0 : currentMode === 'walk' ? Math.max(0, -swingOpposite) * 0.2 + torsoBob : idleBreath * 0.38
-  const rightArmYBase =
-    options.mode === 'attack' ? 0 : currentMode === 'walk' ? Math.max(0, -swing) * 0.2 + torsoBob : idleBreath * 0.38
+  const legWalkOffsets: Record<'leftLeg' | 'rightLeg', { x: number; y: number; angle: number; phase: number }> = {
+    leftLeg: { x: 0, y: 0, angle: 0, phase: 0 },
+    rightLeg: { x: 0, y: 0, angle: 0, phase: 0 },
+  }
+  if (currentMode === 'walk') {
+    const normalizedLegCycle = positiveModulo(walkCycle, 1)
+    const legPhase = normalizedLegCycle < 0.5 ? normalizedLegCycle * 4 - 1 : 3 - normalizedLegCycle * 4
+    const screenLeftLegKey: 'leftLeg' | 'rightLeg' = options.facing === 'right' ? 'leftLeg' : 'rightLeg'
+    const screenRightLegKey: 'leftLeg' | 'rightLeg' = screenLeftLegKey === 'leftLeg' ? 'rightLeg' : 'leftLeg'
+    const screenLeftOffset = resolveWalkLegOffset(legPhase)
+    const screenRightOffset = resolveWalkLegOffset(-legPhase)
+    const toLocalX = (screenX: number) => (options.facing === 'right' ? screenX : -screenX)
+    const toLocalAngle = (screenAngle: number) => (options.facing === 'right' ? screenAngle : -screenAngle)
+    legWalkOffsets[screenLeftLegKey] = {
+      ...screenLeftOffset,
+      x: toLocalX(screenLeftOffset.x),
+      angle: toLocalAngle(screenLeftOffset.angle),
+    }
+    legWalkOffsets[screenRightLegKey] = {
+      ...screenRightOffset,
+      x: toLocalX(screenRightOffset.x),
+      angle: toLocalAngle(screenRightOffset.angle),
+    }
+  }
+
+  const armRestY = options.mode === 'attack' ? 0 : currentMode === 'walk' ? torsoBob : idleBreath * 0.38
+  const screenLeftArmKey: 'leftArm' | 'rightArm' = options.facing === 'right' ? 'leftArm' : 'rightArm'
+  const screenRightArmKey: 'leftArm' | 'rightArm' = screenLeftArmKey === 'leftArm' ? 'rightArm' : 'leftArm'
+  const armWalkOffsets: Record<'leftArm' | 'rightArm', ArmPose> = {
+    leftArm: { x: 0, y: 0, angle: 0 },
+    rightArm: { x: 0, y: 0, angle: 0 },
+  }
+  if (currentMode === 'walk') {
+    const screenLeftOffset = resolveWalkArmArcOffset('left', walkCycle)
+    const screenRightOffset = resolveWalkArmArcOffset('right', walkCycle)
+    const toLocalX = (screenX: number) => (options.facing === 'right' ? screenX : -screenX)
+    armWalkOffsets[screenLeftArmKey] = {
+      ...screenLeftOffset,
+      x: toLocalX(screenLeftOffset.x),
+    }
+    armWalkOffsets[screenRightArmKey] = {
+      ...screenRightOffset,
+      x: toLocalX(screenRightOffset.x),
+    }
+  }
 
   const getPartBaseX = (part: MatrixPart, dx: number) => {
     const localX = part.offset[0] - bounds.minX
@@ -326,8 +429,7 @@ export function drawMatrixCharacter(
     return totalWidth - localX - part.size[0] - dx
   }
 
-  const drawPart = (key: MatrixPartKey, dx: number, dy: number) => {
-    const part = manifest.parts[key]
+  const drawPartPixels = (part: MatrixPart, dx: number, dy: number) => {
     const baseX = getPartBaseX(part, dx)
     const baseY = part.offset[1] - bounds.minY + dy
     drawMatrixPart(
@@ -338,6 +440,10 @@ export function drawMatrixCharacter(
       options.pixelSize,
       options.facing,
     )
+  }
+
+  const drawPart = (key: MatrixPartKey, dx: number, dy: number) => {
+    drawPartPixels(manifest.parts[key], dx, dy)
   }
 
   const resolvePartWorld = (key: MatrixPartKey, dx: number, dy: number) => {
@@ -386,10 +492,10 @@ export function drawMatrixCharacter(
     )
   }
 
-  const armBackKey: MatrixPartKey = options.facing === 'right' ? 'rightArm' : 'rightArm'
-  const armFrontKey: MatrixPartKey = options.facing === 'right' ? 'leftArm' : 'leftArm'
-  const frontLegKey: 'leftLeg' | 'rightLeg' = leftLegPhase >= rightLegPhase ? 'leftLeg' : 'rightLeg'
-  const backLegKey: 'leftLeg' | 'rightLeg' = frontLegKey === 'leftLeg' ? 'rightLeg' : 'leftLeg'
+  const armBackKey: 'leftArm' | 'rightArm' = 'rightArm'
+  const armFrontKey: 'leftArm' | 'rightArm' = 'leftArm'
+  const backLegKey: 'leftLeg' | 'rightLeg' = 'rightLeg'
+  const frontLegKey: 'leftLeg' | 'rightLeg' = 'leftLeg'
   const attackFrontKey: 'leftArm' | 'rightArm' = 'rightArm'
   const armAttackOffsets: Record<'leftArm' | 'rightArm', ArmPose> = {
     leftArm: { x: 0, y: 0, angle: 0 },
@@ -400,19 +506,27 @@ export function drawMatrixCharacter(
   }
   const armOffsets: Record<'leftArm' | 'rightArm', ArmPose> = {
     leftArm: {
-      x: leftArmXBase + armAttackOffsets.leftArm.x,
-      y: leftArmYBase + armAttackOffsets.leftArm.y,
-      angle: armAttackOffsets.leftArm.angle,
+      x: armWalkOffsets.leftArm.x + armAttackOffsets.leftArm.x,
+      y: armRestY + armWalkOffsets.leftArm.y + armAttackOffsets.leftArm.y,
+      angle: armWalkOffsets.leftArm.angle + armAttackOffsets.leftArm.angle,
     },
     rightArm: {
-      x: rightArmXBase + armAttackOffsets.rightArm.x,
-      y: rightArmYBase + armAttackOffsets.rightArm.y,
-      angle: armAttackOffsets.rightArm.angle,
+      x: armWalkOffsets.rightArm.x + armAttackOffsets.rightArm.x,
+      y: armRestY + armWalkOffsets.rightArm.y + armAttackOffsets.rightArm.y,
+      angle: armWalkOffsets.rightArm.angle + armAttackOffsets.rightArm.angle,
     },
   }
   const legOffsets: Record<'leftLeg' | 'rightLeg', { x: number; y: number; angle: number }> = {
-    leftLeg: { x: leftLegX, y: currentMode === 'walk' ? torsoBob + leftLegY : leftLegY, angle: leftLegAngle },
-    rightLeg: { x: rightLegX, y: currentMode === 'walk' ? torsoBob + rightLegY : rightLegY, angle: rightLegAngle },
+    leftLeg: {
+      x: legWalkOffsets.leftLeg.x,
+      y: currentMode === 'walk' ? torsoBob + legWalkOffsets.leftLeg.y : 0,
+      angle: legWalkOffsets.leftLeg.angle,
+    },
+    rightLeg: {
+      x: legWalkOffsets.rightLeg.x,
+      y: currentMode === 'walk' ? torsoBob + legWalkOffsets.rightLeg.y : 0,
+      angle: legWalkOffsets.rightLeg.angle,
+    },
   }
 
   const partTransforms: Record<MatrixPartKey, ArmPose> = {
@@ -491,16 +605,20 @@ export function drawMatrixCharacter(
   }
 
   drawArmPart(armBackKey, armOffsets[armBackKey].x, armOffsets[armBackKey].y, armOffsets[armBackKey].angle)
+  drawHandEquipmentForArm(armBackKey)
   drawLegPart(backLegKey, legOffsets[backLegKey].x, legOffsets[backLegKey].y, legOffsets[backLegKey].angle)
   drawLegPart(frontLegKey, legOffsets[frontLegKey].x, legOffsets[frontLegKey].y, legOffsets[frontLegKey].angle)
   drawPart('torso', partTransforms.torso.x, partTransforms.torso.y)
-  drawArmPart(armFrontKey, armOffsets[armFrontKey].x, armOffsets[armFrontKey].y, armOffsets[armFrontKey].angle)
   const armor = options.equipment?.armor
   if (armor) drawEquipmentPiece(armor)
+  drawArmPart(armFrontKey, armOffsets[armFrontKey].x, armOffsets[armFrontKey].y, armOffsets[armFrontKey].angle)
   const helmet = options.equipment?.helmet
   if (helmet) drawEquipmentPiece(helmet, 'back')
   drawPart('head', partTransforms.head.x, partTransforms.head.y)
+  const hair = manifest.parts.hair
+  if (!helmet && hair && hair.points.length > 0) {
+    drawPartPixels(hair, partTransforms.head.x, partTransforms.head.y)
+  }
   if (helmet) drawEquipmentPiece(helmet, 'front')
-  drawHandEquipmentForArm(armBackKey)
   drawHandEquipmentForArm(armFrontKey)
 }

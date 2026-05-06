@@ -133,10 +133,10 @@ export default function PixelKnightCharacterDemoView() {
   const [ready, setReady] = useState(false)
   const [selectedHelmetId, setSelectedHelmetId] = useState(helmetAzureData.id as string)
   const [equippedSlots, setEquippedSlots] = useState<Record<MatrixEquipmentSlot, boolean>>({
-    helmet: true,
-    armor: true,
-    mainHand: true,
-    offHand: true,
+    helmet: false,
+    armor: false,
+    mainHand: false,
+    offHand: false,
   })
   const selectedHelmet = helmetVariants.find((piece) => piece.id === selectedHelmetId) ?? helmetVariants[0]
 

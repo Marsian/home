@@ -78,7 +78,8 @@ function buildPreview(value: unknown) {
   }
 
   if (isMatrixAsset(value)) {
-    for (const key of Object.keys(value.parts).sort()) {
+    // Preserve insertion order from JSON.parse (same order as keys appear in the file).
+    for (const key of Object.keys(value.parts)) {
       const part = value.parts[key]
       const offset = part.offset ?? [0, 0]
       addPointsToMap(map, part.points, offset[0], offset[1])
