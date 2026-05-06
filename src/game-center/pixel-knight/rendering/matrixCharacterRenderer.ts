@@ -66,6 +66,7 @@ const equipmentAnchorsBySlot: Record<MatrixEquipmentSlot, MatrixEquipmentAnchor>
     offset: [-1, -2],
     rotateWithPart: true,
     pivot: [2, 10],
+    angleOffset: 0.15,
   },
   offHand: {
     type: 'part',
@@ -76,15 +77,16 @@ const equipmentAnchorsBySlot: Record<MatrixEquipmentSlot, MatrixEquipmentAnchor>
   },
 }
 
-function resolvePartRotationPivot(partKey: MatrixPartKey, part: MatrixPart, facing: MatrixFacing): [number, number] {
+function resolvePartRotationPivot(partKey: MatrixPartKey, part: MatrixPart): [number, number] {
+  // IMPORTANT: Always return the pivot in the unmirrored part-local coordinate space (facing = 'right').
+  // Mirroring is handled by `drawRotatedMatrixPart`, and equipment attachment math relies on this.
   const basePivotX = part.size[0] / 2
-  const mirroredPivotX = facing === 'right' ? basePivotX : part.size[0] - basePivotX
   if (partKey === 'leftArm') return [part.size[0] - 1.15, 1.1]
   if (partKey === 'rightArm') return [1.15, 1.1]
   if (partKey === 'leftLeg' || partKey === 'rightLeg') {
-    return [mirroredPivotX, 0.5]
+    return [basePivotX, 0.5]
   }
-  return [mirroredPivotX, part.size[1] / 2]
+  return [basePivotX, part.size[1] / 2]
 }
 
 type ArmPose = { x: number; y: number; angle: number }
@@ -460,7 +462,7 @@ export function drawMatrixCharacter(
     const part = manifest.parts[key]
     const baseX = getPartBaseX(part, dx)
     const baseY = part.offset[1] - bounds.minY + dy
-    const [pivotX, pivotY] = resolvePartRotationPivot(key, part, options.facing)
+    const [pivotX, pivotY] = resolvePartRotationPivot(key, part)
     drawRotatedMatrixPart(
       ctx,
       part,
@@ -478,7 +480,7 @@ export function drawMatrixCharacter(
     const part = manifest.parts[key]
     const baseX = getPartBaseX(part, dx)
     const baseY = part.offset[1] - bounds.minY + dy
-    const [pivotX, pivotY] = resolvePartRotationPivot(key, part, options.facing)
+    const [pivotX, pivotY] = resolvePartRotationPivot(key, part)
     drawRotatedMatrixPart(
       ctx,
       part,
@@ -572,14 +574,17 @@ export function drawMatrixCharacter(
         options.facing === 'right'
           ? resolvedAnchorX
           : anchorPart.size[0] - resolvedAnchorX - 1
-      const angle = (anchor.rotateWithPart ? transform.angle : 0) + (anchor.angleOffset ?? 0)
+      // When the whole character is mirrored, a positive visual offset becomes a negative rotation in local space.
+      const signedAngleOffset = (anchor.angleOffset ?? 0) * forward
+      const angle = (anchor.rotateWithPart ? transform.angle : 0) + signedAngleOffset
       if (usesAttachmentAnchor) {
-        const [partPivotX, partPivotY] = resolvePartRotationPivot(anchor.part, anchorPart, options.facing)
-        const dx = attachmentX - partPivotX
+        const [partPivotX, partPivotY] = resolvePartRotationPivot(anchor.part, anchorPart)
+        const resolvedPartPivotX = options.facing === 'right' ? partPivotX : anchorPart.size[0] - 1 - partPivotX
+        const dx = attachmentX - resolvedPartPivotX
         const dy = resolvedAnchorY - partPivotY
         const cosA = Math.cos(transform.angle)
         const sinA = Math.sin(transform.angle)
-        const rotatedAttachmentX = dx * cosA - dy * sinA + partPivotX
+        const rotatedAttachmentX = dx * cosA - dy * sinA + resolvedPartPivotX
         const rotatedAttachmentY = dx * sinA + dy * cosA + partPivotY
         const effectivePivotX = options.facing === 'right' ? pivot[0] : entry.size[0] - 1 - pivot[0]
         const x0 = partWorld.x + (rotatedAttachmentX - effectivePivotX) * options.pixelSize

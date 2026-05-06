@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Pause, Play } from 'lucide-react'
+import { ArrowLeft, ArrowLeftRight, Pause, Play } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -127,11 +127,13 @@ export default function PixelKnightCharacterDemoView() {
   const attackStartMsRef = useRef<number | null>(null)
   const queuedAttackRef = useRef(false)
   const attackDurationMsRef = useRef(BASE_ATTACK_DURATION_MS)
+  const facingOverrideRef = useRef<Facing | null>(null)
 
   const [paused, setPaused] = useState(false)
   const [mode, setMode] = useState<DemoMode>('walk')
   const [ready, setReady] = useState(false)
   const [selectedHelmetId, setSelectedHelmetId] = useState(helmetAzureData.id as string)
+  const [facingOverride, setFacingOverride] = useState<Facing | null>(null)
   const [equippedSlots, setEquippedSlots] = useState<Record<MatrixEquipmentSlot, boolean>>({
     helmet: false,
     armor: false,
@@ -147,6 +149,10 @@ export default function PixelKnightCharacterDemoView() {
   useEffect(() => {
     modeRef.current = mode
   }, [mode])
+
+  useEffect(() => {
+    facingOverrideRef.current = facingOverride
+  }, [facingOverride])
 
   useEffect(() => {
     manifestRef.current = pointMatrixData as MatrixManifest
@@ -189,9 +195,15 @@ export default function PixelKnightCharacterDemoView() {
       }
       if (!pausedRef.current && modeRef.current === 'walk') {
         const velocity = 90 * (dt / 1000)
+        const override = facingOverrideRef.current
+        if (override) facing = override
         actorX += facing === 'right' ? velocity : -velocity
-        if (actorX > 792) facing = 'left'
-        if (actorX < 168) facing = 'right'
+        if (!override) {
+          if (actorX > 792) facing = 'left'
+          if (actorX < 168) facing = 'right'
+        } else {
+          actorX = Math.max(168, Math.min(792, actorX))
+        }
       }
 
       drawGround(ctx, elapsed)
@@ -309,6 +321,20 @@ export default function PixelKnightCharacterDemoView() {
                 >
                   {paused ? <Play /> : <Pause />}
                   {paused ? '继续' : '暂停'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    setFacingOverride((current) => {
+                      if (!current) return 'left'
+                      return current === 'left' ? 'right' : 'left'
+                    })
+                  }
+                  className="border-[#455037]/18 bg-[#f7efd7]/70 text-[#243019] hover:bg-[#fff7df]"
+                >
+                  <ArrowLeftRight />
+                  {facingOverride ? `朝向：${facingOverride === 'left' ? '左' : '右'}` : '切换左右方向'}
                 </Button>
                 <Button
                   type="button"
