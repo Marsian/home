@@ -1,24 +1,25 @@
-# Pixel Knight Starter Village Assets
+# Pixel Knight · `assets/village`
 
-Source files:
+运行时新手村画面使用 **`maps/starter-village/backdrop.png`**（在 `villageAssets.ts` 里注册为 `starter-village-v7-backdrop`），不再加载本目录下的切片地砖或地形大图。
 
-- `starter-village-spritesheet.png`: original imagegen output for the starter village pass.
-- `starter-village-spritesheet-alpha.png`: alpha-cleaned source. White, light gray, medium gray, dark neutral checkerboard pixels, and washed-out green edge fringe are removed.
-- `sliced/*.png`: clean independent assets cropped from the alpha source.
-- `sliced/_contact-sheet.png`: visual QA sheet for the sliced assets.
+## 仍保留的文件
 
-Sliced asset groups:
+| 路径 | 用途 |
+|------|------|
+| `v7-front/cutouts/imagegen-green/starter-village-collision-elements-imagegen-green-sheet.png` | `scripts/slice-pixel-knight-v7-village-cutouts.py` 的输入：从绿幕整页切出原子 PNG → 写入 `maps/starter-village/atoms/` |
 
-- `tile-*`: grass, dirt road, cliff edge, and plaza tiles.
-- `landmark-*`: portal, shop, storage chest, blacksmith, notice board, lantern.
-- `decor-*`: bushes, grass patches, pine, and signposts.
+## 已移除的内容（历史）
 
-Generation prompt summary:
+- `starter-village-spritesheet*.png`、`sliced/`、`terrain/`：旧版拼接地砖 / landmark 贴图管线；村庄改为整张底图后已无运行时引用，已从仓库删除。
 
-- Subject: cozy medieval fantasy starter village spritesheet.
-- Included assets: grass, dirt roads, stone plaza, portal, shop stall, storage chest, blacksmith forge, notice board, lanterns, bushes, signposts.
-- Style: crisp 2.5D top-down pixel art, warm handmade fantasy, 1px dark outline, no text, no characters, no commercial-game copying.
+## 旧管线脚本
 
-Maintenance:
+下列脚本依赖已删除的源文件；若需再次运行，请先从 Git 历史恢复对应 PNG / 目录，或改脚本指向新路径：
 
-Run `python3 scripts/slice-pixel-knight-village-assets.py` from the repo root after replacing the source spritesheet. The script rewrites the alpha source, exports cleaned alpha PNGs into `sliced/`, checks neutral and green edge noise, and regenerates the contact sheet.
+- `scripts/slice-pixel-knight-village-assets.py`
+- `scripts/generate-pixel-knight-terrain-patches.py`
+- `scripts/build-pixel-knight-brick-road-from-seamless-tile.py`
+
+`scripts/generate-pixel-knight-brick-road-terrain.py` 为程序化生成，不依赖旧切片，但若写入 `assets/village/terrain/` 需自行确认是否仍要纳入版本库。
+
+地图资源约定见：**`maps/README.md`**。

@@ -8,8 +8,8 @@ import cv2
 
 
 ROOT = Path(__file__).resolve().parents[1]
-IMG = ROOT / "src/game-center/pixel-knight/assets/village/v7-front/full/starter-village-front-small-plaza-all-roads-connected.png"
-DETECTIONS = ROOT / "src/game-center/pixel-knight/game/maps/starterVillageV7Detections.json"
+IMG = ROOT / "src/game-center/pixel-knight/maps/starter-village/backdrop.png"
+DETECTIONS = ROOT / "src/game-center/pixel-knight/maps/starter-village/detections.v7.json"
 OUT = ROOT / "docs/pixel-knight-v7-front-village-assets/concepts/aligned-option-c-small-plaza-all-roads-connected.detections.png"
 
 

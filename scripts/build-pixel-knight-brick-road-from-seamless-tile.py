@@ -70,6 +70,12 @@ def main() -> None:
     args = parser.parse_args()
     src_path: Path = args.source
 
+    if not src_path.exists():
+        raise SystemExit(
+            f"Missing seamless source {src_path}. brick-road-seamless-tile-source.png was removed with legacy terrain assets; "
+            "restore from git history or pass an alternate image path."
+        )
+
     raw = Image.open(src_path)
     sq = center_square(raw)
     tile = clamp_tile(sq)

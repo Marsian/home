@@ -6,6 +6,13 @@ import math
 RAW_SRC = Path('src/game-center/pixel-knight/assets/village/starter-village-spritesheet.png')
 ALPHA_SRC = Path('src/game-center/pixel-knight/assets/village/starter-village-spritesheet-alpha.png')
 OUT = Path('src/game-center/pixel-knight/assets/village/sliced')
+
+if not RAW_SRC.exists():
+    raise SystemExit(
+        "Missing starter-village-spritesheet.png — legacy village sliced pipeline assets were removed from the repo. "
+        "Runtime village uses maps/starter-village/backdrop.png. Restore sources from git history to run this script, "
+        "or use scripts/slice-pixel-knight-v7-village-cutouts.py for atom slicing."
+    )
 OUT.mkdir(parents=True, exist_ok=True)
 for old in OUT.glob('*.png'):
     old.unlink()

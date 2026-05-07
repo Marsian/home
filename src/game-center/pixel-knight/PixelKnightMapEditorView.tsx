@@ -1,17 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { ArrowLeft, Download, Grid3X3, Hand, Layers, RotateCcw, Trash2 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import villageBackdrop from '@/game-center/pixel-knight/assets/village/v7-front/full/starter-village-front-small-plaza-all-roads-connected.png'
+import {
+  atomAssetsForMapSlug,
+  displayNameForMapFolder,
+  getBackdropUrlForMapSlug,
+  getObstaclesFileForMapSlug,
+  getPlacementsFileForMapSlug,
+  isKnownPixelKnightMapSlug,
+  listPixelKnightMapFolders,
+  type EditorPlacementPayload,
+} from '@/game-center/pixel-knight/maps/mapEditorAssets'
 
 const TILE = 16
 
 type EditorTab = 'placement' | 'obstacles'
 type AtomAsset = { key: string; src: string }
-type Placement = { id: string; assetKey: string; x: number; y: number; scale: number }
+type Placement = EditorPlacementPayload
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value))
@@ -42,24 +51,17 @@ function useViewport() {
 
 export default function PixelKnightMapEditorView() {
   const navigate = useNavigate()
+  const { mapSlug = '' } = useParams<{ mapSlug: string }>()
   const [tab, setTab] = useState<EditorTab>('placement')
 
-  const atomModules = useMemo(() => {
-    return import.meta.glob('/src/game-center/pixel-knight/assets/village/v7-front/atoms/*.png', {
-      eager: true,
-      import: 'default',
-    }) as Record<string, string>
-  }, [])
+  const backdropUrl = useMemo(() => (mapSlug ? getBackdropUrlForMapSlug(mapSlug) : undefined), [mapSlug])
 
-  const atoms = useMemo<AtomAsset[]>(() => {
-    const keys = Object.keys(atomModules)
-      .map((p) => p.split('/').at(-1) ?? p)
-      .sort((a, b) => a.localeCompare(b))
-    return keys.map((filename) => ({
-      key: filename.replace('.png', ''),
-      src: atomModules[`/src/game-center/pixel-knight/assets/village/v7-front/atoms/${filename}`],
-    }))
-  }, [atomModules])
+  const mapDisplayName = useMemo(() => {
+    const folder = listPixelKnightMapFolders().find((m) => m.slug === mapSlug)
+    return folder ? displayNameForMapFolder(folder) : mapSlug
+  }, [mapSlug])
+
+  const atoms = useMemo<AtomAsset[]>(() => (mapSlug ? atomAssetsForMapSlug(mapSlug) : []), [mapSlug])
 
   const [imgSize, setImgSize] = useState({ width: 1254, height: 1254 })
   const viewport = useViewport()
@@ -67,19 +69,52 @@ export default function PixelKnightMapEditorView() {
   const [spacePanning, setSpacePanning] = useState(false)
   const panStartRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null)
 
-  const [placements, setPlacements] = useState<Placement[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const selected = useMemo(() => placements.find((p) => p.id === selectedId) ?? null, [placements, selectedId])
-
-  // obstacles: bitmap in cols*rows
   const cols = Math.ceil(imgSize.width / TILE)
   const rows = Math.ceil(imgSize.height / TILE)
+
+  const [placements, setPlacements] = useState<Placement[]>([])
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [blocked, setBlocked] = useState<Uint8Array>(() => new Uint8Array(cols * rows))
 
+  const selected = useMemo(() => placements.find((p) => p.id === selectedId) ?? null, [placements, selectedId])
+
   useEffect(() => {
-    // Re-init obstacle bitmap when image size changes.
-    setBlocked(new Uint8Array(Math.ceil(imgSize.width / TILE) * Math.ceil(imgSize.height / TILE)))
-  }, [imgSize.width, imgSize.height])
+    if (!mapSlug || !isKnownPixelKnightMapSlug(mapSlug)) {
+      navigate('/games/pixel-knight/map-editor', { replace: true })
+    }
+  }, [mapSlug, navigate])
+
+  useEffect(() => {
+    viewport.setZoom(1)
+    viewport.setPan({ x: 0, y: 0 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when switching map folder
+  }, [mapSlug])
+
+  useEffect(() => {
+    const pack = mapSlug ? getPlacementsFileForMapSlug(mapSlug) : null
+    const list = pack?.placements
+    if (Array.isArray(list) && list.every((p) => p && typeof p.id === 'string' && typeof p.assetKey === 'string')) {
+      setPlacements(list as Placement[])
+    } else {
+      setPlacements([])
+    }
+    setSelectedId(null)
+  }, [mapSlug])
+
+  useEffect(() => {
+    const c = Math.ceil(imgSize.width / TILE)
+    const r = Math.ceil(imgSize.height / TILE)
+    const next = new Uint8Array(c * r)
+    const obs = mapSlug ? getObstaclesFileForMapSlug(mapSlug) : null
+    if (obs?.blocked?.length) {
+      for (const cell of obs.blocked) {
+        if (cell.col >= 0 && cell.col < c && cell.row >= 0 && cell.row < r) {
+          next[cell.row * c + cell.col] = 1
+        }
+      }
+    }
+    setBlocked(next)
+  }, [mapSlug, imgSize.width, imgSize.height])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -198,7 +233,7 @@ export default function PixelKnightMapEditorView() {
   }
 
   const exportPlacements = () => {
-    downloadJson('starterVillagePlacements.v1.json', {
+    downloadJson('placements.v1.json', {
       image: imgSize,
       placements,
     })
@@ -214,7 +249,7 @@ export default function PixelKnightMapEditorView() {
         if (blocked[index]) blockedCells.push({ col, row })
       }
     }
-    downloadJson('starterVillageObstacles16.v1.json', {
+    downloadJson('obstacles16.v1.json', {
       tile: TILE,
       cols: currentCols,
       rows: currentRows,
@@ -271,6 +306,14 @@ export default function PixelKnightMapEditorView() {
     } as const
   }, [viewport.pan.x, viewport.pan.y, viewport.zoom])
 
+  if (!mapSlug || !backdropUrl) {
+    return (
+      <main className="min-h-[100dvh] bg-[linear-gradient(180deg,#f8ebc8_0%,#d6ddb1_100%)] px-4 py-5 text-[#1d2516] sm:px-6 sm:pl-24">
+        <p className="text-sm text-[#5b6646]">加载地图…</p>
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-[100dvh] bg-[linear-gradient(180deg,#f8ebc8_0%,#d6ddb1_100%)] px-4 py-5 pb-28 text-[#1d2516] sm:px-6 sm:pl-24">
       <div className="mx-auto max-w-[1320px]">
@@ -280,6 +323,12 @@ export default function PixelKnightMapEditorView() {
             <h1 className="mt-1 text-[clamp(2rem,5vw,3.8rem)] leading-none font-black tracking-[0.08em] text-[#28321b] uppercase">
               地图编辑器
             </h1>
+            {mapSlug ? (
+              <div className="mt-2 text-xs font-bold tracking-[0.12em] text-[#5a6647]">
+                {mapDisplayName}
+                <span className="ml-2 font-mono text-[0.65rem] font-normal text-[#7a8470]">maps/{mapSlug}</span>
+              </div>
+            ) : null}
           </div>
           <div className="flex gap-2">
             <Button
@@ -429,8 +478,15 @@ export default function PixelKnightMapEditorView() {
                   )}
                 </>
               ) : (
-                <div className="rounded-[1rem] border border-[#2f4328]/10 bg-[#fffdf4] p-3 text-xs text-[#4f5d3e]">
-                  - 左键：添加障碍{'\n'}- Shift 或右键：移除障碍{'\n'}- Space：拖拽平移{'\n'}- 滚轮：缩放{'\n'}\n+                  \n+                  当前网格：{TILE}px/格（{cols}×{rows}）\n+                </div>
+                <div className="rounded-[1rem] border border-[#2f4328]/10 bg-[#fffdf4] p-3 text-xs text-[#4f5d3e] whitespace-pre-line">
+                  {`- 左键：添加障碍
+- Shift 或右键：移除障碍
+- Space：拖拽平移
+- 滚轮：缩放`}
+                  <div className="mt-2 text-[#5b6646]">
+                    当前网格：{TILE}px/格（{cols}×{rows}）
+                  </div>
+                </div>
               )}
             </aside>
 
@@ -463,8 +519,8 @@ export default function PixelKnightMapEditorView() {
               >
                 <div className="absolute left-0 top-0" style={drawTransformStyle}>
                   <img
-                    src={villageBackdrop}
-                    alt="starter village"
+                    src={backdropUrl}
+                    alt={mapDisplayName}
                     draggable={false}
                     onLoad={(e) => {
                       const img = e.currentTarget

@@ -3,6 +3,13 @@ from PIL import Image
 
 SRC = Path("src/game-center/pixel-knight/assets/village/sliced")
 OUT = Path("src/game-center/pixel-knight/assets/village/terrain")
+
+if not SRC.is_dir():
+    raise SystemExit(
+        "Missing assets/village/sliced/ — terrain patch sources were removed. "
+        "Restore from git history or regenerate via scripts/slice-pixel-knight-village-assets.py."
+    )
+
 OUT.mkdir(parents=True, exist_ok=True)
 
 

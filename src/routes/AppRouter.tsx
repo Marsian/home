@@ -47,7 +47,8 @@ export default function AppRouter() {
           <Route path="/games/pixel-knight/pixel-editor" element={<PixelKnightPixelEditorFilesView />} />
           <Route path="/games/pixel-knight/pixel-editor/edit" element={<PixelKnightPixelEditorView />} />
           <Route path="/games/pixel-knight/map-editor" element={<PixelKnightMapEditorFilesView />} />
-          <Route path="/games/pixel-knight/map-editor/edit" element={<PixelKnightMapEditorView />} />
+          <Route path="/games/pixel-knight/map-editor/edit" element={<Navigate to="/games/pixel-knight/map-editor" replace />} />
+          <Route path="/games/pixel-knight/map-editor/edit/:mapSlug" element={<PixelKnightMapEditorView />} />
           {/* Back-compat: old direct entry */}
           <Route path="/tank90" element={<Navigate to="/games/tank90" replace />} />
         </Route>

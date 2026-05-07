@@ -1,11 +1,17 @@
+import { useMemo } from 'react'
 import { ArrowLeft, Hammer } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
-import villageBackdrop from '@/game-center/pixel-knight/assets/village/v7-front/full/starter-village-front-small-plaza-all-roads-connected.png'
+import {
+  displayNameForMapFolder,
+  listPixelKnightMapFolders,
+} from '@/game-center/pixel-knight/maps/mapEditorAssets'
 
 export default function PixelKnightMapEditorFilesView() {
   const navigate = useNavigate()
+
+  const maps = useMemo(() => listPixelKnightMapFolders(), [])
 
   return (
     <main className="min-h-[100dvh] bg-[linear-gradient(180deg,#f8ebc8_0%,#d6ddb1_100%)] px-4 py-5 pb-28 text-[#1d2516] sm:px-6 sm:pl-24">
@@ -32,28 +38,38 @@ export default function PixelKnightMapEditorFilesView() {
 
         <div className="space-y-3">
           <div className="text-xs tracking-[0.26em] text-[#6c7753] uppercase">地图列表</div>
-          <div className="rounded-[1.2rem] border border-[#2f4328]/10 bg-[#fffdf4] p-3 shadow-[0_18px_70px_rgba(60,66,31,0.14)]">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-sm font-black tracking-[0.08em] text-[#243019]">新手村</div>
-                <div className="mt-1 text-xs text-[#5b6646]">v7 · 1254×1254 · 障碍 16px/格 · placement 像素坐标</div>
-              </div>
-              <Button
-                type="button"
-                onClick={() => navigate('/games/pixel-knight/map-editor/edit')}
-                className="bg-[#30422a] text-[#fbf5e5] hover:bg-[#23321d]"
+          <div className="space-y-3">
+            {maps.map((map) => (
+              <div
+                key={map.slug}
+                className="rounded-[1.2rem] border border-[#2f4328]/10 bg-[#fffdf4] p-3 shadow-[0_18px_70px_rgba(60,66,31,0.14)]"
               >
-                <Hammer />
-                编辑
-              </Button>
-            </div>
-            <div className="mt-3 overflow-hidden rounded-[0.95rem] border border-[#2f4328]/10 bg-[#1f2a19]">
-              <img src={villageBackdrop} alt="新手村 snapshot" className="block aspect-[16/9] w-full object-cover" />
-            </div>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-black tracking-[0.08em] text-[#243019]">{displayNameForMapFolder(map)}</div>
+                    <div className="mt-1 font-mono text-[0.65rem] text-[#5b6646]">maps/{map.slug}</div>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => navigate(`/games/pixel-knight/map-editor/edit/${encodeURIComponent(map.slug)}`)}
+                    className="bg-[#30422a] text-[#fbf5e5] hover:bg-[#23321d]"
+                  >
+                    <Hammer />
+                    编辑
+                  </Button>
+                </div>
+                <div className="mt-3 overflow-hidden rounded-[0.95rem] border border-[#2f4328]/10 bg-[#1f2a19]">
+                  <img
+                    src={map.backdropUrl}
+                    alt=""
+                    className="block aspect-[16/9] w-full object-cover"
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
     </main>
   )
 }
-

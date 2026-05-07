@@ -11,13 +11,11 @@ import cv2
 import numpy as np
 
 
-FULL = Path(
-    "src/game-center/pixel-knight/assets/village/v7-front/full/starter-village-front-small-plaza-all-roads-connected.png"
-)
-ATOMS_DIR = Path("src/game-center/pixel-knight/assets/village/v7-front/atoms")
-ATOMS_JSON = ATOMS_DIR / "atoms.json"
-OUT_TS = Path("src/game-center/pixel-knight/game/maps/starterVillageV8Rows.ts")
-OUT_OBJECTS_TS = Path("src/game-center/pixel-knight/game/maps/starterVillageV8Objects.ts")
+MAP_DIR = Path("src/game-center/pixel-knight/maps/starter-village")
+FULL = MAP_DIR / "backdrop.png"
+ATOMS_DIR = MAP_DIR / "atoms"
+OUT_OBSTACLES = MAP_DIR / "obstacles16.v1.json"
+OUT_PLACEMENTS = MAP_DIR / "placements.v1.json"
 
 TILE = 16
 
@@ -36,11 +34,17 @@ def ceil_div(a: int, b: int) -> int:
     return (a + b - 1) // b
 
 
-def load_atoms() -> list[dict[str, Any]]:
-    data = json.loads(ATOMS_JSON.read_text())
-    if not isinstance(data, list):
-        raise ValueError("atoms.json must be a list")
-    return data
+def load_atoms_by_area_desc() -> list[tuple[str, Path]]:
+    """PNG atom filenames under the map folder, largest sprites first (better template matching order)."""
+    items: list[tuple[str, Path, int]] = []
+    for path in sorted(ATOMS_DIR.glob("atom-*.png")):
+        templ_bgra = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+        if templ_bgra is None:
+            continue
+        h, w = templ_bgra.shape[:2]
+        items.append((path.stem, path, w * h))
+    items.sort(key=lambda entry: -entry[2])
+    return [(atom_id, path) for atom_id, path, _area in items]
 
 
 def match_one(full_gray: np.ndarray, templ_gray: np.ndarray, templ_mask: np.ndarray) -> tuple[float, int, int]:
@@ -175,8 +179,8 @@ def detect_portal_cell(full_bgr: np.ndarray, cols: int, rows: int, pad_x: int, p
 
 
 def main() -> None:
-    if not ATOMS_JSON.exists():
-        raise SystemExit("Missing atoms.json. Run scripts/slice-pixel-knight-v7-village-cutouts.py first.")
+    if not ATOMS_DIR.is_dir():
+        raise SystemExit(f"Missing atoms dir {ATOMS_DIR}. Run scripts/slice-pixel-knight-v7-village-cutouts.py first.")
 
     full_bgr = cv2.imread(str(FULL), cv2.IMREAD_COLOR)
     if full_bgr is None:
@@ -202,12 +206,9 @@ def main() -> None:
     full_gray = cv2.cvtColor(full_bgr, cv2.COLOR_BGR2GRAY)
     walkable_cells = compute_walkable_cells(full_bgr, cols, rows, pad_x, pad_y)
 
-    atoms = load_atoms()
+    atoms = load_atoms_by_area_desc()
     matches: list[Match] = []
-    # Prefer matching bigger atoms first; atoms.json already sorted by area desc from the slicer.
-    for atom in atoms:
-        atom_id = str(atom["id"])
-        atom_path = ATOMS_DIR / str(atom["file"])
+    for atom_id, atom_path in atoms:
         templ_bgra = cv2.imread(str(atom_path), cv2.IMREAD_UNCHANGED)
         if templ_bgra is None or templ_bgra.shape[2] != 4:
             continue
@@ -277,8 +278,55 @@ def main() -> None:
                 grid[yy][xx] = "."
     grid[py][px] = "P"
 
-    # Emit TS with rows + a small metadata export for hotspots tuning.
     row_strings = ["".join(r) for r in grid]
+    blocked: list[dict[str, int]] = []
+    for r, line in enumerate(row_strings):
+        for c, ch in enumerate(line):
+            if ch == "#":
+                blocked.append({"col": c, "row": r})
+
+    obstacles_payload = {
+        "tile": TILE,
+        "cols": cols,
+        "rows": rows,
+        "image": {"width": int(full_w), "height": int(full_h)},
+        "blocked": blocked,
+    }
+
+    # Editor placements.v1.json (same shape as PixelKnightMapEditorView export).
+    dim_by_id: dict[str, tuple[int, int]] = {}
+    for atom_id, atom_path in atoms:
+        templ_bgra = cv2.imread(str(atom_path), cv2.IMREAD_UNCHANGED)
+        if templ_bgra is None:
+            continue
+        hh, ww = templ_bgra.shape[:2]
+        dim_by_id[atom_id] = (ww, hh)
+
+    placements_out: list[dict[str, Any]] = []
+    objects.sort(key=lambda o: (o["baseY"], o["id"]))
+    for index, o in enumerate(objects):
+        atom_id = str(o["id"])
+        nw, nh = dim_by_id.get(atom_id, (int(o["w"]), int(o["h"])))
+        ww, hh = int(o["w"]), int(o["h"])
+        scale_w = ww / nw if nw else 1.0
+        scale_h = hh / nh if nh else 1.0
+        scale = round((scale_w + scale_h) / 2, 6)
+        placements_out.append(
+            {
+                "id": f"{atom_id}-{index}",
+                "assetKey": atom_id,
+                "x": float(o["x"]),
+                "y": float(o["y"]),
+                "scale": scale,
+            }
+        )
+
+    placements_payload = {"image": {"width": int(full_w), "height": int(full_h)}, "placements": placements_out}
+
+    MAP_DIR.mkdir(parents=True, exist_ok=True)
+    OUT_OBSTACLES.write_text(json.dumps(obstacles_payload, ensure_ascii=False, indent=2) + "\n")
+    OUT_PLACEMENTS.write_text(json.dumps(placements_payload, ensure_ascii=False, indent=2) + "\n")
+
     meta = {
         "tile": TILE,
         "image": {"width": full_w, "height": full_h},
@@ -294,37 +342,10 @@ def main() -> None:
         },
     }
 
-    OUT_TS.parent.mkdir(parents=True, exist_ok=True)
-    OUT_TS.write_text(
-        "// Generated by scripts/build-pixel-knight-v7-village-collision-grid.py\n"
-        "export const starterVillageV8Meta = "
-        + json.dumps(meta, ensure_ascii=False, indent=2)
-        + " as const;\n\n"
-        "export const starterVillageV8Rows = [\n"
-        + "\n".join([f"  {json.dumps(r)}," for r in row_strings])
-        + "\n] as const;\n"
-    )
-
-    # Emit objects (for occlusion rendering).
-    objects.sort(key=lambda o: (o["baseY"], o["id"]))
-    OUT_OBJECTS_TS.write_text(
-        "// Generated by scripts/build-pixel-knight-v7-village-collision-grid.py\n"
-        "export type StarterVillageV8Object = {\n"
-        "  id: string\n"
-        "  x: number\n"
-        "  y: number\n"
-        "  w: number\n"
-        "  h: number\n"
-        "  baseY: number\n"
-        "}\n\n"
-        "export const starterVillageV8Objects: StarterVillageV8Object[] = "
-        + json.dumps(objects, ensure_ascii=False, indent=2)
-        + ";\n"
-    )
-
-    print(f"Wrote {OUT_TS}")
-    print(f"Wrote {OUT_OBJECTS_TS}")
+    print(f"Wrote {OUT_OBSTACLES}")
+    print(f"Wrote {OUT_PLACEMENTS}")
     print(json.dumps(meta, ensure_ascii=False, indent=2))
+    print("Hint: sync portal/start in maps/starter-village/map.meta.json if heuristics changed.")
 
 
 if __name__ == "__main__":

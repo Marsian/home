@@ -3,9 +3,7 @@ import knightManifestData from '@/game-center/pixel-knight/assets/characters/kni
 import shieldMatrixData from '@/game-center/pixel-knight/assets/equipment/off-hand/wood-shield.json'
 import swordMatrixData from '@/game-center/pixel-knight/assets/equipment/main-hand/iron-sword.json'
 import { getPixelKnightVillageAsset } from './game/preload'
-import { starterVillageLandmarks, starterVillageMap, starterVillageTerrainPatches } from './game/maps/starterVillage'
-import { getVillageAssetMeta, resolveLandmarkAsset } from './rendering/villageAssets'
-import type { VillageAssetId } from './rendering/villageAssets'
+import { starterVillageMap } from './maps/starter-village/starterVillageMap'
 import {
   drawMatrixCharacter,
   type MatrixCharacterMode,
@@ -331,7 +329,6 @@ export class PixelKnightGame {
   private portalNearby = false
   private nearbyHotspot: MapHotspot | null = null
   private lastHomeHudSignature: string | null = null
-  private villageTerrainCache: HTMLCanvasElement | null = null
   private villageBackdropCache: HTMLCanvasElement | null = null
   private matrixEquipment: MatrixEquipmentLoadout = { ...defaultMatrixKnightEquipment }
 
@@ -364,7 +361,6 @@ export class PixelKnightGame {
     window.addEventListener('keyup', this.onKeyUp)
 
     this.phase = 'home'
-    this.villageTerrainCache = null
     this.villageBackdropCache = null
     this.enterVillage()
     this.emitHud()
@@ -491,9 +487,8 @@ export class PixelKnightGame {
     this.emitHud()
   }
 
-  /** Terrain cache can bake before village PNGs finish preloading — drop canvas so next frame rebuilds once assets exist. */
+  /** Backdrop cache can bake before PNG preload finishes — drop canvas so next frame rebuilds once assets exist. */
   invalidateVillageTerrainCache() {
-    this.villageTerrainCache = null
     this.villageBackdropCache = null
   }
 
@@ -506,7 +501,6 @@ export class PixelKnightGame {
     }
     window.removeEventListener('keydown', this.onKeyDown)
     window.removeEventListener('keyup', this.onKeyUp)
-    this.villageTerrainCache = null
     this.villageBackdropCache = null
   }
 
@@ -1193,50 +1187,6 @@ export class PixelKnightGame {
     }
   }
 
-  private drawVillageAsset(
-    ctx: CanvasRenderingContext2D,
-    assetId: Parameters<typeof getVillageAssetMeta>[0],
-    centerX: number,
-    centerY: number,
-    scale = 1,
-    offsetX = 0,
-    offsetY = 0,
-  ) {
-    const image = getPixelKnightVillageAsset(assetId)
-    if (!image) return
-    const meta = getVillageAssetMeta(assetId)
-    ctx.save()
-    ctx.imageSmoothingEnabled = false
-    const drawWidth = meta.width * scale
-    const drawHeight = meta.height * scale
-    const anchorX = meta.anchorX * scale
-    const anchorY = meta.anchorY * scale
-    ctx.drawImage(image, centerX - anchorX + offsetX, centerY - anchorY + offsetY, drawWidth, drawHeight)
-    ctx.restore()
-  }
-
-  private bakeVillageTerrainCacheIfNeeded() {
-    if (this.villageTerrainCache) return
-    const probe = getPixelKnightVillageAsset('terrain-grass-field')
-    if (!probe?.naturalWidth) return
-
-    let maxW = 0
-    let maxH = 0
-    for (const patch of starterVillageTerrainPatches) {
-      maxW = Math.max(maxW, patch.x + patch.width)
-      maxH = Math.max(maxH, patch.y + patch.height)
-    }
-    const canvas = document.createElement('canvas')
-    canvas.width = Math.ceil(maxW)
-    canvas.height = Math.ceil(maxH)
-    const bctx = canvas.getContext('2d')
-    if (!bctx) return
-    for (const patch of starterVillageTerrainPatches) {
-      this.paintVillageTerrainPatchWorld(bctx, patch)
-    }
-    this.villageTerrainCache = canvas
-  }
-
   private bakeVillageBackdropCacheIfNeeded() {
     if (this.villageBackdropCache) return
     const image = getPixelKnightVillageAsset('starter-village-v7-backdrop')
@@ -1273,78 +1223,6 @@ export class PixelKnightGame {
     ctx.imageSmoothingEnabled = false
     ctx.drawImage(cache, sx, sy, sw, sh, 0, 0, sw, sh)
     ctx.restore()
-  }
-
-  /** World-coordinate fill: repeat at intrinsic pixel size (seam-aligned); stretches if pattern unavailable. */
-  private paintVillageTerrainPatchWorld(
-    ctx: CanvasRenderingContext2D,
-    patch: { x: number; y: number; width: number; height: number; assetId: string },
-  ) {
-    const assetId = patch.assetId as VillageAssetId
-    const image = getPixelKnightVillageAsset(assetId)
-    if (!image || image.naturalWidth === 0) return
-    const pattern = ctx.createPattern(image, 'repeat')
-    ctx.save()
-    ctx.imageSmoothingEnabled = false
-    if (pattern) {
-      ctx.fillStyle = pattern
-      ctx.fillRect(patch.x, patch.y, patch.width, patch.height)
-    } else {
-      ctx.drawImage(image, patch.x, patch.y, patch.width, patch.height)
-    }
-    ctx.restore()
-  }
-
-  private renderVillageTerrainPatches(ctx: CanvasRenderingContext2D, camera: Vector2) {
-    this.bakeVillageTerrainCacheIfNeeded()
-    const cache = this.villageTerrainCache
-    if (cache) {
-      const sx = camera.x
-      const sy = camera.y
-      const sw = Math.min(WIDTH, Math.max(0, cache.width - camera.x))
-      const sh = Math.min(HEIGHT, Math.max(0, cache.height - camera.y))
-      if (sw > 0 && sh > 0) {
-        ctx.save()
-        ctx.imageSmoothingEnabled = false
-        ctx.drawImage(cache, sx, sy, sw, sh, 0, 0, sw, sh)
-        ctx.restore()
-      }
-      return
-    }
-
-    ctx.save()
-    ctx.translate(-camera.x, -camera.y)
-    const wx0 = camera.x
-    const wy0 = camera.y
-    const wx1 = camera.x + WIDTH
-    const wy1 = camera.y + HEIGHT
-    for (const patch of starterVillageTerrainPatches) {
-      if (patch.x + patch.width < wx0 || patch.x > wx1 || patch.y + patch.height < wy0 || patch.y > wy1) continue
-      this.paintVillageTerrainPatchWorld(ctx, patch)
-    }
-    ctx.restore()
-  }
-
-  private renderVillageLandmarkLayer(
-    ctx: CanvasRenderingContext2D,
-    camera: Vector2,
-    landmarks: typeof starterVillageLandmarks,
-  ) {
-    for (const landmark of landmarks) {
-      const centerX = landmark.cell.x * TILE + TILE / 2 - camera.x
-      const centerY = landmark.cell.y * TILE + TILE / 2 - camera.y
-      if (centerX + 120 < 0 || centerX - 120 > WIDTH || centerY + 120 < 0 || centerY - 120 > HEIGHT) continue
-      const assetId = resolveLandmarkAsset(landmark.kind)
-      this.drawVillageAsset(
-        ctx,
-        assetId,
-        centerX,
-        centerY,
-        landmark.drawScale ?? 1,
-        landmark.drawOffset?.x ?? 0,
-        landmark.drawOffset?.y ?? 0,
-      )
-    }
   }
 
   private renderIdleScene(ctx: CanvasRenderingContext2D) {
