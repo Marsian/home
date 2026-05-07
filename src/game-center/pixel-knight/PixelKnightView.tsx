@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { ArrowLeft, Database, Map, Pause, Play, Swords } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -25,7 +25,6 @@ import hudHealthFrameFront from '@/game-center/pixel-knight/assets/ui/inventory/
 import hudHpFill from '@/game-center/pixel-knight/assets/ui/inventory/hud-hp-fill-core-v2.png'
 import hudMinimapFrame from '@/game-center/pixel-knight/assets/ui/inventory/hud-minimap-frame-v2.png'
 import hudPauseButton from '@/game-center/pixel-knight/assets/ui/inventory/hud-pause-button-v2.png'
-import hudPromptPlaque from '@/game-center/pixel-knight/assets/ui/inventory/hud-prompt-plaque-v2.png'
 import inventoryBgFrame from '@/game-center/pixel-knight/assets/ui/inventory/inventory-bg-v2.png'
 import inventoryGridPanel from '@/game-center/pixel-knight/assets/ui/inventory/inventory-grid-6x6-v2.png'
 import inventorySlotFrame from '@/game-center/pixel-knight/assets/ui/inventory/inventory-slot-v2.png'
@@ -122,6 +121,25 @@ const defaultHud: PixelKnightHudState = {
     dodge: 0,
   },
 }
+
+type MinimapCell = { x: number; y: number }
+
+const minimapPlayerCellStore = (() => {
+  let cell: MinimapCell = defaultHud.playerCell
+  const listeners = new Set<() => void>()
+  return {
+    getSnapshot: () => cell,
+    subscribe: (listener: () => void) => {
+      listeners.add(listener)
+      return () => listeners.delete(listener)
+    },
+    set: (nextCell: MinimapCell) => {
+      if (cell.x === nextCell.x && cell.y === nextCell.y) return
+      cell = nextCell
+      listeners.forEach((listener) => listener())
+    },
+  }
+})()
 
 function formatTime(ms: number) {
   const total = Math.floor(ms / 1000)
@@ -381,7 +399,11 @@ export default function PixelKnightView() {
     const host = hostRef.current
     if (!host) return
     const game = new PixelKnightGame(host, {
-      onHud: (state) => setHud(state),
+      onHud: (state) => {
+        minimapPlayerCellStore.set(state.playerCell)
+        setHud(state)
+      },
+      onMinimapPlayerCell: (cell) => minimapPlayerCellStore.set(cell),
       onHotspotInteract: (hotspot: MapHotspot) => {
         setInventoryOpen(false)
         setActiveVillagePanel(hotspot.kind)
@@ -937,23 +959,7 @@ export default function PixelKnightView() {
                 </div>
 
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 p-4">
-                  <div className="flex flex-col items-center gap-3">
-                    {(hud.nearbyHotspot || (hud.portalNearby && hud.mapKind === 'dungeon')) ? (
-                      <div className="relative h-[54px] w-[min(360px,86vw)]">
-                        <img
-                          src={hudPromptPlaque}
-                          alt=""
-                          className="absolute inset-0 h-full w-full object-fill"
-                          draggable={false}
-                          style={{ imageRendering: 'pixelated' }}
-                        />
-                        <div className="absolute inset-x-[10%] top-1/2 -translate-y-1/2 truncate text-center text-sm font-black text-[#2f1f10]">
-                          {hud.nearbyHotspot
-                            ? hud.nearbyHotspot.prompt
-                            : '靠近传送点，按 F 返回村庄'}
-                        </div>
-                      </div>
-                    ) : null}
+                  <div className="flex flex-col items-center gap-2">
                     {hud.mapKind === 'dungeon' ? <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                       {[
                         ['LMB', '斩击', hud.cooldowns.basic],
@@ -1476,6 +1482,65 @@ function InventoryItemCell({
   )
 }
 
+const MiniMapStaticLayer = memo(function MiniMapStaticLayer({
+  rows,
+  hotspots,
+  portalCell,
+}: {
+  rows: string[]
+  hotspots: MapHotspot[]
+  portalCell: MinimapCell
+}) {
+  if (!rows.length) return null
+  return (
+    <>
+      <rect x="0" y="0" width={rows[0].length} height={rows.length} fill="#91c76d" />
+      {rows.map((row, y) =>
+        row.split('').map((cell, x) => {
+          const fill =
+            cell === '#'
+              ? '#33473a'
+              : cell === 'p'
+                ? '#e5cf8f'
+                : cell === 'r'
+                  ? '#b8814d'
+                  : cell === 'P'
+                    ? '#7ae4ff'
+                    : '#9acb6c'
+          return <rect key={`${x}-${y}`} x={x} y={y} width="1" height="1" fill={fill} />
+        }),
+      )}
+      {hotspots.map((hotspot) => (
+        <rect
+          key={hotspot.id}
+          x={hotspot.cell.x}
+          y={hotspot.cell.y}
+          width="1"
+          height="1"
+          fill={hotspot.kind === 'portal' ? '#7ae4ff' : '#ffd56f'}
+        />
+      ))}
+      <rect x={portalCell.x} y={portalCell.y} width="1" height="1" fill="#7ae4ff" />
+    </>
+  )
+})
+
+function MiniMapPlayerMarker({ fallbackCell }: { fallbackCell: MinimapCell }) {
+  const storeCell = useSyncExternalStore(
+    minimapPlayerCellStore.subscribe,
+    minimapPlayerCellStore.getSnapshot,
+    minimapPlayerCellStore.getSnapshot,
+  )
+  const cell = storeCell ?? fallbackCell
+  return (
+    <g>
+      <circle cx={cell.x + 0.5} cy={cell.y + 0.5} r="2.2" fill="rgba(29, 19, 7, 0.72)" />
+      <circle cx={cell.x + 0.5} cy={cell.y + 0.5} r="1.55" fill="#ffdc47" stroke="#fff4b0" strokeWidth="0.45" />
+      <rect x={cell.x + 0.18} y={cell.y + 0.18} width="0.64" height="0.64" fill="#5b3106" />
+    </g>
+  )
+}
+
 function MiniMap({ hud }: { hud: PixelKnightHudState }) {
   const rows = hud.minimapRows
   const mapWindowClass = 'absolute left-[7.2%] right-[7.2%] top-[18.6%] bottom-[6.6%] z-0 overflow-hidden bg-[#91c76d]'
@@ -1488,34 +1553,8 @@ function MiniMap({ hud }: { hud: PixelKnightHudState }) {
         className="absolute inset-0 h-full w-full"
         preserveAspectRatio="none"
       >
-        <rect x="0" y="0" width={rows[0].length} height={rows.length} fill="#91c76d" />
-        {rows.map((row, y) =>
-          row.split('').map((cell, x) => {
-            const fill =
-              cell === '#'
-                ? '#33473a'
-                : cell === 'p'
-                  ? '#e5cf8f'
-                  : cell === 'r'
-                    ? '#b8814d'
-                    : cell === 'P'
-                      ? '#7ae4ff'
-                      : '#9acb6c'
-            return <rect key={`${x}-${y}`} x={x} y={y} width="1" height="1" fill={fill} />
-          }),
-        )}
-        {hud.hotspots.map((hotspot) => (
-          <rect
-            key={hotspot.id}
-            x={hotspot.cell.x}
-            y={hotspot.cell.y}
-            width="1"
-            height="1"
-            fill={hotspot.kind === 'portal' ? '#7ae4ff' : '#ffd56f'}
-          />
-        ))}
-        <rect x={hud.portalCell.x} y={hud.portalCell.y} width="1" height="1" fill="#7ae4ff" />
-        <rect x={hud.playerCell.x} y={hud.playerCell.y} width="1" height="1" fill="#ffde7a" />
+        <MiniMapStaticLayer rows={rows} hotspots={hud.hotspots} portalCell={hud.portalCell} />
+        <MiniMapPlayerMarker fallbackCell={hud.playerCell} />
       </svg>
     </div>
   )

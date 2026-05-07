@@ -3,7 +3,7 @@ import knightManifestData from '@/game-center/pixel-knight/assets/characters/kni
 import shieldMatrixData from '@/game-center/pixel-knight/assets/equipment/off-hand/wood-shield.json'
 import swordMatrixData from '@/game-center/pixel-knight/assets/equipment/main-hand/iron-sword.json'
 import { getPixelKnightVillageAsset } from './game/preload'
-import { starterVillageMap } from './maps/starter-village/starterVillageMap'
+import { starterVillageMap, starterVillagePlacements } from './maps/starter-village/starterVillageMap'
 import {
   drawMatrixCharacter,
   type MatrixCharacterMode,
@@ -12,6 +12,7 @@ import {
   type MatrixFacing,
   type MatrixManifest,
 } from './rendering/matrixCharacterRenderer'
+import { getStarterVillageAtomAssetId } from './rendering/villageAssets'
 import type {
   DifficultyTier,
   DungeonId,
@@ -25,6 +26,15 @@ import type {
 } from './types'
 
 type Vector2 = { x: number; y: number }
+
+type VillagePlacementRenderItem = {
+  image: HTMLImageElement
+  worldX: number
+  worldY: number
+  width: number
+  height: number
+  sortY: number
+}
 
 type PlayerState = {
   x: number
@@ -248,6 +258,15 @@ function worldFromCell(cell: { x: number; y: number }) {
   return { x: cell.x * TILE + TILE / 2, y: cell.y * TILE + TILE / 2 }
 }
 
+function getStarterVillageImagePad(map: MapDef, image: HTMLImageElement) {
+  const worldWidth = map.rows[0].length * TILE
+  const worldHeight = map.rows.length * TILE
+  return {
+    x: Math.max(0, Math.floor((worldWidth - image.naturalWidth) / 2)),
+    y: Math.max(0, Math.floor((worldHeight - image.naturalHeight) / 2)),
+  }
+}
+
 function randomWalkableCell(mapRows: string[], blocked: Array<{ x: number; y: number }>) {
   const floorCells: Array<{ x: number; y: number }> = []
   for (let row = 0; row < mapRows.length; row += 1) {
@@ -329,7 +348,9 @@ export class PixelKnightGame {
   private portalNearby = false
   private nearbyHotspot: MapHotspot | null = null
   private lastHomeHudSignature: string | null = null
+  private lastMinimapPlayerCellSignature: string | null = null
   private villageBackdropCache: HTMLCanvasElement | null = null
+  private villagePlacementRenderItems: VillagePlacementRenderItem[] | null = null
   private matrixEquipment: MatrixEquipmentLoadout = { ...defaultMatrixKnightEquipment }
 
   constructor(host: HTMLDivElement, callbacks: PixelKnightGameCallbacks) {
@@ -362,6 +383,7 @@ export class PixelKnightGame {
 
     this.phase = 'home'
     this.villageBackdropCache = null
+    this.villagePlacementRenderItems = null
     this.enterVillage()
     this.emitHud()
     this.animationFrame = requestAnimationFrame(this.loop)
@@ -426,6 +448,8 @@ export class PixelKnightGame {
     this.encounterLabel = '迷宫探索'
     this.objectiveLabel = '穿越迷宫并带着战利品撤离'
     this.phase = 'playing'
+    this.villagePlacementRenderItems = null
+    this.lastMinimapPlayerCellSignature = null
     this.emitHud()
   }
 
@@ -480,6 +504,8 @@ export class PixelKnightGame {
     this.pauseRequested = false
     this.portalNearby = false
     this.villageBackdropCache = null
+    this.villagePlacementRenderItems = null
+    this.lastMinimapPlayerCellSignature = null
     this.encounterLabel = '新手村'
     this.objectiveLabel = '在村庄中移动，靠近地标后按 F 互动'
     this.lootFeed = ['欢迎来到晨铃新手村。北侧传送门可以进入副本。']
@@ -490,6 +516,7 @@ export class PixelKnightGame {
   /** Backdrop cache can bake before PNG preload finishes — drop canvas so next frame rebuilds once assets exist. */
   invalidateVillageTerrainCache() {
     this.villageBackdropCache = null
+    this.villagePlacementRenderItems = null
   }
 
   dispose() {
@@ -502,6 +529,7 @@ export class PixelKnightGame {
     window.removeEventListener('keydown', this.onKeyDown)
     window.removeEventListener('keyup', this.onKeyUp)
     this.villageBackdropCache = null
+    this.villagePlacementRenderItems = null
   }
 
   private onMouseMove = (event: MouseEvent) => {
@@ -533,15 +561,8 @@ export class PixelKnightGame {
     }
     this.keys.add(event.code)
     if (this.phase === 'home') {
-      // Apply a small immediate step so tap inputs (including automation) still move the player.
       if (event.code === 'KeyW' || event.code === 'KeyA' || event.code === 'KeyS' || event.code === 'KeyD') {
         event.preventDefault()
-        const tapStep = 18
-        const stepX = event.code === 'KeyA' ? -tapStep : event.code === 'KeyD' ? tapStep : 0
-        const stepY = event.code === 'KeyW' ? -tapStep : event.code === 'KeyS' ? tapStep : 0
-        this.tryMovePlayer(stepX, stepY)
-        this.updateVillageHotspot()
-        this.emitHud()
       }
       if (event.code === 'KeyF' && this.nearbyHotspot) {
         event.preventDefault()
@@ -913,6 +934,7 @@ export class PixelKnightGame {
   private updateVillage(dt: number) {
     if (!this.player) return
     this.player.locomotionAnimElapsedMs += dt
+    const prevHotspotId = this.nearbyHotspot?.id ?? null
     const input: Vector2 = {
       x: (this.keys.has('KeyD') ? 1 : 0) - (this.keys.has('KeyA') ? 1 : 0),
       y: (this.keys.has('KeyS') ? 1 : 0) - (this.keys.has('KeyW') ? 1 : 0),
@@ -920,8 +942,12 @@ export class PixelKnightGame {
     const move = normalize(input)
     this.player.moving = Math.abs(move.x) > 0 || Math.abs(move.y) > 0
     this.tryMovePlayer(move.x * 150 * (dt / 1000), move.y * 150 * (dt / 1000))
+    this.emitMinimapPlayerCell()
     this.updateVillageHotspot()
-    this.emitHud()
+    const nextHotspotId = this.nearbyHotspot?.id ?? null
+    if (prevHotspotId !== nextHotspotId) {
+      this.emitHud()
+    }
   }
 
   private updateVillageHotspot() {
@@ -930,11 +956,16 @@ export class PixelKnightGame {
       return
     }
     const hotspots = starterVillage.hotspots ?? []
-    const nearby = hotspots
-      .map((hotspot) => ({ hotspot, dist: distance(this.player as Vector2, worldFromCell(hotspot.cell)) }))
-      .filter(({ hotspot, dist }) => dist <= hotspot.radius)
-      .sort((a, b) => a.dist - b.dist)[0]?.hotspot
-    this.nearbyHotspot = nearby ?? null
+    let nearby: MapHotspot | null = null
+    let nearbyDist = Number.POSITIVE_INFINITY
+    for (const hotspot of hotspots) {
+      const hotspotPos = worldFromCell(hotspot.cell)
+      const dist = distance(this.player, hotspotPos)
+      if (dist > hotspot.radius || dist >= nearbyDist) continue
+      nearby = hotspot
+      nearbyDist = dist
+    }
+    this.nearbyHotspot = nearby
     this.portalNearby = this.nearbyHotspot?.kind === 'portal'
     this.encounterLabel = this.nearbyHotspot ? this.nearbyHotspot.label : '新手村'
     this.objectiveLabel = this.nearbyHotspot?.prompt ?? '在村庄中移动，靠近地标后按 F 互动'
@@ -1046,6 +1077,15 @@ export class PixelKnightGame {
     if (homeSig === this.lastHomeHudSignature) return
     this.lastHomeHudSignature = homeSig
     this.callbacks.onHud(state)
+  }
+
+  private emitMinimapPlayerCell() {
+    if (!this.player) return
+    const cell = { x: Math.floor(this.player.x / TILE), y: Math.floor(this.player.y / TILE) }
+    const signature = `${cell.x}:${cell.y}`
+    if (signature === this.lastMinimapPlayerCellSignature) return
+    this.lastMinimapPlayerCellSignature = signature
+    this.callbacks.onMinimapPlayerCell?.(cell)
   }
 
   private render() {
@@ -1166,25 +1206,141 @@ export class PixelKnightGame {
   private renderVillageScene(ctx: CanvasRenderingContext2D) {
     const camera = this.getCamera()
     this.renderVillageBackdrop(ctx, camera)
+    this.renderVillageDepthSortedEntities(ctx, camera)
+    this.renderVillageHotspotPrompt(ctx, camera)
+  }
+
+  private renderVillageHotspotPrompt(ctx: CanvasRenderingContext2D, camera: Vector2) {
+    if (!this.nearbyHotspot) return
+    const anchor = worldFromCell(this.nearbyHotspot.cell)
+    const text = this.nearbyHotspot.prompt
+    const x = anchor.x - camera.x
+    const tipY = anchor.y - camera.y
+    const bubbleHeight = 34
+    const triangleHeight = 9
+    const cornerRadius = 9
+    const paddingX = 18
+
+    ctx.save()
+    ctx.font = '800 14px sans-serif'
+    const textWidth = ctx.measureText(text).width
+    const bubbleWidth = Math.min(220, Math.max(112, textWidth + paddingX * 2))
+    const bubbleX = clamp(x - bubbleWidth / 2, 10, WIDTH - bubbleWidth - 10)
+    const bubbleY = clamp(tipY - bubbleHeight - triangleHeight, 10, HEIGHT - bubbleHeight - triangleHeight - 10)
+    const triangleX = clamp(x, bubbleX + 18, bubbleX + bubbleWidth - 18)
+    const triangleBaseY = bubbleY + bubbleHeight - 1
+
+    ctx.beginPath()
+    ctx.moveTo(bubbleX + cornerRadius, bubbleY)
+    ctx.lineTo(bubbleX + bubbleWidth - cornerRadius, bubbleY)
+    ctx.quadraticCurveTo(bubbleX + bubbleWidth, bubbleY, bubbleX + bubbleWidth, bubbleY + cornerRadius)
+    ctx.lineTo(bubbleX + bubbleWidth, bubbleY + bubbleHeight - cornerRadius)
+    ctx.quadraticCurveTo(
+      bubbleX + bubbleWidth,
+      bubbleY + bubbleHeight,
+      bubbleX + bubbleWidth - cornerRadius,
+      bubbleY + bubbleHeight,
+    )
+    ctx.lineTo(triangleX + 9, triangleBaseY)
+    ctx.lineTo(triangleX, triangleBaseY + triangleHeight)
+    ctx.lineTo(triangleX - 9, triangleBaseY)
+    ctx.lineTo(bubbleX + cornerRadius, bubbleY + bubbleHeight)
+    ctx.quadraticCurveTo(bubbleX, bubbleY + bubbleHeight, bubbleX, bubbleY + bubbleHeight - cornerRadius)
+    ctx.lineTo(bubbleX, bubbleY + cornerRadius)
+    ctx.quadraticCurveTo(bubbleX, bubbleY, bubbleX + cornerRadius, bubbleY)
+    ctx.closePath()
+
+    ctx.fillStyle = 'rgba(24, 18, 12, 0.72)'
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(245, 214, 132, 0.88)'
+    ctx.lineWidth = 1.5
+    ctx.stroke()
+
+    ctx.fillStyle = '#fff0bc'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(text, bubbleX + bubbleWidth / 2, bubbleY + bubbleHeight / 2 + 1, bubbleWidth - paddingX)
+    ctx.restore()
+  }
+
+  private buildVillagePlacementRenderItems() {
+    if (this.villagePlacementRenderItems) return this.villagePlacementRenderItems
+    const map = this.getActiveMap()
+    if (!map || map.id !== 'starter-village') return []
+    const backdrop = getPixelKnightVillageAsset('starter-village-v7-backdrop')
+    if (!backdrop?.naturalWidth) return []
+
+    const pad = getStarterVillageImagePad(map, backdrop)
+    const items: VillagePlacementRenderItem[] = []
+
+    for (const placement of starterVillagePlacements.placements) {
+      const image = getPixelKnightVillageAsset(getStarterVillageAtomAssetId(placement.assetKey))
+      if (!image?.naturalWidth) continue
+      const worldX = pad.x + placement.x
+      const worldY = pad.y + placement.y
+      const width = image.naturalWidth * placement.scale
+      const height = image.naturalHeight * placement.scale
+      items.push({
+        image,
+        worldX,
+        worldY,
+        width,
+        height,
+        sortY: worldY + height,
+      })
+    }
+
+    items.sort((a, b) => a.sortY - b.sortY)
+    this.villagePlacementRenderItems = items
+    return items
+  }
+
+  private drawVillagePlacement(ctx: CanvasRenderingContext2D, camera: Vector2, item: VillagePlacementRenderItem) {
+    const x = item.worldX - camera.x
+    const y = item.worldY - camera.y
+    if (x + item.width < 0 || y + item.height < 0 || x > WIDTH || y > HEIGHT) return
+    ctx.drawImage(item.image, x, y, item.width, item.height)
+  }
+
+  private renderVillageDepthSortedEntities(ctx: CanvasRenderingContext2D, camera: Vector2) {
+    const placements = this.buildVillagePlacementRenderItems()
+
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+
+    if (!this.player) {
+      for (const item of placements) this.drawVillagePlacement(ctx, camera, item)
+      ctx.restore()
+      return
+    }
+
+    const playerSortY = this.player.y + 8
+    let index = 0
+    while (index < placements.length && placements[index].sortY <= playerSortY) {
+      this.drawVillagePlacement(ctx, camera, placements[index])
+      index += 1
+    }
 
     if (this.player) {
       const x = this.player.x - camera.x
       const y = this.player.y - camera.y
       const facing = this.getFacingDirection(camera)
       this.renderMatrixPlayer(ctx, x, y, facing, this.player)
+      if (this.player.whirlMs > 0) {
+        ctx.strokeStyle = 'rgba(255,243,173,0.8)'
+        ctx.lineWidth = 4
+        ctx.beginPath()
+        ctx.arc(x, y, 38, 0, Math.PI * 2)
+        ctx.stroke()
+      }
     }
 
-    if (this.nearbyHotspot && this.player) {
-      const hotspotPos = worldFromCell(this.nearbyHotspot.cell)
-      ctx.fillStyle = 'rgba(30,20,11,0.72)'
-      ctx.fillRect(hotspotPos.x - camera.x - 90, hotspotPos.y - camera.y - 78, 180, 32)
-      ctx.strokeStyle = '#f0d078'
-      ctx.lineWidth = 2
-      ctx.strokeRect(hotspotPos.x - camera.x - 90, hotspotPos.y - camera.y - 78, 180, 32)
-      ctx.fillStyle = '#fff0bc'
-      ctx.font = '800 16px sans-serif'
-      ctx.fillText(this.nearbyHotspot.prompt, hotspotPos.x - camera.x - 72, hotspotPos.y - camera.y - 56)
+    while (index < placements.length) {
+      this.drawVillagePlacement(ctx, camera, placements[index])
+      index += 1
     }
+
+    ctx.restore()
   }
 
   private bakeVillageBackdropCacheIfNeeded() {
@@ -1194,10 +1350,9 @@ export class PixelKnightGame {
     const map = this.getActiveMap()
     if (!map || map.id !== 'starter-village') return
 
+    const pad = getStarterVillageImagePad(map, image)
     const worldWidth = map.rows[0].length * TILE
     const worldHeight = map.rows.length * TILE
-    const padX = Math.max(0, Math.floor((worldWidth - image.naturalWidth) / 2))
-    const padY = Math.max(0, Math.floor((worldHeight - image.naturalHeight) / 2))
 
     const canvas = document.createElement('canvas')
     canvas.width = Math.ceil(worldWidth)
@@ -1206,7 +1361,7 @@ export class PixelKnightGame {
     if (!bctx) return
     bctx.imageSmoothingEnabled = false
     bctx.clearRect(0, 0, canvas.width, canvas.height)
-    bctx.drawImage(image, padX, padY)
+    bctx.drawImage(image, pad.x, pad.y)
     this.villageBackdropCache = canvas
   }
 

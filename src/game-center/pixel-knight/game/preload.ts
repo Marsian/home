@@ -96,10 +96,30 @@ function loadImage(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image()
     image.decoding = 'async'
-    image.onload = () => resolve(image)
+    image.onload = async () => {
+      try {
+        await image.decode()
+      } catch {
+        // Some browsers report decode failures for already-loaded images; drawing can still succeed.
+      }
+      resolve(image)
+    }
     image.onerror = () => reject(new Error(`贴图加载失败：${src}`))
     image.src = src
   })
+}
+
+function primeImageDraws(images: HTMLImageElement[]) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 1
+  canvas.height = 1
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  ctx.imageSmoothingEnabled = false
+  for (const image of images) {
+    ctx.clearRect(0, 0, 1, 1)
+    ctx.drawImage(image, 0, 0, 1, 1)
+  }
 }
 
 function getAllVillageAssets(): VillageAssetId[] {
@@ -123,6 +143,7 @@ async function preloadVillageAssets(required: VillageAssetId[]) {
       return [id, image] as const
     }),
   )
+  primeImageDraws(entries.map(([, image]) => image))
 
   villageAssetCache = {
     ...(villageAssetCache ?? ({} as Record<VillageAssetId, HTMLImageElement>)),

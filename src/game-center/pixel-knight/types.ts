@@ -259,6 +259,7 @@ export type RunResult = {
 
 export type PixelKnightGameCallbacks = {
   onHud: (state: PixelKnightHudState) => void
+  onMinimapPlayerCell?: (cell: { x: number; y: number }) => void
   onHotspotInteract: (hotspot: MapHotspot) => void
   onRunComplete: (result: RunResult) => void
   onError: (message: string) => void
