@@ -12,6 +12,7 @@ import hudBlueFillUrl from '@/game-center/pixel-knight/assets/ui/inventory/hud-b
 import hudHealthFrameUrl from '@/game-center/pixel-knight/assets/ui/inventory/hud-status-frame-v2.png'
 import hudHealthFrameFrontUrl from '@/game-center/pixel-knight/assets/ui/inventory/hud-status-frame-front-v2.png'
 import hudHpFillUrl from '@/game-center/pixel-knight/assets/ui/inventory/hud-hp-fill-core-v2.png'
+import hudKnightPortraitUrl from '@/game-center/pixel-knight/assets/ui/inventory/hud-portrait-knight-v4.png'
 import hudMinimapFrameUrl from '@/game-center/pixel-knight/assets/ui/inventory/hud-minimap-frame-v2.png'
 import hudPauseButtonUrl from '@/game-center/pixel-knight/assets/ui/inventory/hud-pause-button-v2.png'
 import hudPromptPlaqueUrl from '@/game-center/pixel-knight/assets/ui/inventory/hud-prompt-plaque-v2.png'
@@ -60,6 +61,7 @@ const pixelKnightUiAssetSources = [
   hudHealthFrameUrl,
   hudHealthFrameFrontUrl,
   hudHpFillUrl,
+  hudKnightPortraitUrl,
   hudMinimapFrameUrl,
   hudPauseButtonUrl,
   hudPromptPlaqueUrl,

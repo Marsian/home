@@ -18,7 +18,7 @@ import type {
   SkillDef,
 } from '../types'
 
-export const PIXEL_KNIGHT_STORAGE_KEY = 'pixel-knight-save-v1'
+export const PIXEL_KNIGHT_STORAGE_KEY = 'pixel-knight-save-v2'
 
 export const difficultyOrder: DifficultyTier[] = ['normal', 'hard', 'master', 'legend']
 
@@ -357,6 +357,13 @@ export function createInitialProfile(): PixelKnightProfile {
     },
     hasCompletedInitialLoad: false,
   }
+}
+
+export function createInitialCharacterProfile(): Omit<PixelKnightProfile, 'version' | 'baseClassId'> {
+  const profile = createInitialProfile()
+  // keep v1 initializer as source of truth
+  const { baseClassId: _baseClassId, version: _version, ...rest } = profile
+  return rest
 }
 
 export function experienceToNextLevel(level: number) {

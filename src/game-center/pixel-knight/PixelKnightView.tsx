@@ -23,6 +23,7 @@ import hudBlueFill from '@/game-center/pixel-knight/assets/ui/inventory/hud-blue
 import hudHealthFrame from '@/game-center/pixel-knight/assets/ui/inventory/hud-status-frame-v2.png'
 import hudHealthFrameFront from '@/game-center/pixel-knight/assets/ui/inventory/hud-status-frame-front-v2.png'
 import hudHpFill from '@/game-center/pixel-knight/assets/ui/inventory/hud-hp-fill-core-v2.png'
+import hudKnightPortrait from '@/game-center/pixel-knight/assets/ui/inventory/hud-portrait-knight-v4.png'
 import hudMinimapFrame from '@/game-center/pixel-knight/assets/ui/inventory/hud-minimap-frame-v2.png'
 import hudPauseButton from '@/game-center/pixel-knight/assets/ui/inventory/hud-pause-button-v2.png'
 import inventoryBgFrame from '@/game-center/pixel-knight/assets/ui/inventory/inventory-bg-v2.png'
@@ -67,9 +68,9 @@ import { PixelKnightGame } from './pixelKnightGame'
 import {
   applyPixelKnightRunResult,
   derivePixelKnightStats,
-  loadPixelKnightProfile,
+  loadPixelKnightSave,
   pixelKnightItemStatLine,
-  savePixelKnightProfile,
+  savePixelKnightSave,
 } from './profile'
 import type {
   BaseClassId,
@@ -78,7 +79,8 @@ import type {
   ItemInstance,
   MapHotspot,
   PixelKnightHudState,
-  PixelKnightProfile,
+  PixelKnightCharacterProfile,
+  PixelKnightSave,
   PreloadProgress,
   RenderableEquipmentAssetId,
   RunResult,
@@ -178,7 +180,7 @@ function resolveMatrixEquipment(item: ItemInstance | null | undefined) {
   return matrixEquipmentByAssetId[item.assetId] ?? null
 }
 
-function resolveProfileMatrixEquipment(profile: PixelKnightProfile): MatrixEquipmentLoadout {
+function resolveProfileMatrixEquipment(profile: Pick<PixelKnightCharacterProfile, 'equipment'>): MatrixEquipmentLoadout {
   return {
     mainHand: resolveMatrixEquipment(profile.equipment.mainHand),
     offHand: resolveMatrixEquipment(profile.equipment.offHand),
@@ -191,19 +193,19 @@ const characterSelectEntries: Array<{
   id: string
   classId?: BaseClassId
   name?: string
-  level?: string
+  label?: string
 }> = [
   {
     id: 'slot-knight',
     classId: 'knight',
     name: '骑士',
-    level: 'Lv.1',
+    label: 'KNIGHT',
   },
   { id: 'slot-empty-1' },
   { id: 'slot-empty-2' },
 ]
 
-function CharacterSelectKnightCanvas() {
+function CharacterSelectKnightCanvas({ equipment }: { equipment: MatrixEquipmentLoadout }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   useEffect(() => {
@@ -226,21 +228,30 @@ function CharacterSelectKnightCanvas() {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       ctx.imageSmoothingEnabled = false
 
+      const renderOffsetY = 22
       const idleBreath = Math.sin(elapsed / 280)
       const shadowPulse = 0.94 + idleBreath * 0.035
       ctx.fillStyle = 'rgba(23, 18, 11, 0.34)'
       ctx.beginPath()
-      ctx.ellipse(256, 414 + idleBreath * 1.2, 108 * shadowPulse, 27 + idleBreath * 0.55, 0, 0, Math.PI * 2)
+      ctx.ellipse(
+        256,
+        414 + renderOffsetY + idleBreath * 1.2,
+        108 * shadowPulse,
+        27 + idleBreath * 0.55,
+        0,
+        0,
+        Math.PI * 2,
+      )
       ctx.fill()
 
       drawMatrixCharacter(ctx, selectKnightManifest, {
         actorX: 256,
-        actorFeetY: 404,
+        actorFeetY: 404 + renderOffsetY,
         pixelSize: 12,
         facing: 'right',
         mode: 'idle',
         timeMs: elapsed,
-        equipment: selectKnightEquipment,
+        equipment,
       })
 
       frameId = requestAnimationFrame(render)
@@ -251,7 +262,7 @@ function CharacterSelectKnightCanvas() {
       disposed = true
       cancelAnimationFrame(frameId)
     }
-  }, [])
+  }, [equipment])
 
   return (
     <canvas
@@ -264,7 +275,7 @@ function CharacterSelectKnightCanvas() {
   )
 }
 
-function CharacterSelectAvatarCanvas() {
+function CharacterSelectAvatarCanvas({ equipment }: { equipment: MatrixEquipmentLoadout }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   useEffect(() => {
@@ -287,10 +298,10 @@ function CharacterSelectAvatarCanvas() {
       facing: 'right',
       mode: 'static',
       timeMs: 0,
-      equipment: selectKnightEquipment,
+      equipment,
     })
     ctx.restore()
-  }, [])
+  }, [equipment])
 
   return (
     <canvas
@@ -304,7 +315,7 @@ function CharacterSelectAvatarCanvas() {
   )
 }
 
-function InventoryCharacterCanvas({ profile }: { profile: PixelKnightProfile }) {
+function InventoryCharacterCanvas({ profile }: { profile: PixelKnightCharacterProfile }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   useEffect(() => {
@@ -364,7 +375,7 @@ export default function PixelKnightView() {
   const hostRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<PixelKnightGame | null>(null)
 
-  const [profile, setProfile] = useState<PixelKnightProfile>(() => loadPixelKnightProfile())
+  const [save, setSave] = useState<PixelKnightSave>(() => loadPixelKnightSave())
   const [preload, setPreload] = useState(initialPreload)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [phase, setPhase] = useState<'loading' | 'home' | 'playing' | 'results' | 'error'>('loading')
@@ -375,13 +386,26 @@ export default function PixelKnightView() {
     unlockedDifficulties: ['normal'],
   })
   const [inventoryOpen, setInventoryOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [lastResult, setLastResult] = useState<RunResult | null>(null)
   const [homeStage, setHomeStage] = useState<'character' | 'village'>('character')
   const [activeVillagePanel, setActiveVillagePanel] = useState<VillageHotspotKind | null>(null)
 
   useEffect(() => {
-    savePixelKnightProfile(profile)
-  }, [profile])
+    savePixelKnightSave(save)
+  }, [save])
+
+  const profile = save.profilesByClassId[save.activeClassId]
+
+  const updateActiveProfile = (fn: (current: PixelKnightCharacterProfile) => PixelKnightCharacterProfile) => {
+    setSave((current) => ({
+      ...current,
+      profilesByClassId: {
+        ...current.profilesByClassId,
+        [current.activeClassId]: fn(current.profilesByClassId[current.activeClassId]),
+      },
+    }))
+  }
 
   useEffect(() => {
     const dungeonId = selected.dungeonId
@@ -410,7 +434,7 @@ export default function PixelKnightView() {
       },
       onRunComplete: (result) => {
         setLastResult(result)
-        setProfile((current) => applyPixelKnightRunResult(current, result))
+        updateActiveProfile((current) => applyPixelKnightRunResult(current, result))
         setPhase('results')
       },
       onError: (message) => {
@@ -438,7 +462,7 @@ export default function PixelKnightView() {
         })
         if (cancelled) return
         gameRef.current?.invalidateVillageTerrainCache()
-        setProfile((current) => ({ ...current, hasCompletedInitialLoad: true }))
+        updateActiveProfile((current) => ({ ...current, hasCompletedInitialLoad: true }))
         setHomeStage('character')
         setPhase('home')
       } catch (error) {
@@ -481,7 +505,7 @@ export default function PixelKnightView() {
     void preloadPixelKnightAssets((progress) => setPreload(progress))
       .then(() => {
         gameRef.current?.invalidateVillageTerrainCache()
-        setProfile((current) => ({ ...current, hasCompletedInitialLoad: true }))
+        updateActiveProfile((current) => ({ ...current, hasCompletedInitialLoad: true }))
         setHomeStage('character')
         setPhase('home')
       })
@@ -492,7 +516,7 @@ export default function PixelKnightView() {
   }
 
   const equipItem = (item: ItemInstance) => {
-    setProfile((current) => {
+    updateActiveProfile((current) => {
       const existing = current.equipment[item.slot] ?? null
       return {
         ...current,
@@ -508,7 +532,7 @@ export default function PixelKnightView() {
   }
 
   const unequipItem = (slot: EquipmentSlot) => {
-    setProfile((current) => {
+    updateActiveProfile((current) => {
       const existing = current.equipment[slot] ?? null
       if (!existing) return current
       return {
@@ -527,11 +551,12 @@ export default function PixelKnightView() {
     setHomeStage('village')
     setPhase('home')
     setInventoryOpen(false)
+    setSettingsOpen(false)
     setActiveVillagePanel(null)
   }
 
   const confirmKnightSelection = () => {
-    const nextProfile: PixelKnightProfile = {
+    const nextProfile: PixelKnightCharacterProfile = {
       ...profile,
       equipment: {
         ...profile.equipment,
@@ -539,7 +564,7 @@ export default function PixelKnightView() {
         offHand: profile.equipment.offHand ?? createStarterShield(),
       },
     }
-    setProfile(nextProfile)
+    updateActiveProfile(() => nextProfile)
     gameRef.current?.enterVillage({
       stats: derivePixelKnightStats(nextProfile),
       equipment: resolveProfileMatrixEquipment(nextProfile),
@@ -646,23 +671,24 @@ export default function PixelKnightView() {
                   </div>
                 </div>
 
-                <div className="absolute left-[19.3%] top-[34%] h-[41%] w-[35%]">
-                  <CharacterSelectKnightCanvas />
+                  <div className="absolute left-[19.3%] top-[34%] h-[41%] w-[35%]">
+                  <CharacterSelectKnightCanvas equipment={resolveProfileMatrixEquipment(profile)} />
                 </div>
 
                 <div className="absolute right-[1.2%] top-[21.5%] flex w-[33.2%] flex-col gap-[0.75vw]">
                   {characterSelectEntries.map((entry) => {
                     const classId = entry.classId
-                    const selectedClass = classId != null && profile.baseClassId === classId
+                    const selectedClass = classId != null && save.activeClassId === classId
                     const isEmptySlot = classId == null
                     const frame = selectedClass ? characterCardSelectedFrame : characterCardNormalFrame
+                    const entryProfile = classId ? save.profilesByClassId[classId] : null
                     return (
                       <button
                         key={entry.id}
                         type="button"
                         disabled={isEmptySlot}
                         onClick={() =>
-                          classId && setProfile((current) => ({ ...current, baseClassId: classId }))
+                          classId && setSave((current) => ({ ...current, activeClassId: classId }))
                         }
                         className={cn(
                           'group relative aspect-[896/253] w-full text-left outline-none transition duration-150',
@@ -690,7 +716,11 @@ export default function PixelKnightView() {
                             style={{ imageRendering: 'pixelated' }}
                           />
                         ) : null}
-                        {!isEmptySlot ? <CharacterSelectAvatarCanvas /> : null}
+                        {!isEmptySlot ? (
+                          <CharacterSelectAvatarCanvas
+                            equipment={resolveProfileMatrixEquipment(entryProfile!)}
+                          />
+                        ) : null}
                         {!isEmptySlot ? (
                           <>
                             <div
@@ -700,7 +730,7 @@ export default function PixelKnightView() {
                               {entry.name}
                             </div>
                             <div className="absolute left-[31%] top-[58%] text-[min(1.35rem,1.32vw)] font-black leading-none text-[#14100d]">
-                              {entry.level}
+                              Lv.{entryProfile?.level ?? 1}
                             </div>
                           </>
                         ) : null}
@@ -904,7 +934,11 @@ export default function PixelKnightView() {
             {(phase === 'home' && homeStage === 'village') || phase === 'playing' || hud.phase === 'paused' ? (
               <>
                 <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-wrap items-start justify-between gap-3 p-4">
-                  <HudHealth state={hud} fallbackMaxHealth={playerStats.maxHealth} />
+                  <HudHealth
+                    state={hud}
+                    fallbackMaxHealth={playerStats.maxHealth}
+                    onOpenSettings={() => setSettingsOpen(true)}
+                  />
 
                   <div className="flex items-start gap-2">
                     <div className="pointer-events-none relative aspect-square w-[clamp(7.25rem,14vw,13.5rem)] max-w-[calc(100vw-2rem)]">
@@ -1057,10 +1091,75 @@ export default function PixelKnightView() {
                 onUnequipItem={unequipItem}
               />
             ) : null}
+
+            {settingsOpen ? (
+              <SettingsOverlay
+                onClose={() => setSettingsOpen(false)}
+                onBackToCharacterSelect={() => {
+                  gameRef.current?.stopToHome()
+                  setPhase('home')
+                  setHomeStage('character')
+                  setInventoryOpen(false)
+                  setSettingsOpen(false)
+                  setActiveVillagePanel(null)
+                }}
+              />
+            ) : null}
           </div>
         </section>
       </div>
     </main>
+  )
+}
+
+function SettingsOverlay({
+  onClose,
+  onBackToCharacterSelect,
+}: {
+  onClose: () => void
+  onBackToCharacterSelect: () => void
+}) {
+  return (
+    <div className="absolute inset-0 z-40 overflow-hidden bg-[#11150f]/82 p-3 text-[#f7ecd0] sm:p-5">
+      <img
+        src={inventoryBgFrame}
+        alt=""
+        className="absolute left-[2%] top-[3%] h-[94%] w-[96%] object-fill opacity-95"
+        draggable={false}
+        style={{ imageRendering: 'pixelated' }}
+      />
+
+      <div className="relative h-full w-full">
+        <div className="absolute left-[7%] top-[6%] text-lg font-black tracking-[0.18em] text-[#f6dfac] sm:text-2xl">
+          配置
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-[5%] top-[6%] z-10 h-11 w-11 transition hover:scale-105 active:scale-95 sm:h-14 sm:w-14"
+          aria-label="关闭配置"
+        >
+          <img
+            src={closeButtonFrame}
+            alt=""
+            className="h-full w-full object-contain"
+            draggable={false}
+            style={{ imageRendering: 'pixelated' }}
+          />
+        </button>
+
+        <div className="absolute left-[8%] right-[8%] top-[18%] bottom-[10%] grid place-items-center">
+          <Button
+            type="button"
+            onClick={onBackToCharacterSelect}
+            className="h-12 w-full max-w-sm rounded-full bg-[#f3d48f] text-[#2e2414] hover:bg-[#ffe2a6]"
+          >
+            返回主菜单
+          </Button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -1072,7 +1171,7 @@ function VillageSystemPanel({
   onOpenInventory,
 }: {
   kind: VillageHotspotKind
-  profile: PixelKnightProfile
+  profile: PixelKnightCharacterProfile
   playerStats: ReturnType<typeof derivePixelKnightStats>
   onClose: () => void
   onOpenInventory: () => void
@@ -1145,9 +1244,11 @@ function VillageSystemPanel({
 function HudHealth({
   state,
   fallbackMaxHealth,
+  onOpenSettings,
 }: {
   state: PixelKnightHudState
   fallbackMaxHealth: number
+  onOpenSettings: () => void
 }) {
   const maxHealth = state.maxHealth || fallbackMaxHealth
   const health = state.maxHealth ? state.health : maxHealth
@@ -1159,6 +1260,19 @@ function HudHealth({
         src={hudHealthFrame}
         alt=""
         className="absolute inset-0 z-0 h-full w-full object-fill"
+        draggable={false}
+        style={{ imageRendering: 'pixelated' }}
+      />
+      <button
+        type="button"
+        onClick={onOpenSettings}
+        className="peer pointer-events-auto absolute left-[6%] top-[14%] z-40 aspect-square w-[22%] rounded-[0.6rem]"
+        aria-label="打开配置"
+      />
+      <img
+        src={hudKnightPortrait}
+        alt=""
+        className="absolute left-[5%] top-[18%] z-[25] h-[65%] w-[22%] origin-center object-contain transition-transform duration-150 ease-out peer-hover:scale-105 peer-focus-visible:scale-105"
         draggable={false}
         style={{ imageRendering: 'pixelated' }}
       />
@@ -1225,7 +1339,7 @@ function InventoryOverlay({
   onEquipItem,
   onUnequipItem,
 }: {
-  profile: PixelKnightProfile
+  profile: PixelKnightCharacterProfile
   playerStats: ReturnType<typeof derivePixelKnightStats>
   onClose: () => void
   onEquipItem: (item: ItemInstance) => void
@@ -1273,7 +1387,7 @@ function InventoryOverlay({
           />
         </button>
 
-        <div className="absolute left-[6%] top-[13%] h-[63%] w-[55%]">
+        <div className="absolute left-[6%] top-[16%] h-[63%] w-[55%]">
           <InventoryCharacterCanvas profile={profile} />
           {equipmentSlotOrder.map((slot) => (
             <EquipmentSlotButton
@@ -1285,7 +1399,7 @@ function InventoryOverlay({
           ))}
         </div>
 
-        <div className="absolute left-[12.5%] top-[67%] grid w-[42%] grid-cols-4 gap-x-1.5 gap-y-1 text-[#f3dfb5] lg:gap-x-2 lg:gap-y-1.5">
+        <div className="absolute left-[12.5%] top-[70%] grid w-[42%] grid-cols-4 gap-x-1.5 gap-y-1 text-[#f3dfb5] lg:gap-x-2 lg:gap-y-1.5">
           {stats.map(([label, value, icon]) => (
             <div key={label} className="flex min-w-0 items-center gap-1 lg:gap-1.5">
               <img
@@ -1303,7 +1417,7 @@ function InventoryOverlay({
           ))}
         </div>
 
-        <section className="absolute right-[5%] top-[17%] h-[68%] w-[33%]">
+        <section className="absolute right-[5%] top-[20%] h-[68%] w-[33%]">
           <img
             src={inventoryGridPanel}
             alt=""

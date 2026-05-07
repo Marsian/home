@@ -14,11 +14,12 @@ import {
   setBonuses,
   slotLabel,
 } from './content/data'
-import { derivePixelKnightStats, loadPixelKnightProfile, pixelKnightItemStatLine } from './profile'
+import { derivePixelKnightStats, loadPixelKnightSave, pixelKnightItemStatLine } from './profile'
 
 export default function PixelKnightDataView() {
   const navigate = useNavigate()
-  const profile = loadPixelKnightProfile()
+  const save = loadPixelKnightSave()
+  const profile = save.profilesByClassId[save.activeClassId]
   const stats = derivePixelKnightStats(profile)
 
   return (

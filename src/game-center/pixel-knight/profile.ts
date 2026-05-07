@@ -5,8 +5,19 @@ import {
   nextDifficulty,
   PIXEL_KNIGHT_STORAGE_KEY,
   createInitialProfile,
+  createInitialCharacterProfile,
 } from './content/data'
-import type { EquipmentSlot, ItemInstance, PixelKnightProfile, PlayerDerivedStats, RenderableEquipmentAssetId, RunResult } from './types'
+import type {
+  BaseClassId,
+  EquipmentSlot,
+  ItemInstance,
+  PixelKnightCharacterProfile,
+  PixelKnightProfile,
+  PixelKnightSave,
+  PlayerDerivedStats,
+  RenderableEquipmentAssetId,
+  RunResult,
+} from './types'
 
 type LegacyEquipmentSlot = EquipmentSlot | 'weapon' | 'shield' | 'ring-left' | 'ring-right'
 
@@ -82,24 +93,72 @@ function normalizePixelKnightProfile(profile: PixelKnightProfile): PixelKnightPr
   }
 }
 
-export function loadPixelKnightProfile() {
-  if (typeof window === 'undefined') return createInitialProfile()
-  const stored = window.localStorage.getItem(PIXEL_KNIGHT_STORAGE_KEY)
-  if (!stored) return createInitialProfile()
-  try {
-    const parsed = JSON.parse(stored) as PixelKnightProfile
-    if (parsed?.version !== 1) return createInitialProfile()
-    return normalizePixelKnightProfile(parsed)
-  } catch {
-    return createInitialProfile()
+function createDefaultSave(activeClassId: BaseClassId = 'knight'): PixelKnightSave {
+  const make = () => createInitialCharacterProfile()
+  return {
+    version: 2,
+    activeClassId,
+    profilesByClassId: {
+      knight: make(),
+      archer: make(),
+      mage: make(),
+    },
   }
 }
 
-export function savePixelKnightProfile(profile: PixelKnightProfile) {
-  window.localStorage.setItem(PIXEL_KNIGHT_STORAGE_KEY, JSON.stringify(profile))
+function normalizeCharacterProfile(profile: PixelKnightCharacterProfile): PixelKnightCharacterProfile {
+  const v1Like: PixelKnightProfile = {
+    ...createInitialProfile(),
+    ...profile,
+    baseClassId: 'knight',
+    version: 1,
+  }
+  const normalized = normalizePixelKnightProfile(v1Like)
+  const { baseClassId: _baseClassId, version: _version, ...rest } = normalized
+  return rest
 }
 
-export function derivePixelKnightStats(profile: PixelKnightProfile): PlayerDerivedStats {
+function normalizePixelKnightSave(save: PixelKnightSave): PixelKnightSave {
+  const fallback = createDefaultSave(save.activeClassId ?? 'knight')
+  const profilesByClassId = save.profilesByClassId ?? ({} as PixelKnightSave['profilesByClassId'])
+  return {
+    version: 2,
+    activeClassId: save.activeClassId ?? 'knight',
+    profilesByClassId: {
+      knight: profilesByClassId.knight ? normalizeCharacterProfile(profilesByClassId.knight) : fallback.profilesByClassId.knight,
+      archer: profilesByClassId.archer ? normalizeCharacterProfile(profilesByClassId.archer) : fallback.profilesByClassId.archer,
+      mage: profilesByClassId.mage ? normalizeCharacterProfile(profilesByClassId.mage) : fallback.profilesByClassId.mage,
+    },
+  }
+}
+
+export function loadPixelKnightSave(): PixelKnightSave {
+  if (typeof window === 'undefined') return createDefaultSave()
+  const stored = window.localStorage.getItem(PIXEL_KNIGHT_STORAGE_KEY)
+  if (!stored) return createDefaultSave()
+  try {
+    const parsed = JSON.parse(stored) as PixelKnightProfile | PixelKnightSave
+    if (parsed && typeof parsed === 'object' && 'version' in parsed && parsed.version === 2) {
+      return normalizePixelKnightSave(parsed as PixelKnightSave)
+    }
+    if (parsed && typeof parsed === 'object' && 'version' in parsed && parsed.version === 1) {
+      const legacy = normalizePixelKnightProfile(parsed as PixelKnightProfile)
+      const migrated = createDefaultSave(legacy.baseClassId)
+      const { baseClassId, version: _version, ...character } = legacy
+      migrated.profilesByClassId[baseClassId] = normalizeCharacterProfile(character)
+      return migrated
+    }
+    return createDefaultSave()
+  } catch {
+    return createDefaultSave()
+  }
+}
+
+export function savePixelKnightSave(save: PixelKnightSave) {
+  window.localStorage.setItem(PIXEL_KNIGHT_STORAGE_KEY, JSON.stringify(save))
+}
+
+export function derivePixelKnightStats(profile: Pick<PixelKnightProfile, 'level' | 'equipment'>): PlayerDerivedStats {
   const items = Object.values(profile.equipment).filter(Boolean) as ItemInstance[]
   const activeLegendaryPowers = items
     .map((item) => item.legendaryPowerId)
@@ -132,8 +191,11 @@ export function derivePixelKnightStats(profile: PixelKnightProfile): PlayerDeriv
   }
 }
 
-export function applyPixelKnightRunResult(profile: PixelKnightProfile, result: RunResult): PixelKnightProfile {
-  let nextProfile: PixelKnightProfile = {
+export function applyPixelKnightRunResult(
+  profile: PixelKnightCharacterProfile,
+  result: RunResult,
+): PixelKnightCharacterProfile {
+  let nextProfile: PixelKnightCharacterProfile = {
     ...profile,
     gold: profile.gold + result.rewards.goldGained,
     materials: profile.materials + result.rewards.materialsGained,

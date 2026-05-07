@@ -188,6 +188,14 @@ export type PixelKnightProfile = {
   hasCompletedInitialLoad: boolean
 }
 
+export type PixelKnightCharacterProfile = Omit<PixelKnightProfile, 'version' | 'baseClassId'>
+
+export type PixelKnightSave = {
+  version: 2
+  activeClassId: BaseClassId
+  profilesByClassId: Record<BaseClassId, PixelKnightCharacterProfile>
+}
+
 export type PlayerDerivedStats = {
   attack: number
   armor: number
