@@ -37,7 +37,7 @@ def ceil_div(a: int, b: int) -> int:
 def load_atoms_by_area_desc() -> list[tuple[str, Path]]:
     """PNG atom filenames under the map folder, largest sprites first (better template matching order)."""
     items: list[tuple[str, Path, int]] = []
-    for path in sorted(ATOMS_DIR.glob("atom-*.png")):
+    for path in sorted(ATOMS_DIR.glob("*.png")):
         templ_bgra = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
         if templ_bgra is None:
             continue
@@ -350,4 +350,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

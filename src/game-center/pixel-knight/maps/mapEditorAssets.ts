@@ -5,7 +5,11 @@
 
 export type PixelKnightMapFolderMeta = {
   id?: string
+  kind?: string
   name?: string
+  start?: { x: number; y: number }
+  portal?: { x: number; y: number }
+  hotspots?: EditorHotspotPayload[]
 }
 
 export type PixelKnightMapFolderInfo = {
@@ -76,6 +80,17 @@ export type EditorPlacementPayload = {
   scale: number
 }
 
+export type EditorHotspotPayload = {
+  id: string
+  kind: string
+  label: string
+  prompt: string
+  cell: { x: number; y: number }
+  radius: number
+}
+
+export type EditorMapMetaFile = PixelKnightMapFolderMeta
+
 export type EditorPlacementsFileV1 = {
   image?: { width: number; height: number }
   placements?: EditorPlacementPayload[]
@@ -101,6 +116,13 @@ export function getObstaclesFileForMapSlug(slug: string): EditorObstaclesFileV1 
   if (!key) return null
   const raw = obstaclesModules[key]
   return raw && typeof raw === 'object' ? (raw as EditorObstaclesFileV1) : null
+}
+
+export function getMapMetaFileForMapSlug(slug: string): EditorMapMetaFile | null {
+  const key = globKeyForSlug(metaModules as Record<string, unknown>, slug, 'map.meta.json')
+  if (!key) return null
+  const raw = metaModules[key]
+  return raw && typeof raw === 'object' ? (raw as EditorMapMetaFile) : null
 }
 
 export function atomAssetsForMapSlug(slug: string): Array<{ key: string; src: string }> {

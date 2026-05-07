@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import { ArrowLeft, Download, Grid3X3, Hand, Layers, RotateCcw, Trash2 } from 'lucide-react'
+import { ArrowLeft, Crosshair, Download, Grid3X3, Hand, Layers, MapPin, Plus, RotateCcw, X } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -9,21 +9,34 @@ import {
   atomAssetsForMapSlug,
   displayNameForMapFolder,
   getBackdropUrlForMapSlug,
+  getMapMetaFileForMapSlug,
   getObstaclesFileForMapSlug,
   getPlacementsFileForMapSlug,
   isKnownPixelKnightMapSlug,
   listPixelKnightMapFolders,
+  type EditorHotspotPayload,
   type EditorPlacementPayload,
 } from '@/game-center/pixel-knight/maps/mapEditorAssets'
 
 const TILE = 16
 
-type EditorTab = 'placement' | 'obstacles'
+type EditorTab = 'placement' | 'obstacles' | 'interactions'
 type AtomAsset = { key: string; src: string }
 type Placement = EditorPlacementPayload
+type Hotspot = EditorHotspotPayload
+
+const HOTSPOT_KINDS = ['portal', 'shop', 'stash', 'blacksmith', 'notice-board', 'gemsmith'] as const
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value))
+}
+
+function normalizeScale(value: number) {
+  return Math.round(clamp(value, 0.15, 6) * 100) / 100
+}
+
+function worldFromCell(cell: { x: number; y: number }) {
+  return { x: cell.x * TILE + TILE / 2, y: cell.y * TILE + TILE / 2 }
 }
 
 function downloadJson(filename: string, value: unknown) {
@@ -75,8 +88,37 @@ export default function PixelKnightMapEditorView() {
   const [placements, setPlacements] = useState<Placement[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [blocked, setBlocked] = useState<Uint8Array>(() => new Uint8Array(cols * rows))
+  const [mapMeta, setMapMeta] = useState({
+    id: mapSlug || 'map',
+    kind: 'village',
+    name: mapDisplayName,
+    start: { x: 0, y: 0 },
+    portal: { x: 0, y: 0 },
+  })
+  const [hotspots, setHotspots] = useState<Hotspot[]>([])
+  const [selectedHotspotId, setSelectedHotspotId] = useState<string | null>(null)
 
   const selected = useMemo(() => placements.find((p) => p.id === selectedId) ?? null, [placements, selectedId])
+  const selectedHotspot = useMemo(
+    () => hotspots.find((hotspot) => hotspot.id === selectedHotspotId) ?? null,
+    [hotspots, selectedHotspotId],
+  )
+
+  const fitViewportToImage = (size = imgSize) => {
+    if (!canvasRef.current) {
+      viewport.setZoom(1)
+      viewport.setPan({ x: 0, y: 0 })
+      return
+    }
+
+    const rect = canvasRef.current.getBoundingClientRect()
+    const nextZoom = clamp(Math.min(rect.width / size.width, rect.height / size.height), 0.15, 6)
+    viewport.setZoom(nextZoom)
+    viewport.setPan({
+      x: (rect.width - size.width * nextZoom) / 2,
+      y: (rect.height - size.height * nextZoom) / 2,
+    })
+  }
 
   useEffect(() => {
     if (!mapSlug || !isKnownPixelKnightMapSlug(mapSlug)) {
@@ -85,8 +127,7 @@ export default function PixelKnightMapEditorView() {
   }, [mapSlug, navigate])
 
   useEffect(() => {
-    viewport.setZoom(1)
-    viewport.setPan({ x: 0, y: 0 })
+    window.requestAnimationFrame(() => fitViewportToImage())
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when switching map folder
   }, [mapSlug])
 
@@ -100,6 +141,23 @@ export default function PixelKnightMapEditorView() {
     }
     setSelectedId(null)
   }, [mapSlug])
+
+  useEffect(() => {
+    const meta = mapSlug ? getMapMetaFileForMapSlug(mapSlug) : null
+    setMapMeta({
+      id: typeof meta?.id === 'string' ? meta.id : mapSlug || 'map',
+      kind: typeof meta?.kind === 'string' ? meta.kind : 'village',
+      name: typeof meta?.name === 'string' ? meta.name : mapDisplayName,
+      start: meta?.start ?? { x: 0, y: 0 },
+      portal: meta?.portal ?? { x: 0, y: 0 },
+    })
+    setHotspots(
+      Array.isArray(meta?.hotspots)
+        ? meta.hotspots.filter((hotspot) => hotspot && typeof hotspot.id === 'string' && typeof hotspot.label === 'string')
+        : [],
+    )
+    setSelectedHotspotId(null)
+  }, [mapSlug, mapDisplayName])
 
   useEffect(() => {
     const c = Math.ceil(imgSize.width / TILE)
@@ -117,13 +175,23 @@ export default function PixelKnightMapEditorView() {
   }, [mapSlug, imgSize.width, imgSize.height])
 
   useEffect(() => {
+    if (tab === 'interactions' && !selectedHotspotId && hotspots.length > 0) {
+      setSelectedHotspotId(hotspots[0].id)
+    }
+  }, [hotspots, selectedHotspotId, tab])
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.code === 'Space') setSpacePanning(true)
       if (event.code === 'Backspace' || event.code === 'Delete') {
-        if (!selectedId) return
         const target = event.target
         if (target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return
         event.preventDefault()
+        if (tab === 'interactions' && selectedHotspotId) {
+          removeHotspot(selectedHotspotId)
+          return
+        }
+        if (!selectedId) return
         setPlacements((prev) => prev.filter((p) => p.id !== selectedId))
         setSelectedId(null)
       }
@@ -137,7 +205,7 @@ export default function PixelKnightMapEditorView() {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
     }
-  }, [selectedId])
+  }, [selectedId, selectedHotspotId, tab])
 
   const onWheel = (event: React.WheelEvent) => {
     if (!canvasRef.current) return
@@ -147,12 +215,22 @@ export default function PixelKnightMapEditorView() {
     const before = viewport.screenToWorld(mouse)
     const nextZoom = clamp(viewport.zoom * (event.deltaY > 0 ? 0.92 : 1.08), 0.35, 6)
     viewport.setZoom(nextZoom)
-    // Keep mouse anchored in world-space.
-    const afterScreen = viewport.worldToScreen(before)
-    viewport.setPan((prev) => ({ x: prev.x + (mouse.x - afterScreen.x), y: prev.y + (mouse.y - afterScreen.y) }))
+    viewport.setPan({ x: mouse.x - before.x * nextZoom, y: mouse.y - before.y * nextZoom })
   }
 
   const onPointerDownPan = (event: ReactPointerEvent) => {
+    if (tab === 'placement') {
+      const target = event.target
+      if (target instanceof HTMLElement && !target.closest('[data-placement-id]')) {
+        setSelectedId(null)
+      }
+    }
+    if (tab === 'interactions') {
+      const target = event.target
+      if (target instanceof HTMLElement && !target.closest('[data-hotspot-id]')) {
+        setSelectedHotspotId(null)
+      }
+    }
     if (!spacePanning) return
     event.preventDefault()
     panStartRef.current = { x: event.clientX, y: event.clientY, panX: viewport.pan.x, panY: viewport.pan.y }
@@ -210,18 +288,34 @@ export default function PixelKnightMapEditorView() {
 
   const startResizePlacement = (event: ReactPointerEvent, id: string) => {
     event.stopPropagation()
-    ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
-    const start = { x: event.clientX, y: event.clientY }
+    const handle = event.currentTarget as HTMLElement
+    handle.setPointerCapture(event.pointerId)
+    const placementElement = handle.parentElement
+    const canvasElement = canvasRef.current
     const initial = placements.find((p) => p.id === id)
-    if (!initial) return
+    if (!initial || !placementElement || !canvasElement) return
+    const placementRect = placementElement.getBoundingClientRect()
+    const baseWidth = placementRect.width / viewport.zoom / initial.scale
+    const baseHeight = placementRect.height / viewport.zoom / initial.scale
+    if (baseWidth <= 0 || baseHeight <= 0) return
+
+    const pointerToWorld = (clientX: number, clientY: number) => {
+      const canvasRect = canvasElement.getBoundingClientRect()
+      return viewport.screenToWorld({ x: clientX - canvasRect.left, y: clientY - canvasRect.top })
+    }
+    const startPointer = pointerToWorld(event.clientX, event.clientY)
+    const startHandle = { x: initial.x + baseWidth * initial.scale, y: initial.y + baseHeight * initial.scale }
+    const pointerOffset = { x: startPointer.x - startHandle.x, y: startPointer.y - startHandle.y }
+    const baseVectorLengthSq = baseWidth * baseWidth + baseHeight * baseHeight
     setSelectedId(id)
 
     const onMove = (e: PointerEvent) => {
-      // Use signed delta so dragging back shrinks; normalize by zoom to stay "handy".
-      const dx = (e.clientX - start.x) / viewport.zoom
-      const dy = (e.clientY - start.y) / viewport.zoom
-      const delta = (dx + dy) / 2
-      const nextScale = clamp(initial.scale + delta / 220, 0.15, 6)
+      const pointer = pointerToWorld(e.clientX, e.clientY)
+      const handleTarget = { x: pointer.x - pointerOffset.x, y: pointer.y - pointerOffset.y }
+      const dx = handleTarget.x - initial.x
+      const dy = handleTarget.y - initial.y
+      const projectedScale = (dx * baseWidth + dy * baseHeight) / baseVectorLengthSq
+      const nextScale = normalizeScale(projectedScale)
       setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, scale: nextScale } : p)))
     }
     const onUp = () => {
@@ -256,6 +350,74 @@ export default function PixelKnightMapEditorView() {
       image: imgSize,
       blocked: blockedCells,
     })
+  }
+
+  const exportMapMeta = () => {
+    downloadJson('map.meta.json', {
+      ...mapMeta,
+      hotspots,
+    })
+  }
+
+  const addHotspot = () => {
+    const nextIndex = hotspots.length + 1
+    const hotspot: Hotspot = {
+      id: `hotspot-${nextIndex}`,
+      kind: 'shop',
+      label: `交互点 ${nextIndex}`,
+      prompt: '按 F：互动',
+      cell: { x: Math.floor(cols / 2), y: Math.floor(rows / 2) },
+      radius: 22,
+    }
+    setHotspots((prev) => [...prev, hotspot])
+    setSelectedHotspotId(hotspot.id)
+  }
+
+  const updateHotspot = (id: string, patch: Partial<Hotspot>) => {
+    setHotspots((prev) => prev.map((hotspot) => (hotspot.id === id ? { ...hotspot, ...patch } : hotspot)))
+  }
+
+  const updateHotspotCell = (id: string, patch: Partial<Hotspot['cell']>) => {
+    setHotspots((prev) =>
+      prev.map((hotspot) =>
+        hotspot.id === id
+          ? {
+              ...hotspot,
+              cell: {
+                x: clamp(Math.round(patch.x ?? hotspot.cell.x), 0, cols - 1),
+                y: clamp(Math.round(patch.y ?? hotspot.cell.y), 0, rows - 1),
+              },
+            }
+          : hotspot,
+      ),
+    )
+  }
+
+  const removeHotspot = (id: string) => {
+    setHotspots((prev) => prev.filter((hotspot) => hotspot.id !== id))
+    setSelectedHotspotId((prev) => (prev === id ? null : prev))
+  }
+
+  const startMoveHotspot = (event: ReactPointerEvent, id: string) => {
+    if (spacePanning || !canvasRef.current) return
+    event.stopPropagation()
+    ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+    setSelectedHotspotId(id)
+
+    const moveTo = (clientX: number, clientY: number) => {
+      if (!canvasRef.current) return
+      const rect = canvasRef.current.getBoundingClientRect()
+      const world = viewport.screenToWorld({ x: clientX - rect.left, y: clientY - rect.top })
+      updateHotspotCell(id, { x: Math.floor(world.x / TILE), y: Math.floor(world.y / TILE) })
+    }
+
+    const onMove = (e: PointerEvent) => moveTo(e.clientX, e.clientY)
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
   }
 
   const toggleObstacleAt = (worldX: number, worldY: number, value: 0 | 1) => {
@@ -346,32 +508,39 @@ export default function PixelKnightMapEditorView() {
         <section className="rounded-[1.8rem] border border-[#435437]/16 bg-[#f6f0db]/75 p-4 shadow-[0_20px_80px_rgba(60,66,31,0.16)] lg:p-5">
           <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
             <aside className="space-y-3 rounded-[1.1rem] border border-[#495738]/14 bg-[#fff6e2]/75 p-3">
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-3 overflow-hidden rounded-md border border-[#455037]/20 bg-[#f8efd8]/70 p-0.5">
                 <button
                   type="button"
                   onClick={() => setTab('placement')}
                   className={cn(
-                    'inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-black tracking-[0.18em] uppercase',
-                    tab === 'placement'
-                      ? 'border-[#2f4328]/40 bg-[#2f4328] text-[#f6f0de]'
-                      : 'border-[#455037]/20 bg-[#f8efd8]/70 text-[#243019]',
+                    'inline-flex items-center justify-center gap-1.5 rounded px-2 py-1.5 text-xs font-black tracking-[0.12em]',
+                    tab === 'placement' ? 'bg-[#2f4328] text-[#f6f0de]' : 'text-[#243019] hover:bg-[#fff7df]',
                   )}
                 >
-                  <Layers className="size-4" />
-                  Placement
+                  <Layers className="size-3.5" />
+                  素材
                 </button>
                 <button
                   type="button"
                   onClick={() => setTab('obstacles')}
                   className={cn(
-                    'inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-black tracking-[0.18em] uppercase',
-                    tab === 'obstacles'
-                      ? 'border-[#2f4328]/40 bg-[#2f4328] text-[#f6f0de]'
-                      : 'border-[#455037]/20 bg-[#f8efd8]/70 text-[#243019]',
+                    'inline-flex items-center justify-center gap-1.5 rounded px-2 py-1.5 text-xs font-black tracking-[0.12em]',
+                    tab === 'obstacles' ? 'bg-[#2f4328] text-[#f6f0de]' : 'text-[#243019] hover:bg-[#fff7df]',
                   )}
                 >
-                  <Grid3X3 className="size-4" />
-                  Obstacles
+                  <Grid3X3 className="size-3.5" />
+                  障碍
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTab('interactions')}
+                  className={cn(
+                    'inline-flex items-center justify-center gap-1.5 rounded px-2 py-1.5 text-xs font-black tracking-[0.12em]',
+                    tab === 'interactions' ? 'bg-[#2f4328] text-[#f6f0de]' : 'text-[#243019] hover:bg-[#fff7df]',
+                  )}
+                >
+                  <MapPin className="size-3.5" />
+                  交互
                 </button>
               </div>
 
@@ -387,10 +556,7 @@ export default function PixelKnightMapEditorView() {
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
-                  onClick={() => {
-                    viewport.setZoom(1)
-                    viewport.setPan({ x: 0, y: 0 })
-                  }}
+                  onClick={() => fitViewportToImage()}
                   variant="outline"
                   className="h-8 border-[#455037]/20 bg-[#f8efd8]/70 px-2 text-xs text-[#243019] hover:bg-[#fff7df]"
                 >
@@ -407,7 +573,7 @@ export default function PixelKnightMapEditorView() {
                     <Download className="size-3" />
                     导出 placements
                   </Button>
-                ) : (
+                ) : tab === 'obstacles' ? (
                   <Button
                     type="button"
                     onClick={exportObstacles}
@@ -415,6 +581,15 @@ export default function PixelKnightMapEditorView() {
                   >
                     <Download className="size-3" />
                     导出 obstacles
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={exportMapMeta}
+                    className="h-8 bg-[#30422a] px-2 text-xs text-[#fbf5e5] hover:bg-[#23321d]"
+                  >
+                    <Download className="size-3" />
+                    导出 map.meta
                   </Button>
                 )}
               </div>
@@ -440,42 +615,181 @@ export default function PixelKnightMapEditorView() {
                     </div>
                   </div>
 
-                  {selected ? (
-                    <div className="rounded-[1rem] border border-[#2f4328]/10 bg-[#fffdf4] p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-xs font-black tracking-[0.18em] text-[#243019] uppercase">选中</div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPlacements((prev) => prev.filter((p) => p.id !== selected.id))
-                            setSelectedId(null)
-                          }}
-                          className="inline-flex items-center gap-1 rounded-md border border-[#612c1f]/20 bg-[#fff1ea] px-2 py-1 text-xs font-bold text-[#612c1f]"
-                        >
-                          <Trash2 className="size-3" />
-                          删除
-                        </button>
-                      </div>
-                      <div className="mt-1 text-xs text-[#4f5d3e]">asset: {selected.assetKey}</div>
-                      <div className="mt-2">
-                        <div className="mb-1 text-[0.68rem] font-bold text-[#39452c]">scale: {selected.scale.toFixed(2)}x</div>
+                  <div className="rounded-[1rem] border border-[#2f4328]/10 bg-[#fffdf4] p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs font-black tracking-[0.18em] text-[#243019] uppercase">选中</div>
+                      {selected ? <div className="truncate text-xs font-bold text-[#4f5d3e]">{selected.assetKey}</div> : null}
+                    </div>
+                    {selected ? (
+                      <label className="mt-2 flex items-center gap-2">
+                        <span className="w-12 text-xs font-bold text-[#39452c]">scale</span>
                         <input
-                          type="range"
+                          type="number"
                           min={0.15}
                           max={6}
                           step={0.01}
-                          value={selected.scale}
+                          value={selected.scale.toFixed(2)}
                           onChange={(e) => {
-                            const next = Number(e.target.value)
+                            const next = normalizeScale(Number(e.target.value) || 0.15)
                             setPlacements((prev) => prev.map((p) => (p.id === selected.id ? { ...p, scale: next } : p)))
                           }}
-                          className="w-full"
+                          className="w-full rounded-md border border-[#2f4328]/15 bg-white px-2 py-1.5 text-sm font-bold text-[#243019] outline-none focus:border-[#bd842b]"
+                          aria-label="scale"
                         />
-                      </div>
+                      </label>
+                    ) : null}
+                  </div>
+
+                </>
+              ) : tab === 'interactions' ? (
+                <>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xs tracking-[0.26em] text-[#6c7753] uppercase">交互对象 ({hotspots.length})</div>
+                    <Button
+                      type="button"
+                      onClick={addHotspot}
+                      className="h-7 bg-[#30422a] px-2 text-xs text-[#fbf5e5] hover:bg-[#23321d]"
+                    >
+                      <Plus className="size-3" />
+                      新增
+                    </Button>
+                  </div>
+
+                  <div className="max-h-48 space-y-1 overflow-auto pr-1">
+                    {hotspots.map((hotspot) => (
+                      <button
+                        key={hotspot.id}
+                        type="button"
+                        onClick={() => setSelectedHotspotId(hotspot.id)}
+                        className={cn(
+                          'flex w-full items-center justify-between gap-2 rounded-md border px-2 py-1.5 text-left text-xs',
+                          hotspot.id === selectedHotspotId
+                            ? 'border-[#2f4328]/30 bg-[#30422a] text-[#fbf5e5]'
+                            : 'border-[#2f4328]/10 bg-[#fffdf4] text-[#243019]',
+                        )}
+                      >
+                        <span className="truncate font-bold">{hotspot.label || hotspot.id}</span>
+                        <span className="text-[0.65rem] opacity-75">
+                          {hotspot.cell.x},{hotspot.cell.y}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="rounded-[1rem] border border-[#2f4328]/10 bg-[#fffdf4] p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs font-black tracking-[0.18em] text-[#243019] uppercase">Meta</div>
+                      {selectedHotspot ? (
+                        <button
+                          type="button"
+                          onClick={() => removeHotspot(selectedHotspot.id)}
+                          className="grid size-5 place-items-center rounded-full bg-[#d93636] text-white opacity-70 transition-opacity hover:opacity-100"
+                          aria-label="删除交互对象"
+                          title="删除"
+                        >
+                          <X className="size-3 stroke-[3]" />
+                        </button>
+                      ) : null}
                     </div>
-                  ) : (
-                    <div className="text-xs text-[#5b6646]">提示：拖拽素材到右侧地图；点击可选中；Delete 删除。</div>
-                  )}
+
+                    <label className="mt-2 block text-xs font-bold text-[#39452c]">
+                      map name
+                      <input
+                        type="text"
+                        value={mapMeta.name}
+                        onChange={(e) => setMapMeta((prev) => ({ ...prev, name: e.target.value }))}
+                        className="mt-1 w-full rounded-md border border-[#2f4328]/15 bg-white px-2 py-1.5 text-sm font-bold text-[#243019] outline-none focus:border-[#bd842b]"
+                      />
+                    </label>
+
+                    {selectedHotspot ? (
+                      <div className="mt-3 space-y-2">
+                        <label className="block text-xs font-bold text-[#39452c]">
+                          id
+                          <input
+                            type="text"
+                            value={selectedHotspot.id}
+                            onChange={(e) => {
+                              const nextId = e.target.value.trim() || selectedHotspot.id
+                              setHotspots((prev) =>
+                                prev.map((hotspot) => (hotspot.id === selectedHotspot.id ? { ...hotspot, id: nextId } : hotspot)),
+                              )
+                              setSelectedHotspotId(nextId)
+                            }}
+                            className="mt-1 w-full rounded-md border border-[#2f4328]/15 bg-white px-2 py-1.5 text-sm text-[#243019] outline-none focus:border-[#bd842b]"
+                          />
+                        </label>
+
+                        <label className="block text-xs font-bold text-[#39452c]">
+                          kind
+                          <select
+                            value={selectedHotspot.kind}
+                            onChange={(e) => updateHotspot(selectedHotspot.id, { kind: e.target.value })}
+                            className="mt-1 w-full rounded-md border border-[#2f4328]/15 bg-white px-2 py-1.5 text-sm text-[#243019] outline-none focus:border-[#bd842b]"
+                          >
+                            {HOTSPOT_KINDS.map((kind) => (
+                              <option key={kind} value={kind}>
+                                {kind}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="block text-xs font-bold text-[#39452c]">
+                          label
+                          <input
+                            type="text"
+                            value={selectedHotspot.label}
+                            onChange={(e) => updateHotspot(selectedHotspot.id, { label: e.target.value })}
+                            className="mt-1 w-full rounded-md border border-[#2f4328]/15 bg-white px-2 py-1.5 text-sm text-[#243019] outline-none focus:border-[#bd842b]"
+                          />
+                        </label>
+
+                        <label className="block text-xs font-bold text-[#39452c]">
+                          prompt
+                          <input
+                            type="text"
+                            value={selectedHotspot.prompt}
+                            onChange={(e) => updateHotspot(selectedHotspot.id, { prompt: e.target.value })}
+                            className="mt-1 w-full rounded-md border border-[#2f4328]/15 bg-white px-2 py-1.5 text-sm text-[#243019] outline-none focus:border-[#bd842b]"
+                          />
+                        </label>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          <label className="block text-xs font-bold text-[#39452c]">
+                            cell x
+                            <input
+                              type="number"
+                              value={selectedHotspot.cell.x}
+                              onChange={(e) => updateHotspotCell(selectedHotspot.id, { x: Number(e.target.value) || 0 })}
+                              className="mt-1 w-full rounded-md border border-[#2f4328]/15 bg-white px-2 py-1.5 text-sm text-[#243019] outline-none focus:border-[#bd842b]"
+                            />
+                          </label>
+                          <label className="block text-xs font-bold text-[#39452c]">
+                            cell y
+                            <input
+                              type="number"
+                              value={selectedHotspot.cell.y}
+                              onChange={(e) => updateHotspotCell(selectedHotspot.id, { y: Number(e.target.value) || 0 })}
+                              className="mt-1 w-full rounded-md border border-[#2f4328]/15 bg-white px-2 py-1.5 text-sm text-[#243019] outline-none focus:border-[#bd842b]"
+                            />
+                          </label>
+                          <label className="block text-xs font-bold text-[#39452c]">
+                            radius
+                            <input
+                              type="number"
+                              min={1}
+                              value={selectedHotspot.radius}
+                              onChange={(e) =>
+                                updateHotspot(selectedHotspot.id, { radius: Math.max(1, Math.round(Number(e.target.value) || 1)) })
+                              }
+                              className="mt-1 w-full rounded-md border border-[#2f4328]/15 bg-white px-2 py-1.5 text-sm text-[#243019] outline-none focus:border-[#bd842b]"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                 </>
               ) : (
                 <div className="rounded-[1rem] border border-[#2f4328]/10 bg-[#fffdf4] p-3 text-xs text-[#4f5d3e] whitespace-pre-line">
@@ -524,9 +838,17 @@ export default function PixelKnightMapEditorView() {
                     draggable={false}
                     onLoad={(e) => {
                       const img = e.currentTarget
-                      setImgSize({ width: img.naturalWidth || 1254, height: img.naturalHeight || 1254 })
+                      const nextSize = { width: img.naturalWidth || 1254, height: img.naturalHeight || 1254 }
+                      setImgSize(nextSize)
+                      window.requestAnimationFrame(() => fitViewportToImage(nextSize))
                     }}
-                    style={{ imageRendering: 'pixelated' }}
+                    style={{
+                      imageRendering: 'pixelated',
+                      width: imgSize.width,
+                      height: imgSize.height,
+                      maxWidth: 'none',
+                      opacity: tab === 'obstacles' ? 0.7 : 1,
+                    }}
                   />
 
                   {tab === 'placement'
@@ -537,9 +859,12 @@ export default function PixelKnightMapEditorView() {
                         return (
                           <div
                             key={p.id}
+                            data-placement-id={p.id}
                             className={cn(
                               'absolute select-none',
-                              active ? 'outline outline-2 outline-[#ffd36d]' : 'outline outline-1 outline-transparent',
+                              active
+                                ? 'cursor-move outline outline-2 outline-offset-2 outline-[#ffd36d]'
+                                : 'outline outline-1 outline-transparent',
                             )}
                             style={{
                               left: p.x,
@@ -557,12 +882,76 @@ export default function PixelKnightMapEditorView() {
                               className="pointer-events-none"
                             />
                             {active ? (
-                              <div
-                                className="absolute -bottom-2 -right-2 size-4 rounded-sm border border-[#2f4328]/20 bg-[#f7d88a] shadow"
-                                onPointerDown={(e) => startResizePlacement(e, p.id)}
-                                title="拖拽等比缩放"
-                              />
+                              <>
+                                <button
+                                  type="button"
+                                  className="absolute -right-2.5 -top-2.5 grid size-4 place-items-center rounded-full border border-white/70 bg-[#d93636] text-white opacity-60 shadow-sm transition-opacity hover:opacity-100"
+                                  onPointerDown={(e) => {
+                                    e.stopPropagation()
+                                    e.preventDefault()
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setPlacements((prev) => prev.filter((item) => item.id !== p.id))
+                                    setSelectedId(null)
+                                  }}
+                                  title="删除"
+                                  aria-label="删除"
+                                >
+                                  <X className="size-2.5 stroke-[3]" />
+                                </button>
+                                <div
+                                  className="absolute -bottom-2 -right-2 size-3 cursor-nwse-resize rounded-sm border border-[#2f4328]/20 bg-[#f7d88a] shadow-sm"
+                                  onPointerDown={(e) => startResizePlacement(e, p.id)}
+                                  title="拖拽等比缩放"
+                                />
+                              </>
                             ) : null}
+                          </div>
+                        )
+                      })
+                    : null}
+
+                  {tab === 'interactions'
+                    ? hotspots.map((hotspot) => {
+                        const center = worldFromCell(hotspot.cell)
+                        const active = hotspot.id === selectedHotspotId
+                        return (
+                          <div
+                            key={hotspot.id}
+                            data-hotspot-id={hotspot.id}
+                            className="absolute cursor-move select-none"
+                            style={{
+                              left: center.x,
+                              top: center.y,
+                              width: hotspot.radius * 2,
+                              height: hotspot.radius * 2,
+                              transform: 'translate(-50%, -50%)',
+                            }}
+                            onPointerDown={(e) => startMoveHotspot(e, hotspot.id)}
+                            title={hotspot.label}
+                          >
+                            <div
+                              className={cn(
+                                'absolute inset-0 rounded-full border-2',
+                                active
+                                  ? 'border-[#ffd36d] bg-[#ffd36d]/24 shadow-[0_0_0_2px_rgba(36,48,25,0.28)]'
+                                  : 'border-[#7ae4ff]/80 bg-[#7ae4ff]/14',
+                              )}
+                            />
+                            <div
+                              className={cn(
+                                'absolute left-1/2 top-1/2 grid size-5 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border text-[0.6rem] font-black',
+                                active
+                                  ? 'border-[#243019] bg-[#ffd36d] text-[#243019]'
+                                  : 'border-white/70 bg-[#214153] text-white',
+                              )}
+                            >
+                              <Crosshair className="size-3" />
+                            </div>
+                            <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-[#172013]/85 px-1.5 py-0.5 text-[0.62rem] font-bold text-white">
+                              {hotspot.label}
+                            </div>
                           </div>
                         )
                       })
@@ -575,7 +964,6 @@ export default function PixelKnightMapEditorView() {
                         width={imgSize.width}
                         height={imgSize.height}
                         className="absolute left-0 top-0 pointer-events-none"
-                        style={{ opacity: 0.22 }}
                       >
                         {Array.from({ length: cols + 1 }, (_, c) => (
                           <line
@@ -584,7 +972,7 @@ export default function PixelKnightMapEditorView() {
                             y1={0}
                             x2={c * TILE}
                             y2={imgSize.height}
-                            stroke="rgba(255,255,255,0.25)"
+                            stroke={c % 4 === 0 ? 'rgba(255,211,109,0.95)' : 'rgba(255,255,255,0.58)'}
                             strokeWidth={1}
                           />
                         ))}
@@ -595,7 +983,7 @@ export default function PixelKnightMapEditorView() {
                             y1={r * TILE}
                             x2={imgSize.width}
                             y2={r * TILE}
-                            stroke="rgba(255,255,255,0.25)"
+                            stroke={r % 4 === 0 ? 'rgba(255,211,109,0.95)' : 'rgba(255,255,255,0.58)'}
                             strokeWidth={1}
                           />
                         ))}
@@ -611,7 +999,7 @@ export default function PixelKnightMapEditorView() {
                               items.push(
                                 <div
                                   key={`${c}-${r}`}
-                                  className="absolute bg-[#111818]/55"
+                                  className="absolute border border-[#461f14]/35 bg-[#d93636]/70"
                                   style={{ left: c * TILE, top: r * TILE, width: TILE, height: TILE }}
                                 />,
                               )
@@ -631,4 +1019,3 @@ export default function PixelKnightMapEditorView() {
     </main>
   )
 }
-

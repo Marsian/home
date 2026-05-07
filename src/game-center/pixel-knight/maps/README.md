@@ -19,11 +19,11 @@ maps/
 │   ├── backdrop.png          # 必填（编辑器列表依赖此文件发现地图）
 │   ├── map.meta.json         # 强烈建议（显示名、游玩用 meta）
 │   ├── atoms/                # 原子精灵 PNG（编辑器拖拽用）
-│   │   └── atom-*.png
+│   │   └── *.png
 │   ├── placements.v1.json    # 可选；地图编辑器「导出 placements」同款格式
 │   ├── obstacles16.v1.json   # 可选；地图编辑器「导出 obstacles」同款格式
 │   ├── starterVillageMap.ts  # 可选：把本包接入游戏的装配模块（见下文）
-│   └── …                     # 其它辅助文件（如 detections*.json）不影响扫描
+│   └── …                     # 其它辅助文件不影响扫描
 ```
 
 **注意：** 只有 **`maps/<slug>/backdrop.png`** 存在时，该文件夹才会出现在地图编辑器的列表里。共享的 `.ts` 文件放在 `maps/` 根下即可，不要与某一地图的资源混放。
@@ -36,7 +36,7 @@ maps/
 |------|----------|------|
 | `backdrop.png` | **必填** | 世界底图；分辨率决定画布大小与障碍网格范围。 |
 | `map.meta.json` | **强烈建议** | 编辑器列表标题优先使用其中的 `name`；接入游戏时需要完整的互动与出生点信息。 |
-| `atoms/*.png` | 按需 | 仅在需要在编辑器里摆放原子素材时需要；命名建议 `atom-0000.png` 形式，`assetKey` 与文件名（无扩展名）一致。 |
+| `atoms/*.png` | 按需 | 仅在需要在编辑器里摆放原子素材时需要；建议使用简洁语义名（如 `pine-01.png`），`assetKey` 与文件名（无扩展名）一致。 |
 | `placements.v1.json` | 可选 | 进入编辑器时加载初始摆放；可与编辑器导出文件互相覆盖迭代。 |
 | `obstacles16.v1.json` | 可选 | 进入编辑器时加载初始障碍格；格式见下。 |
 
@@ -66,7 +66,7 @@ maps/
   "placements": [
     {
       "id": "唯一实例 id",
-      "assetKey": "atom-0001",
+      "assetKey": "pine-01",
       "x": 100,
       "y": 200,
       "scale": 1
