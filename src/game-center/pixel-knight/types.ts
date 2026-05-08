@@ -19,7 +19,17 @@ export type RenderableEquipmentAssetId =
   | 'iron-sword'
   | 'wood-shield'
 
-export type DungeonId = 'sunmeadow' | 'vine-ruins' | 'crystal-cavern'
+export type DungeonId =
+  | 'ember-forge'
+  | 'frost-peak'
+  | 'jade-tower'
+  | 'sun-obelisk'
+  | 'crystal-rift'
+  | 'autumn-wood'
+  | 'tide-cave'
+  | 'clock-temple'
+  | 'mushroom-marsh'
+  | 'cloud-altar'
 
 export type GamePhase = 'boot' | 'loading' | 'home' | 'playing' | 'paused' | 'results' | 'error'
 

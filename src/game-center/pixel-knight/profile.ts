@@ -6,6 +6,7 @@ import {
   PIXEL_KNIGHT_STORAGE_KEY,
   createInitialProfile,
   createInitialCharacterProfile,
+  initialDungeonUnlocks,
 } from './content/data'
 import type {
   BaseClassId,
@@ -90,6 +91,10 @@ function normalizePixelKnightProfile(profile: PixelKnightProfile): PixelKnightPr
     ...profile,
     equipment: Object.fromEntries(equipmentSlotOrder.map((slot) => [slot, migrated[slot] ?? null])),
     stash,
+    unlockedDifficultiesByDungeon: {
+      ...initialDungeonUnlocks,
+      ...profile.unlockedDifficultiesByDungeon,
+    },
   }
 }
 

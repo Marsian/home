@@ -54,9 +54,6 @@ import {
   createStarterShield,
   createStarterSword,
   difficultyConfigs,
-  difficultyOrder,
-  dungeons,
-  experienceToNextLevel,
   getDungeonById,
   rarityLabel,
   rarityTone,
@@ -87,6 +84,7 @@ import type {
   VillageHotspotKind,
 } from './types'
 import { LoadingOverlay } from './ui/LoadingOverlay'
+import { OtherworldMapOverlay } from './ui/OtherworldMapOverlay'
 
 const initialPreload: PreloadProgress = {
   loaded: 0,
@@ -381,7 +379,7 @@ export default function PixelKnightView() {
   const [phase, setPhase] = useState<'loading' | 'home' | 'playing' | 'results' | 'error'>('loading')
   const [hud, setHud] = useState(defaultHud)
   const [selected, setSelected] = useState<DungeonSelectState>({
-    dungeonId: 'sunmeadow',
+    dungeonId: 'ember-forge',
     selectedDifficulty: 'normal',
     unlockedDifficulties: ['normal'],
   })
@@ -479,7 +477,6 @@ export default function PixelKnightView() {
 
   const playerStats = useMemo(() => derivePixelKnightStats(profile), [profile])
   const gameEquipment = useMemo(() => resolveProfileMatrixEquipment(profile), [profile])
-  const xpRatio = profile.experience / experienceToNextLevel(profile.level)
 
   useEffect(() => {
     gameRef.current?.setEquipment(gameEquipment)
@@ -769,153 +766,19 @@ export default function PixelKnightView() {
             ) : null}
 
             {phase === 'home' && homeStage === 'village' && activeVillagePanel === 'portal' ? (
-              <div className="absolute inset-0 z-30 flex items-center justify-center bg-[radial-gradient(circle_at_top,rgba(248,222,156,0.16),transparent_24%),linear-gradient(180deg,rgba(9,12,10,0.22),rgba(7,10,8,0.58))] p-4">
-                <div className="grid w-full max-w-5xl gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-                  <div className="rounded-[1.8rem] border border-[#f3d48f]/16 bg-[#172019]/86 p-5 backdrop-blur-[3px]">
-                    <div className="text-[0.72rem] tracking-[0.3em] text-[#efd9a2]/72 uppercase">Start Run</div>
-                    <div className="mt-2 flex items-start justify-between gap-3">
-                      <div className="text-[clamp(2rem,4vw,3.2rem)] font-black tracking-[0.08em] text-[#fbf4dd]">
-                        传送门
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setActiveVillagePanel(null)}
-                        className="rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-sm text-[#d6dfcd]"
-                      >
-                        关闭
-                      </button>
-                    </div>
-                    <div className="mt-4 grid gap-3">
-                      {dungeons.map((dungeon) => {
-                        const active = dungeon.id === selected.dungeonId
-                        return (
-                          <button
-                            key={dungeon.id}
-                            type="button"
-                            onClick={() =>
-                              setSelected({
-                                dungeonId: dungeon.id,
-                                selectedDifficulty: profile.unlockedDifficultiesByDungeon[dungeon.id][0],
-                                unlockedDifficulties: profile.unlockedDifficultiesByDungeon[dungeon.id],
-                              })
-                            }
-                            className={cn(
-                              'rounded-[1.3rem] border px-4 py-3 text-left transition',
-                              active
-                                ? 'border-[#f3d48f]/20 bg-[#f3d48f]/10 text-[#fbf4dd]'
-                                : 'border-white/10 bg-white/4 text-[#d9e2d0] hover:bg-white/8',
-                            )}
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <div>
-                                <div className="font-black tracking-[0.05em]">{dungeon.name}</div>
-                                <div className={cn('mt-1 text-sm', active ? 'text-[#ead7ac]' : 'text-[#b9cbb8]')}>
-                                  {dungeon.subtitle}
-                                </div>
-                              </div>
-                              <div
-                                className="h-11 w-11 rounded-[0.9rem] border border-white/10"
-                                style={{
-                                  background: `linear-gradient(135deg, ${dungeon.palette.sky}, ${dungeon.palette.ground})`,
-                                }}
-                              />
-                            </div>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="rounded-[1.8rem] border border-white/10 bg-black/28 p-5 backdrop-blur-[3px]">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-[0.72rem] tracking-[0.3em] text-[#c8d7c8]/72 uppercase">Knight</div>
-                        <div className="mt-1 text-2xl font-black tracking-[0.06em] text-[#fbf4dd]">Lv.{profile.level}</div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setInventoryOpen((current) => !current)}
-                        className="relative h-12 w-12 transition hover:scale-105 active:scale-95"
-                        aria-label="打开背包"
-                      >
-                        <img
-                          src={hudBackpackButton}
-                          alt=""
-                          className="h-full w-full object-contain"
-                          draggable={false}
-                          style={{ imageRendering: 'pixelated' }}
-                        />
-                      </button>
-                    </div>
-
-                    <div className="mt-4 h-3 overflow-hidden rounded-full border border-white/10 bg-black/24">
-                      <div
-                        className="h-full bg-[linear-gradient(90deg,#f2ce74,#f8f2b4)]"
-                        style={{ width: `${xpRatio * 100}%` }}
-                      />
-                    </div>
-                    <div className="mt-2 flex justify-between text-sm text-[#d8d0b7]">
-                      <span>{profile.experience}/{experienceToNextLevel(profile.level)} XP</span>
-                      <span>{profile.completedRuns} clears</span>
-                    </div>
-
-                    <div className="mt-5">
-                      <div className="text-[0.72rem] tracking-[0.28em] text-[#c8d7c8]/72 uppercase">Difficulty</div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {difficultyOrder.map((difficulty) => {
-                          const unlocked = profile.unlockedDifficultiesByDungeon[selected.dungeonId].includes(difficulty)
-                          const active = difficulty === selected.selectedDifficulty
-                          return (
-                            <button
-                              key={difficulty}
-                              type="button"
-                              disabled={!unlocked}
-                              onClick={() =>
-                                unlocked &&
-                                setSelected((current) => ({
-                                  ...current,
-                                  selectedDifficulty: difficulty,
-                                }))
-                              }
-                              className={cn(
-                                'rounded-full border px-4 py-2 text-sm font-semibold transition',
-                                unlocked
-                                  ? active
-                                    ? 'border-[#f3d48f]/20 bg-[#f3d48f]/10 text-[#fbf4dd]'
-                                    : 'border-white/10 bg-white/4 text-[#d7e1cf] hover:bg-white/8'
-                                  : 'cursor-not-allowed border-white/8 bg-black/10 text-[#788678]',
-                              )}
-                            >
-                              {difficultyConfigs[difficulty].label}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="mt-5 grid grid-cols-3 gap-3 text-sm">
-                      <HomeStat label="攻击" value={playerStats.attack} />
-                      <HomeStat label="护甲" value={playerStats.armor} />
-                      <HomeStat label="技能" value={playerStats.skillPower} />
-                    </div>
-
-                    <div className="mt-5 grid grid-cols-3 gap-3 text-sm">
-                      <HomeStat label="经验" value={`${difficultyConfigs[selected.selectedDifficulty].experienceMultiplier.toFixed(2)}x`} />
-                      <HomeStat label="金币" value={`${difficultyConfigs[selected.selectedDifficulty].goldMultiplier.toFixed(2)}x`} />
-                      <HomeStat label="掉落" value={`${difficultyConfigs[selected.selectedDifficulty].magicFind.toFixed(2)}x`} />
-                    </div>
-
-                    <Button
-                      type="button"
-                      onClick={startRun}
-                      className="mt-5 h-12 w-full rounded-full bg-[#f3d48f] text-[#2e2414] hover:bg-[#ffe2a6]"
-                    >
-                      <Swords />
-                      开始副本
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              <OtherworldMapOverlay
+                selectedDungeonId={selected.dungeonId}
+                unlockedDifficultiesByDungeon={profile.unlockedDifficultiesByDungeon}
+                onSelectDungeon={(dungeonId) =>
+                  setSelected({
+                    dungeonId,
+                    selectedDifficulty: profile.unlockedDifficultiesByDungeon[dungeonId][0],
+                    unlockedDifficulties: profile.unlockedDifficultiesByDungeon[dungeonId],
+                  })
+                }
+                onEnter={startRun}
+                onClose={() => setActiveVillagePanel(null)}
+              />
             ) : null}
 
             {phase === 'home' && homeStage === 'village' && activeVillagePanel && activeVillagePanel !== 'portal' ? (

@@ -185,31 +185,44 @@ function buildMaze(dungeonId: DungeonId) {
     [15, 20, 11, 5],
     [30, 19, 16, 7],
   ]
-  const roomVariants: Record<DungeonId, Array<[number, number, number, number]>> = {
-    sunmeadow: commonRooms,
-    'vine-ruins': [...commonRooms, [21, 6, 5, 4], [9, 15, 5, 4]],
-    'crystal-cavern': [...commonRooms, [35, 8, 6, 4], [27, 15, 4, 5]],
+  const mazeVariantByDungeon: Record<DungeonId, 'open' | 'ruin' | 'crystal'> = {
+    'ember-forge': 'open',
+    'frost-peak': 'crystal',
+    'jade-tower': 'ruin',
+    'sun-obelisk': 'open',
+    'crystal-rift': 'crystal',
+    'autumn-wood': 'ruin',
+    'tide-cave': 'open',
+    'clock-temple': 'crystal',
+    'mushroom-marsh': 'ruin',
+    'cloud-altar': 'crystal',
   }
-  const paths: Record<DungeonId, Array<Array<[number, number]>>> = {
-    sunmeadow: [
+  const variant = mazeVariantByDungeon[dungeonId]
+  const roomVariants: Record<typeof variant, Array<[number, number, number, number]>> = {
+    open: commonRooms,
+    ruin: [...commonRooms, [21, 6, 5, 4], [9, 15, 5, 4]],
+    crystal: [...commonRooms, [35, 8, 6, 4], [27, 15, 4, 5]],
+  }
+  const paths: Record<typeof variant, Array<Array<[number, number]>>> = {
+    open: [
       [[4, 4], [16, 4], [16, 13], [7, 13], [7, 22], [20, 22], [20, 13], [37, 13], [37, 22], [44, 22]],
       [[20, 4], [29, 4], [29, 13]],
       [[29, 4], [41, 4]],
     ],
-    'vine-ruins': [
+    ruin: [
       [[4, 4], [16, 4], [16, 13], [7, 13], [7, 22], [20, 22], [20, 13], [24, 13], [24, 7], [29, 7], [29, 13], [37, 13], [37, 22], [44, 22]],
       [[20, 4], [41, 4]],
       [[11, 13], [11, 16], [23, 16]],
     ],
-    'crystal-cavern': [
+    crystal: [
       [[4, 4], [16, 4], [16, 13], [7, 13], [7, 22], [20, 22], [20, 13], [29, 13], [29, 17], [37, 17], [37, 22], [44, 22]],
       [[20, 4], [29, 4], [29, 13]],
       [[29, 4], [41, 4], [41, 9], [37, 9]],
     ],
   }
 
-  for (const room of roomVariants[dungeonId]) carveRect(grid, ...room)
-  for (const path of paths[dungeonId]) carvePath(grid, path)
+  for (const room of roomVariants[variant]) carveRect(grid, ...room)
+  for (const path of paths[variant]) carvePath(grid, path)
 
   grid[start.y][start.x] = 'S'
   grid[portal.y][portal.x] = 'P'

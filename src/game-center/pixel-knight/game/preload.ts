@@ -1,4 +1,15 @@
 import { dungeons, legendaryPowers, setBonuses, skills } from '../content/data'
+import otherworldMapBaseDetail2xUrl from '@/game-center/pixel-knight/assets/otherworld/otherworld-map-base-biomes@2x-detail.png'
+import otherworldAutumnWoodEntranceUrl from '@/game-center/pixel-knight/assets/otherworld/04-autumn-spirit-grove-left.png'
+import otherworldClockTempleEntranceUrl from '@/game-center/pixel-knight/assets/otherworld/08-ancient-clockwork-temple-front.png'
+import otherworldCloudAltarEntranceUrl from '@/game-center/pixel-knight/assets/otherworld/10-sky-altar-portal-left.png'
+import otherworldCrystalRiftEntranceUrl from '@/game-center/pixel-knight/assets/otherworld/06-shadow-crystal-rift-front.png'
+import otherworldEmberForgeEntranceUrl from '@/game-center/pixel-knight/assets/otherworld/01-volcanic-forge-gate-right.png'
+import otherworldFrostPeakEntranceUrl from '@/game-center/pixel-knight/assets/otherworld/02-frost-peak-shrine-front.png'
+import otherworldJadeTowerEntranceUrl from '@/game-center/pixel-knight/assets/otherworld/03-emerald-ruin-tower-left.png'
+import otherworldMushroomMarshEntranceUrl from '@/game-center/pixel-knight/assets/otherworld/09-mushroom-swamp-hut-left.png'
+import otherworldSunObeliskEntranceUrl from '@/game-center/pixel-knight/assets/otherworld/05-desert-sun-obelisk-right.png'
+import otherworldTideCaveEntranceUrl from '@/game-center/pixel-knight/assets/otherworld/07-tropical-tide-cave-right.png'
 import characterSelectBgUrl from '@/game-center/pixel-knight/assets/ui/character-select-bg-clean.png'
 import buttonDisabledFrameUrl from '@/game-center/pixel-knight/assets/ui/character-select/button-disabled.png'
 import buttonPrimaryFrameUrl from '@/game-center/pixel-knight/assets/ui/character-select/button-primary.png'
@@ -40,11 +51,13 @@ let cachedPromise: Promise<void> | null = null
 let warmLoaded = false
 let villageAssetCache: Record<VillageAssetId, HTMLImageElement> | null = null
 let uiAssetsLoaded = false
+let otherworldAssetsLoaded = false
 
 const preloadSteps = [
   { label: '正在校准副本与词条表', wait: 220 },
   { label: '正在同步界面图集', wait: 220 },
   { label: '正在铺设新手村地砖', wait: 220 },
+  { label: '正在绘制异界地图', wait: 220 },
 ] as const
 
 const pixelKnightUiAssetSources = [
@@ -82,6 +95,20 @@ const pixelKnightUiAssetSources = [
   statHealthIconUrl,
   statMoveSpeedIconUrl,
   statSkillIconUrl,
+]
+
+const pixelKnightOtherworldAssetSources = [
+  otherworldMapBaseDetail2xUrl,
+  otherworldEmberForgeEntranceUrl,
+  otherworldFrostPeakEntranceUrl,
+  otherworldJadeTowerEntranceUrl,
+  otherworldSunObeliskEntranceUrl,
+  otherworldCrystalRiftEntranceUrl,
+  otherworldAutumnWoodEntranceUrl,
+  otherworldTideCaveEntranceUrl,
+  otherworldClockTempleEntranceUrl,
+  otherworldMushroomMarshEntranceUrl,
+  otherworldCloudAltarEntranceUrl,
 ]
 
 function sleep(ms: number) {
@@ -153,6 +180,13 @@ async function preloadVillageAssets(required: VillageAssetId[]) {
   }
 }
 
+async function preloadOtherworldAssets() {
+  if (otherworldAssetsLoaded) return
+  const images = await Promise.all(pixelKnightOtherworldAssetSources.map((src) => loadImage(src)))
+  primeImageDraws(images)
+  otherworldAssetsLoaded = true
+}
+
 export function getPixelKnightVillageAsset(id: VillageAssetId) {
   return villageAssetCache?.[id] ?? null
 }
@@ -168,6 +202,7 @@ export function clearPixelKnightPreloadCache() {
   warmLoaded = false
   villageAssetCache = null
   uiAssetsLoaded = false
+  otherworldAssetsLoaded = false
 }
 
 export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress) => void) {
@@ -184,6 +219,7 @@ export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress)
       if (index === 0) await preloadGameData()
       if (index === 1) await preloadUiAssets()
       if (index === 2) await preloadVillageAssets(villageAssets)
+      if (index === 3) await preloadOtherworldAssets()
 
       await sleep(warmLoaded ? Math.max(35, step.wait * 0.22) : step.wait)
       onProgress({
