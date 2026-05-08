@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { ArrowLeft, Database, Map, Pause, Play, Swords } from 'lucide-react'
+import { ArrowLeft, Bug, Database, Map, Pause, Play, Swords } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -602,6 +602,17 @@ export default function PixelKnightView() {
               <Link to="/games/pixel-knight/character-demo">
                 <Swords />
                 角色
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              asChild
+              className="border-[#314635]/18 bg-[#f7efd7]/70 text-[#193123] hover:bg-[#fff5dc]"
+            >
+              <Link to="/games/pixel-knight/monsters">
+                <Bug />
+                怪物
               </Link>
             </Button>
             <Button

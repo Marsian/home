@@ -1,0 +1,63 @@
+{
+  "id": "slime",
+  "name": "史莱姆",
+  "defaultState": "idle",
+  "frameSize": [
+    256,
+    256
+  ],
+  "anchor": [
+    128,
+    190
+  ],
+  "animations": {
+    "idle": {
+      "frameDurationMs": 120,
+      "loop": true,
+      "frames": [
+        "frames/idle/frame-01.png",
+        "frames/idle/frame-02.png",
+        "frames/idle/frame-03.png",
+        "frames/idle/frame-04.png",
+        "frames/idle/frame-05.png",
+        "frames/idle/frame-06.png"
+      ]
+    },
+    "walk": {
+      "frameDurationMs": 110,
+      "loop": true,
+      "frames": [
+        "frames/walk/frame-01.png",
+        "frames/walk/frame-02.png",
+        "frames/walk/frame-03.png",
+        "frames/walk/frame-04.png",
+        "frames/walk/frame-05.png",
+        "frames/walk/frame-06.png"
+      ]
+    },
+    "attack": {
+      "frameDurationMs": 90,
+      "loop": false,
+      "frames": [
+        "frames/attack/frame-01.png",
+        "frames/attack/frame-02.png",
+        "frames/attack/frame-03.png",
+        "frames/attack/frame-04.png",
+        "frames/attack/frame-05.png",
+        "frames/attack/frame-06.png",
+        "frames/attack/frame-07.png",
+        "frames/attack/frame-08.png"
+      ]
+    },
+    "attacked": {
+      "frameDurationMs": 115,
+      "loop": false,
+      "frames": [
+        "frames/attacked/frame-01.png",
+        "frames/attacked/frame-02.png",
+        "frames/attacked/frame-03.png",
+        "frames/attacked/frame-04.png"
+      ]
+    }
+  }
+}
