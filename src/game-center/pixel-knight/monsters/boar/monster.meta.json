@@ -1,0 +1,67 @@
+{
+  "id": "boar",
+  "name": "野猪",
+  "defaultState": "idle",
+  "frameSize": [
+    256,
+    256
+  ],
+  "anchor": [
+    128,
+    190
+  ],
+  "animations": {
+    "idle": {
+      "frameDurationMs": 140,
+      "loop": true,
+      "frames": [
+        "frames/idle/frame-01.png",
+        "frames/idle/frame-02.png",
+        "frames/idle/frame-03.png",
+        "frames/idle/frame-04.png"
+      ]
+    },
+    "walk": {
+      "frameDurationMs": 90,
+      "loop": true,
+      "frames": [
+        "frames/walk/frame-01.png",
+        "frames/walk/frame-02.png",
+        "frames/walk/frame-03.png",
+        "frames/walk/frame-04.png",
+        "frames/walk/frame-05.png",
+        "frames/walk/frame-06.png",
+        "frames/walk/frame-07.png",
+        "frames/walk/frame-08.png",
+        "frames/walk/frame-09.png",
+        "frames/walk/frame-10.png"
+      ]
+    },
+    "attack": {
+      "frameDurationMs": 95,
+      "loop": false,
+      "frames": [
+        "frames/attack/frame-01.png",
+        "frames/attack/frame-02.png",
+        "frames/attack/frame-03.png",
+        "frames/attack/frame-04.png",
+        "frames/attack/frame-05.png",
+        "frames/attack/frame-06.png",
+        "frames/attack/frame-07.png"
+      ]
+    },
+    "attacked": {
+      "frameDurationMs": 95,
+      "loop": false,
+      "frames": [
+        "frames/attacked/frame-01.png",
+        "frames/attacked/frame-02.png",
+        "frames/attacked/frame-03.png",
+        "frames/attacked/frame-04.png",
+        "frames/attacked/frame-05.png",
+        "frames/attacked/frame-06.png",
+        "frames/attacked/frame-07.png"
+      ]
+    }
+  }
+}

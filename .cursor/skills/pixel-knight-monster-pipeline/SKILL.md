@@ -36,11 +36,14 @@ src/game-center/pixel-knight/monsters/<monster-id>/
 
 ```text
 Create a single pixel-art sprite sheet of one <monster description> on a perfectly flat solid #00ff00 chroma-key background.
-Canvas/layout: exact 8 columns x 4 rows grid, each cell equal size, generous padding inside every cell, no visible grid lines, no labels, no text.
-Row 1: idle, first 6 frames only, subtle breathing and gentle bounce; columns 7 and 8 must be empty pure #00ff00 background. Keep the same silhouette and baseline across the row.
-Row 2: walk, first 6 frames only, squash/stretch hopping motion; columns 7 and 8 must be empty pure #00ff00 background.
-Row 3: attack, 8 frames, wind-up, forward lunge, impact, rebound, recover; keep the entire monster fully inside every cell with extra padding, especially frame 4.
-Row 4: attacked, first 4 frames only, normal, hit squash, rebound, recover; columns 5-8 must be empty pure #00ff00 background. Do not include movement, knockback, walking, lunging, particles, travel blur, or extra effects in attacked.
+FIRST PRIORITY: legal animation continuity. Every row must be usable as animation, not merely a contact sheet. Frame 1 starts the motion, each next frame changes by a small natural increment, and for looped states the final frame must connect cleanly back to frame 1. Walk/idle loops are invalid if the last frame cannot cycle into the first without a visible pop.
+SECOND PRIORITY: one consistent character model across the entire sheet. All frames in all rows must be the exact same monster evolving through poses: same body proportions, face design, tusk/horn/accessory shape, palette, outline thickness, lighting direction, pixel density, scale, x-center, and foot baseline. Do not redraw a different-looking monster per action row.
+THIRD PRIORITY: every action starts from the same standing idle pose. The first frame of idle, walk, attack, and attacked must be the identical neutral standing pose, or as close as possible: same feet on the ground, same body height, same face direction, same center point. Action motion begins on frame 2.
+Canvas/layout: exact <columns> columns x 4 rows grid, each cell equal size, very large empty spacing between neighboring frames, generous padding inside every cell, no overlapping silhouettes, no visible grid lines, no labels, no text. The monster should occupy at most 50% of each cell width, leaving wide pure #00ff00 gutters on both left and right so each frame can be isolated without capturing pixels from adjacent frames.
+Row 1: idle, <idle frame count> frames, subtle breathing and gentle bounce; unused columns must be empty pure #00ff00 background. Keep the same silhouette and baseline across the row. The last idle frame must loop back to the first.
+Row 2: walk, <walk frame count> frames. Frame 1 is the standing idle pose. Frame 2 begins the first step. For simple blob-like monsters 6 frames is enough; for complex four-legged animals use 10-12 frames so the gait has enough hoof/leg positions. The walk cycle must be a closed loop: the final frame must be the immediate predecessor of frame 1, not a different endpoint pose.
+Row 3: attack, <attack frame count> frames. Frame 1 is the standing idle pose. Match the monster's natural attack. Start and end in the same neutral-ready pose so it can return to idle without a pop. Avoid excessive ground effects, travel blur, or large displacement unless the design explicitly needs a charge. Keep the entire monster fully inside each cell.
+Row 4: attacked, <attacked frame count> frames. Frame 1 is the standing idle pose. Design this per monster anatomy: slime can squash/rebound in 4 frames; animals can use 6-8 frames for flinch, brace, recoil, shake, and recovery. Start and end in the same neutral-ready pose. Avoid accidentally turning attacked into walk/attack/knockback.
 Chroma-key constraints: background must be uniform #00ff00 with no shadows, gradients, texture, floor, reflections, antialiasing halos, watermarks, or text. Do not use green in the monster or effects.
 ```
 
@@ -63,35 +66,53 @@ node scripts/pixel-knight/slice-monster-spritesheet.mjs \
   --key '#00ff00'
 ```
 
-默认状态配置：
-
-```text
-idle: 6 frames, 120ms, loop
-walk: 6 frames, 110ms, loop
-attack: 8 frames, 90ms, non-loop
-attacked: 4 frames, 115ms, non-loop
-```
-
-如需自定义，传 `--states`：
+如果生成图看起来像网格，但横向间距并不严格等宽，或相邻帧身体接近格子边界，使用自动主体检测切帧：
 
 ```bash
---states idle:0:6:120:true,walk:1:6:110:true,attack:2:8:90:false,attacked:3:4:115:false
+node scripts/pixel-knight/slice-monster-spritesheet.mjs \
+  --auto-detect \
+  --source src/game-center/pixel-knight/monsters/<monster-id>/source-green/<monster-id>-actions-greenscreen.png \
+  --out src/game-center/pixel-knight/monsters/<monster-id>/frames \
+  --meta src/game-center/pixel-knight/monsters/<monster-id>/monster.meta.json \
+  --id <monster-id> \
+  --name <display-name> \
+  --frame-size 256x256 \
+  --anchor 128,190 \
+  --grid <columns>x4 \
+  --states <state-config> \
+  --key '#00ff00'
+```
+
+常用状态配置：
+
+```text
+simple/blob monster: idle 4-6, walk 6, attack 6-8, attacked 4-6
+four-legged animal: idle 4-6, walk 10-12, attack 6-8, attacked 6-8
+```
+
+按实际怪物传 `--grid` 与 `--states`。例如 12 列四足动物：
+
+```bash
+--grid 12x4 \
+--states idle:0:6:120:true,walk:1:12:90:true,attack:2:8:95:false,attacked:3:8:95:false
 ```
 
 脚本职责：
 
 - 按固定网格切 cell。
+- `--auto-detect` 模式按行寻找独立主体并排序切帧，用于复杂动物、非严格等距 sheet、或相邻帧过近的图。
 - 使用 key 色距离和绿色优势判断背景。
-- 去绿幕、despill、过滤小连通噪点。
+- 去绿幕、despill、过滤小连通噪点，并把弱绿色边缘像素作为失败项处理。
 - 输出统一 256×256 透明 PNG。
 - 按锚点把主体放在统一基线。
 - 更新 `monster.meta.json` 的 `frames`、帧时长和循环配置。
 
-如果 imagegen 生成的 `idle` 或 `attacked` 行仍然对不齐，优先从一个稳定基准帧派生这些小动作：
+如果 imagegen 生成的局部动作行对不齐，优先从一个稳定基准帧派生少量关键帧，但只在这个状态语义适合时使用：
 
-- `idle`：基准帧做 6 帧以内的轻微 squash/stretch，保持脚底/锚点稳定。
-- `attacked`：基准帧做 4 帧原地动作：正常、压扁、回弹、恢复。
-- 不要为了修复对齐问题继续增加帧数；帧数越多，生成图漂移越明显。
+- `idle`：可用基准帧做 6 帧以内的轻微 squash/stretch，保持脚底/锚点稳定。
+- slime/blob attacked：可用基准帧做原地 squash/rebound。
+- animal attacked：不要套用 slime 的压扁模板；优先设计 flinch、brace、recoil、shake、recover 等符合动物身体结构的帧。
+- 不要为了修复对齐问题盲目增加帧数；帧数要服务动作语义。
 
 ## 步骤 3：资源校验
 
@@ -103,8 +124,13 @@ attacked: 4 frames, 115ms, non-loop
 
 额外人工检查：
 
+- 动作连贯性是第一验收标准：同一行必须像连续动画，不像一组独立姿势插画。
+- 循环闭合是硬门槛：`idle` 和 `walk` 的最后一帧必须能自然接回第一帧；walk 头尾接不上就是非法产出。
+- 起始静姿是硬门槛：每个动作的第 1 帧都必须是站立静姿，walk/attack/attacked 都不能从动作中段开始。
+- 形象一致是硬门槛：同一张 sprite sheet 的所有状态必须是同一个怪物形象演化；体型、脸、角/牙、颜色、线条和基线肉眼可见变化时，应重新生成。
+- 帧间距是硬门槛：源图每一帧之间要有足够绿幕空白，主体建议不超过单元格宽度的 50%，不能依赖切图脚本从相邻帧里抢救主体。
 - `idle` 是否足够稳定；最多 6 帧，避免因为帧数过多导致主体对不齐。
-- `attacked` 是否是原地受击：正常、受击压扁、回弹、恢复。
+- `attacked` 是否符合怪物身体结构。不要把史莱姆的压扁/回弹方案套到所有动物上。
 - `attack` 第 4 帧或主要冲刺帧是否完整，没有被裁切。
 - 同一状态播放时主体不异常漂移。
 
