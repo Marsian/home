@@ -24,7 +24,22 @@ function readArgs(argv) {
     states: DEFAULT_STATES,
     normalizeSource: true,
     autoDetect: false,
+    qualityReport: false,
+    failOnQuality: false,
+    loopCheck: [],
+    neutralCheck: [],
+    minCellPadding: 10,
+    minNeighborGap: 20,
+    maxLoopDiffRatio: 0.2,
+    maxNeutralDiffRatio: 0.12,
   }
+
+  const noValueFlags = new Set([
+    '--auto-detect',
+    '--fail-on-quality',
+    '--no-normalize-source',
+    '--quality-report',
+  ])
 
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index]
@@ -53,7 +68,15 @@ function readArgs(argv) {
     })
     if (flag === '--no-normalize-source') args.normalizeSource = false
     if (flag === '--auto-detect') args.autoDetect = true
-    if (flag !== '--no-normalize-source' && flag !== '--auto-detect') index += 1
+    if (flag === '--quality-report') args.qualityReport = true
+    if (flag === '--fail-on-quality') args.failOnQuality = true
+    if (flag === '--loop-check') args.loopCheck = value.split(',').filter(Boolean)
+    if (flag === '--neutral-check') args.neutralCheck = value.split(',').filter(Boolean)
+    if (flag === '--min-cell-padding') args.minCellPadding = Number(value)
+    if (flag === '--min-neighbor-gap') args.minNeighborGap = Number(value)
+    if (flag === '--max-loop-diff-ratio') args.maxLoopDiffRatio = Number(value)
+    if (flag === '--max-neutral-diff-ratio') args.maxNeutralDiffRatio = Number(value)
+    if (!noValueFlags.has(flag)) index += 1
   }
 
   return args
@@ -84,6 +107,14 @@ key = tuple(int(key_hex[i:i+2], 16) for i in (0, 2, 4))
 green_threshold = 8
 weak_green_threshold = 0
 edge_padding = 2
+quality_report_enabled = config.get('qualityReport', False) or config.get('failOnQuality', False)
+fail_on_quality = config.get('failOnQuality', False)
+loop_check_states = set(config.get('loopCheck', []))
+neutral_check_states = set(config.get('neutralCheck', []))
+min_cell_padding = config.get('minCellPadding', 10)
+min_neighbor_gap = config.get('minNeighborGap', 20)
+max_loop_diff_ratio = config.get('maxLoopDiffRatio', 0.2)
+max_neutral_diff_ratio = config.get('maxNeutralDiffRatio', 0.12)
 
 def is_green_fringe(r, g, b, a):
     if a == 0:
@@ -255,6 +286,57 @@ def key_out_cell(cell):
 def alpha_bbox(image):
     return image.getchannel('A').getbbox()
 
+def alpha_area(image):
+    return sum(1 for a in image.getchannel('A').getdata() if a > 8)
+
+def bbox_center(bbox):
+    if not bbox:
+        return None
+    return ((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2)
+
+def alpha_diff_ratio(a, b):
+    alpha_a = list(a.getchannel('A').getdata())
+    alpha_b = list(b.getchannel('A').getdata())
+    changed = 0
+    union = 0
+    for av, bv in zip(alpha_a, alpha_b):
+        if av > 8 or bv > 8:
+            union += 1
+        if abs(av - bv) > 24:
+            changed += 1
+    return changed / max(1, union)
+
+def source_cell_metrics(cell):
+    keyed = key_out_cell(cell)
+    bbox = alpha_bbox(keyed)
+    if not bbox:
+        return {
+            'bbox': None,
+            'area': 0,
+            'center': None,
+            'margins': None,
+            'bodyWidthRatio': 0,
+            'bodyHeightRatio': 0,
+        }
+    width, height = keyed.size
+    margins = {
+        'left': bbox[0],
+        'top': bbox[1],
+        'right': width - bbox[2],
+        'bottom': height - bbox[3],
+    }
+    return {
+        'bbox': bbox,
+        'area': alpha_area(keyed),
+        'center': bbox_center(bbox),
+        'margins': margins,
+        'bodyWidthRatio': (bbox[2] - bbox[0]) / width,
+        'bodyHeightRatio': (bbox[3] - bbox[1]) / height,
+    }
+
+def format_ratio(value):
+    return f'{value:.3f}'
+
 def normalize_source_image(image):
     rgba = image.convert('RGBA')
     pixels = []
@@ -301,6 +383,9 @@ if config.get('normalizeSource', True):
 out_root.mkdir(parents=True, exist_ok=True)
 animations = {}
 report = []
+rendered_frames = {}
+source_report = {}
+quality_issues = []
 
 for state in config['states']:
     state_name = state['name']
@@ -310,7 +395,10 @@ for state in config['states']:
             old.unlink()
     state_dir.mkdir(parents=True, exist_ok=True)
     frames = []
+    rendered_frames[state_name] = []
+    source_report[state_name] = []
     for frame_index in range(state['frames']):
+        source_metrics = None
         if config.get('autoDetect', False):
             if frame_index == 0:
                 upper = round(state['row'] * cell_h)
@@ -325,6 +413,7 @@ for state in config['states']:
             right = round((frame_index + 1) * cell_w)
             lower = round((state['row'] + 1) * cell_h)
             cell = image.crop((left, upper, right, lower))
+            source_metrics = source_cell_metrics(cell)
             keyed = key_out_cell(cell)
         canvas, bbox = paste_centered(keyed)
         frame_name = f'frame-{frame_index + 1:02d}.png'
@@ -332,21 +421,34 @@ for state in config['states']:
         frame_path = out_root / state_name / frame_name
         canvas.save(frame_path)
         frames.append(relative)
+        rendered_frames[state_name].append(canvas)
 
         data = list(canvas.convert('RGBA').getdata())
         corners = [data[0][3], data[frame_width - 1][3], data[(frame_height - 1) * frame_width][3], data[-1][3]]
         greenish = sum(1 for r, g, b, a in data if a > 8 and g > 110 and g > r * 1.2 and g > b * 1.1)
         weak_greenish = sum(1 for r, g, b, a in data if is_green_fringe(r, g, b, a))
         touches = bool(bbox and (bbox[0] <= edge_padding or bbox[1] <= edge_padding or bbox[2] >= frame_width - edge_padding or bbox[3] >= frame_height - edge_padding))
+        center = bbox_center(bbox)
+        area = alpha_area(canvas)
         report.append({
             'state': state_name,
             'frame': frame_name,
             'bbox': bbox,
+            'center': center,
+            'area': area,
             'corners': corners,
             'greenish': greenish,
             'weakGreenish': weak_greenish,
             'touchesEdge': touches,
         })
+        source_report[state_name].append(source_metrics)
+        if source_metrics and source_metrics['bbox']:
+            margins = source_metrics['margins']
+            tight_sides = [side for side, margin in margins.items() if margin < min_cell_padding]
+            if tight_sides:
+                quality_issues.append(
+                    f'{state_name}/{frame_name} source cell padding below {min_cell_padding}px on {",".join(tight_sides)}: {margins}'
+                )
         if any(corners):
             raise RuntimeError(f'{relative} failed transparent-corner check: {corners}')
         if greenish > green_threshold:
@@ -362,6 +464,38 @@ for state in config['states']:
         'frames': frames,
     }
 
+if quality_report_enabled:
+    for state in config['states']:
+        state_name = state['name']
+        images = rendered_frames.get(state_name, [])
+        if len(images) < 2:
+            continue
+        frame_diffs = [
+            alpha_diff_ratio(current, following)
+            for current, following in zip(images, images[1:])
+        ]
+        if state_name in loop_check_states:
+            loop_diff = alpha_diff_ratio(images[-1], images[0])
+            if loop_diff > max_loop_diff_ratio:
+                quality_issues.append(
+                    f'{state_name} loop last-to-first alpha diff ratio {format_ratio(loop_diff)} exceeds {format_ratio(max_loop_diff_ratio)}'
+                )
+        if state_name in neutral_check_states and rendered_frames.get('idle'):
+            neutral_diff = alpha_diff_ratio(rendered_frames['idle'][0], images[0])
+            if neutral_diff > max_neutral_diff_ratio:
+                quality_issues.append(
+                    f'{state_name}/frame-01 differs from idle/frame-01 by alpha diff ratio {format_ratio(neutral_diff)} exceeds {format_ratio(max_neutral_diff_ratio)}'
+                )
+        source_cells = [cell for cell in source_report.get(state_name, []) if cell and cell['bbox']]
+        for current, following in zip(source_cells, source_cells[1:]):
+            current_gap = current['margins']['right'] + following['margins']['left']
+            if current_gap < min_neighbor_gap:
+                quality_issues.append(
+                    f'{state_name} adjacent source bodies are too close: combined gutter {current_gap}px below {min_neighbor_gap}px'
+                )
+        if frame_diffs:
+            state['qualityFrameDiffs'] = frame_diffs
+
 meta = {
     'id': config['id'],
     'name': config['name'],
@@ -376,8 +510,49 @@ meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + '\n', enco
 
 print(f'Sliced {sum(s["frames"] for s in config["states"])} frames from {source_w}x{source_h} source ({cols}x{rows} grid).')
 for item in report:
-    print(f'{item["state"]}/{item["frame"]}: bbox={item["bbox"]} greenish={item["greenish"]} weakGreenish={item["weakGreenish"]}')
+    print(f'{item["state"]}/{item["frame"]}: bbox={item["bbox"]} center={item["center"]} area={item["area"]} greenish={item["greenish"]} weakGreenish={item["weakGreenish"]}')
+if quality_report_enabled:
+    print('Quality report:')
+    print(f'  source cell size: {cell_w:.2f}x{cell_h:.2f}px, minCellPadding={min_cell_padding}px, minNeighborGap={min_neighbor_gap}px')
+    for state in config['states']:
+        state_name = state['name']
+        images = rendered_frames.get(state_name, [])
+        if len(images) < 2:
+            continue
+        frame_diffs = [
+            alpha_diff_ratio(current, following)
+            for current, following in zip(images, images[1:])
+        ]
+        centers = [bbox_center(alpha_bbox(image)) for image in images]
+        centers = [center for center in centers if center]
+        center_drift = None
+        if centers:
+            center_drift = (
+                max(center[0] for center in centers) - min(center[0] for center in centers),
+                max(center[1] for center in centers) - min(center[1] for center in centers),
+            )
+        print(f'  {state_name}: frameDiffs={[format_ratio(value) for value in frame_diffs]} centerDrift={center_drift}')
+        if state_name in loop_check_states:
+            print(f'    loop last->first diff={format_ratio(alpha_diff_ratio(images[-1], images[0]))} max={format_ratio(max_loop_diff_ratio)}')
+        if state_name in neutral_check_states and rendered_frames.get('idle'):
+            print(f'    neutral idle/frame-01 diff={format_ratio(alpha_diff_ratio(rendered_frames["idle"][0], images[0]))} max={format_ratio(max_neutral_diff_ratio)}')
+        for index, source_metrics in enumerate(source_report.get(state_name, []), start=1):
+            if not source_metrics or not source_metrics['bbox']:
+                continue
+            print(
+                f'    source frame-{index:02d}: bbox={source_metrics["bbox"]} '
+                f'margins={source_metrics["margins"]} '
+                f'bodyWidthRatio={format_ratio(source_metrics["bodyWidthRatio"])}'
+            )
+    if quality_issues:
+        print('Quality issues:')
+        for issue in quality_issues:
+            print(f'  - {issue}')
+    else:
+        print('Quality issues: none')
 print(f'Updated {meta_path}')
+if fail_on_quality and quality_issues:
+    raise RuntimeError(f'Quality checks failed with {len(quality_issues)} issue(s).')
 `
 
 const args = readArgs(process.argv.slice(2))
