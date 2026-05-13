@@ -36,7 +36,7 @@ const otherworldEntrances: OtherworldEntrance[] = [
   { dungeonId: 'jade-tower', name: '翠塔', src: jadeTowerEntrance, x: 68.5, y: 26, width: 8.5, imageWidth: 291, imageHeight: 339, zIndex: 12 },
   { dungeonId: 'sun-obelisk', name: '沙碑', src: sunObeliskEntrance, x: 19.5, y: 47.5, width: 8.5, imageWidth: 339, imageHeight: 365, zIndex: 20 },
   { dungeonId: 'crystal-rift', name: '晶隙', src: crystalRiftEntrance, x: 48, y: 45, width: 8, imageWidth: 322, imageHeight: 350, zIndex: 21 },
-  { dungeonId: 'autumn-wood', name: '秋林', src: autumnWoodEntrance, x: 82, y: 45.5, width: 9, imageWidth: 305, imageHeight: 324, zIndex: 22 },
+  { dungeonId: 'autumn-wood', name: '枫林入口', src: autumnWoodEntrance, x: 82, y: 45.5, width: 9, imageWidth: 305, imageHeight: 324, zIndex: 22 },
   { dungeonId: 'tide-cave', name: '潮洞', src: tideCaveEntrance, x: 23.2, y: 72.5, width: 9, imageWidth: 349, imageHeight: 360, zIndex: 30 },
   { dungeonId: 'clock-temple', name: '机殿', src: clockTempleEntrance, x: 44.2, y: 75.5, width: 9, imageWidth: 305, imageHeight: 343, zIndex: 31 },
   { dungeonId: 'mushroom-marsh', name: '蘑沼', src: mushroomMarshEntrance, x: 65.7, y: 67.5, width: 9, imageWidth: 314, imageHeight: 346, zIndex: 32 },
@@ -51,16 +51,19 @@ const closeButtonClassName =
 export function OtherworldMapOverlay({
   selectedDungeonId,
   unlockedDifficultiesByDungeon,
+  availableDungeonIds,
   onSelectDungeon,
   onEnter,
   onClose,
 }: {
   selectedDungeonId: DungeonId
   unlockedDifficultiesByDungeon: Record<DungeonId, DifficultyTier[]>
+  availableDungeonIds: DungeonId[]
   onSelectDungeon: (dungeonId: DungeonId) => void
   onEnter: () => void
   onClose: () => void
 }) {
+  const availableDungeonSet = useMemo(() => new Set(availableDungeonIds), [availableDungeonIds])
   const [focusedDungeonId, setFocusedDungeonId] = useState<DungeonId | null>(null)
   const focusedEntrance = useMemo(
     () => otherworldEntrances.find((entry) => entry.dungeonId === focusedDungeonId) ?? null,
@@ -81,6 +84,10 @@ export function OtherworldMapOverlay({
     onSelectDungeon(entrance.dungeonId)
     setFocusedDungeonId(entrance.dungeonId)
   }
+  const focusedEntranceAvailable = focusedEntrance ? availableDungeonSet.has(focusedEntrance.dungeonId) : false
+  const focusedEntranceUnlocked = focusedEntrance
+    ? Boolean(unlockedDifficultiesByDungeon[focusedEntrance.dungeonId]?.length)
+    : false
 
   return (
     <div className="absolute inset-0 z-30 overflow-hidden bg-[#071017] text-[#fff0c8]">
@@ -200,12 +207,14 @@ export function OtherworldMapOverlay({
           >
               <Button
                 type="button"
-                onClick={onEnter}
-                disabled={!unlockedDifficultiesByDungeon[focusedEntrance.dungeonId]?.length}
+                onClick={() => {
+                  if (focusedEntranceAvailable && focusedEntranceUnlocked) onEnter()
+                }}
+                disabled={!focusedEntranceAvailable || !focusedEntranceUnlocked}
                 className="h-12 min-w-[10rem] rounded-none border-2 border-[#7a441f] bg-[#d9422f] px-8 text-lg font-black tracking-[0.12em] text-[#fff2c7] shadow-[inset_0_2px_0_rgba(255,255,255,0.28),0_4px_0_#6f271f] hover:bg-[#ef543b] active:translate-y-0.5 sm:h-14"
               >
                 <Swords className="size-5" />
-                进入
+                {focusedEntranceAvailable ? '进入' : '未开放'}
               </Button>
           </div>
         </>

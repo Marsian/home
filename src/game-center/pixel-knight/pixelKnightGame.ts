@@ -2,7 +2,8 @@ import { difficultyConfigs, generateLootItems, getDungeonById, skills } from './
 import knightManifestData from '@/game-center/pixel-knight/assets/characters/knight.json'
 import shieldMatrixData from '@/game-center/pixel-knight/assets/equipment/off-hand/wood-shield.json'
 import swordMatrixData from '@/game-center/pixel-knight/assets/equipment/main-hand/iron-sword.json'
-import { getPixelKnightVillageAsset } from './game/preload'
+import { getPixelKnightOtherworldMapAsset, getPixelKnightVillageAsset } from './game/preload'
+import { getOtherworldMapPack, type OtherworldMapPack } from './maps/otherworldRegistry'
 import { starterVillageMap, starterVillagePlacements } from './maps/starter-village/starterVillageMap'
 import {
   drawMatrixCharacter,
@@ -12,6 +13,7 @@ import {
   type MatrixFacing,
   type MatrixManifest,
 } from './rendering/matrixCharacterRenderer'
+import { getOtherworldMapAtomAssetId, getOtherworldMapBackdropAssetId } from './rendering/otherworldMapAssets'
 import { getStarterVillageAtomAssetId } from './rendering/villageAssets'
 import type {
   DifficultyTier,
@@ -27,7 +29,7 @@ import type {
 
 type Vector2 = { x: number; y: number }
 
-type VillagePlacementRenderItem = {
+type MapPlacementRenderItem = {
   image: HTMLImageElement
   worldX: number
   worldY: number
@@ -98,16 +100,15 @@ type ActiveRun = {
   rewardGold: number
   rewardMaterials: number
   map: MapDef
+  mapPack: OtherworldMapPack
   portalCell: { x: number; y: number }
 }
 
 const WIDTH = 960
 const HEIGHT = 540
 const TILE = 16
-const WORLD_COLS = 48
-const WORLD_ROWS = 27
 const PORTAL_RADIUS = 30
-const MATRIX_PLAYER_PIXEL_SIZE = 3
+const MATRIX_PLAYER_PIXEL_SIZE = 2.1
 const MATRIX_ATTACK_DURATION_MS = 420
 const matrixKnightManifest = knightManifestData as MatrixManifest
 type MatrixEquipmentLoadout = Partial<Record<MatrixEquipmentSlot, MatrixEquipmentPiece | null>>
@@ -138,103 +139,6 @@ function normalize(vector: Vector2) {
 
 function randomBetween(min: number, max: number) {
   return min + Math.random() * (max - min)
-}
-
-function makeGrid() {
-  return Array.from({ length: WORLD_ROWS }, () => Array.from({ length: WORLD_COLS }, () => '#'))
-}
-
-function carveRect(grid: string[][], x: number, y: number, w: number, h: number, fill = '.') {
-  for (let row = y; row < y + h; row += 1) {
-    for (let col = x; col < x + w; col += 1) {
-      if (row >= 0 && row < WORLD_ROWS && col >= 0 && col < WORLD_COLS) grid[row][col] = fill
-    }
-  }
-}
-
-function carvePath(grid: string[][], points: Array<[number, number]>) {
-  for (let index = 1; index < points.length; index += 1) {
-    const [fromX, fromY] = points[index - 1]
-    const [toX, toY] = points[index]
-    if (fromX === toX) {
-      const start = Math.min(fromY, toY)
-      const end = Math.max(fromY, toY)
-      for (let row = start; row <= end; row += 1) carveRect(grid, fromX - 1, row - 1, 3, 3)
-    } else if (fromY === toY) {
-      const start = Math.min(fromX, toX)
-      const end = Math.max(fromX, toX)
-      for (let col = start; col <= end; col += 1) carveRect(grid, col - 1, fromY - 1, 3, 3)
-    }
-  }
-}
-
-function buildMaze(dungeonId: DungeonId) {
-  const grid = makeGrid()
-  const start = { x: 3, y: 3 }
-  const portal = { x: 44, y: 23 }
-
-  const commonRooms: Array<[number, number, number, number]> = [
-    [1, 1, 8, 6],
-    [12, 1, 10, 5],
-    [25, 2, 9, 6],
-    [38, 1, 8, 7],
-    [4, 10, 10, 7],
-    [19, 11, 8, 5],
-    [31, 10, 13, 6],
-    [2, 20, 9, 5],
-    [15, 20, 11, 5],
-    [30, 19, 16, 7],
-  ]
-  const mazeVariantByDungeon: Record<DungeonId, 'open' | 'ruin' | 'crystal'> = {
-    'ember-forge': 'open',
-    'frost-peak': 'crystal',
-    'jade-tower': 'ruin',
-    'sun-obelisk': 'open',
-    'crystal-rift': 'crystal',
-    'autumn-wood': 'ruin',
-    'tide-cave': 'open',
-    'clock-temple': 'crystal',
-    'mushroom-marsh': 'ruin',
-    'cloud-altar': 'crystal',
-  }
-  const variant = mazeVariantByDungeon[dungeonId]
-  const roomVariants: Record<typeof variant, Array<[number, number, number, number]>> = {
-    open: commonRooms,
-    ruin: [...commonRooms, [21, 6, 5, 4], [9, 15, 5, 4]],
-    crystal: [...commonRooms, [35, 8, 6, 4], [27, 15, 4, 5]],
-  }
-  const paths: Record<typeof variant, Array<Array<[number, number]>>> = {
-    open: [
-      [[4, 4], [16, 4], [16, 13], [7, 13], [7, 22], [20, 22], [20, 13], [37, 13], [37, 22], [44, 22]],
-      [[20, 4], [29, 4], [29, 13]],
-      [[29, 4], [41, 4]],
-    ],
-    ruin: [
-      [[4, 4], [16, 4], [16, 13], [7, 13], [7, 22], [20, 22], [20, 13], [24, 13], [24, 7], [29, 7], [29, 13], [37, 13], [37, 22], [44, 22]],
-      [[20, 4], [41, 4]],
-      [[11, 13], [11, 16], [23, 16]],
-    ],
-    crystal: [
-      [[4, 4], [16, 4], [16, 13], [7, 13], [7, 22], [20, 22], [20, 13], [29, 13], [29, 17], [37, 17], [37, 22], [44, 22]],
-      [[20, 4], [29, 4], [29, 13]],
-      [[29, 4], [41, 4], [41, 9], [37, 9]],
-    ],
-  }
-
-  for (const room of roomVariants[variant]) carveRect(grid, ...room)
-  for (const path of paths[variant]) carvePath(grid, path)
-
-  grid[start.y][start.x] = 'S'
-  grid[portal.y][portal.x] = 'P'
-  return {
-    id: dungeonId,
-    kind: 'dungeon',
-    name: getDungeonById(dungeonId).name,
-    rows: grid.map((row) => row.join('')),
-    start,
-    portal,
-    hotspots: [],
-  } satisfies MapDef
 }
 
 const starterVillage = starterVillageMap
@@ -271,7 +175,11 @@ function worldFromCell(cell: { x: number; y: number }) {
   return { x: cell.x * TILE + TILE / 2, y: cell.y * TILE + TILE / 2 }
 }
 
-function getStarterVillageImagePad(map: MapDef, image: HTMLImageElement) {
+function randomInt(min: number, max: number) {
+  return Math.floor(randomBetween(min, max + 1))
+}
+
+function getMapImagePad(map: MapDef, image: HTMLImageElement) {
   const worldWidth = map.rows[0].length * TILE
   const worldHeight = map.rows.length * TILE
   return {
@@ -280,60 +188,76 @@ function getStarterVillageImagePad(map: MapDef, image: HTMLImageElement) {
   }
 }
 
-function randomWalkableCell(mapRows: string[], blocked: Array<{ x: number; y: number }>) {
+function randomWalkableCell(
+  mapRows: string[],
+  blocked: Array<{ cell: { x: number; y: number }; radius: number }>,
+  preferredArchetype: 'melee' | 'ranged' | 'mixed',
+) {
   const floorCells: Array<{ x: number; y: number }> = []
   for (let row = 0; row < mapRows.length; row += 1) {
     for (let col = 0; col < mapRows[row].length; col += 1) {
       const value = mapRows[row][col]
       if (value === '#' || value === 'S' || value === 'P') continue
-      const tooClose = blocked.some((cell) => Math.abs(cell.x - col) + Math.abs(cell.y - row) < 4)
+      const tooClose = blocked.some(({ cell, radius }) => Math.hypot(cell.x - col, cell.y - row) < radius)
       if (!tooClose) floorCells.push({ x: col, y: row })
     }
+  }
+  if (preferredArchetype === 'ranged') {
+    floorCells.sort((a, b) => a.y - b.y)
   }
   return floorCells[Math.floor(Math.random() * floorCells.length)]
 }
 
-function spawnEnemyClusters(mapRows: string[], dungeonId: DungeonId, difficulty: DifficultyTier) {
+function spawnEnemyClusters(map: MapDef, difficulty: DifficultyTier) {
   const difficultyConfig = difficultyConfigs[difficulty]
-  const start = { x: 3, y: 3 }
-  const portal = { x: 44, y: 23 }
-  const clusterCount = 6 + difficultyConfig.eliteSpawnBonus
+  const portal = map.portal ?? map.start
+  const clusterDefs = map.monsterClusters ?? []
   const enemies: EnemyState[] = []
 
-  for (let clusterIndex = 0; clusterIndex < clusterCount; clusterIndex += 1) {
-    const center = randomWalkableCell(mapRows, [start, portal])
-    const clusterSize = 2 + Math.floor(Math.random() * 3)
-    const rangedCluster = Math.random() > 0.52
-    const baseKindPool: EnemyKind[] = rangedCluster ? ['needlebat', 'sunpriest'] : ['mossling', 'vinebrute']
-    const clusterKind = baseKindPool[Math.floor(Math.random() * baseKindPool.length)]
+  for (const clusterDef of clusterDefs) {
+    const clusterCount = randomInt(clusterDef.clusterCount.min, clusterDef.clusterCount.max) + difficultyConfig.eliteSpawnBonus
 
-    for (let memberIndex = 0; memberIndex < clusterSize; memberIndex += 1) {
-      const candidate = {
-        x: center.x + Math.floor(randomBetween(-2, 3)),
-        y: center.y + Math.floor(randomBetween(-2, 3)),
+    for (let clusterIndex = 0; clusterIndex < clusterCount; clusterIndex += 1) {
+      const center = randomWalkableCell(
+        map.rows,
+        [
+          { cell: map.start, radius: clusterDef.safeRadiusFromStart },
+          { cell: portal, radius: clusterDef.safeRadiusFromPortal },
+        ],
+        clusterDef.archetype,
+      )
+      if (!center) continue
+      const clusterSize = randomInt(clusterDef.membersPerCluster.min, clusterDef.membersPerCluster.max)
+      const clusterKind = clusterDef.kinds[Math.floor(Math.random() * clusterDef.kinds.length)] as EnemyKind
+
+      for (let memberIndex = 0; memberIndex < clusterSize; memberIndex += 1) {
+        const candidate = {
+          x: center.x + Math.floor(randomBetween(-3, 4)),
+          y: center.y + Math.floor(randomBetween(-3, 4)),
+        }
+        if (isWall(map.rows, candidate.x, candidate.y)) continue
+        if (map.rows[candidate.y][candidate.x] === 'S' || map.rows[candidate.y][candidate.x] === 'P') continue
+
+        const elite = memberIndex === 0 && Math.random() < clusterDef.eliteChance
+        const melee = clusterKind === 'mossling' || clusterKind === 'vinebrute'
+        const baseHealth = clusterKind === 'vinebrute' ? 92 : clusterKind === 'sunpriest' ? 56 : clusterKind === 'needlebat' ? 44 : 52
+        const baseDamage = clusterKind === 'vinebrute' ? 16 : clusterKind === 'sunpriest' ? 15 : clusterKind === 'needlebat' ? 11 : 12
+
+        enemies.push({
+          id: `${clusterDef.id}-${clusterKind}-${clusterIndex}-${memberIndex}-${performance.now()}`,
+          kind: clusterKind,
+          ...worldFromCell(candidate),
+          radius: melee ? 16 : 13,
+          health: baseHealth * difficultyConfig.enemyHealthMultiplier * (elite ? 1.4 : 1),
+          maxHealth: baseHealth * difficultyConfig.enemyHealthMultiplier * (elite ? 1.4 : 1),
+          speed: melee ? (clusterKind === 'vinebrute' ? 92 : 108) : 0,
+          damage: baseDamage * difficultyConfig.enemyDamageMultiplier * (elite ? 1.16 : 1),
+          range: melee ? 38 : clusterKind === 'sunpriest' ? 270 : 240,
+          attackCooldownMs: randomBetween(520, 980),
+          elite,
+          archetype: melee ? 'melee' : 'ranged',
+        })
       }
-      if (isWall(mapRows, candidate.x, candidate.y)) continue
-      if (mapRows[candidate.y][candidate.x] === 'S' || mapRows[candidate.y][candidate.x] === 'P') continue
-
-      const elite = memberIndex === 0 && clusterIndex >= 2 && Math.random() > 0.68
-      const melee = clusterKind === 'mossling' || clusterKind === 'vinebrute'
-      const baseHealth = clusterKind === 'vinebrute' ? 92 : clusterKind === 'sunpriest' ? 56 : clusterKind === 'needlebat' ? 44 : 52
-      const baseDamage = clusterKind === 'vinebrute' ? 16 : clusterKind === 'sunpriest' ? 15 : clusterKind === 'needlebat' ? 11 : 12
-
-      enemies.push({
-        id: `${clusterKind}-${clusterIndex}-${memberIndex}-${performance.now()}`,
-        kind: clusterKind,
-        ...worldFromCell(candidate),
-        radius: melee ? 16 : 13,
-        health: baseHealth * difficultyConfig.enemyHealthMultiplier * (elite ? 1.4 : 1),
-        maxHealth: baseHealth * difficultyConfig.enemyHealthMultiplier * (elite ? 1.4 : 1),
-        speed: melee ? (clusterKind === 'vinebrute' ? 92 : 108) : 0,
-        damage: baseDamage * difficultyConfig.enemyDamageMultiplier * (elite ? 1.16 : 1),
-        range: melee ? 38 : clusterKind === 'sunpriest' ? 270 : 240,
-        attackCooldownMs: randomBetween(520, 980),
-        elite,
-        archetype: melee ? 'melee' : 'ranged',
-      })
     }
   }
   return enemies
@@ -362,8 +286,10 @@ export class PixelKnightGame {
   private nearbyHotspot: MapHotspot | null = null
   private lastHomeHudSignature: string | null = null
   private lastMinimapPlayerCellSignature: string | null = null
-  private villageBackdropCache: HTMLCanvasElement | null = null
-  private villagePlacementRenderItems: VillagePlacementRenderItem[] | null = null
+  private mapBackdropCache: HTMLCanvasElement | null = null
+  private mapBackdropCacheFor: string | null = null
+  private mapPlacementRenderItems: MapPlacementRenderItem[] | null = null
+  private mapPlacementRenderItemsFor: string | null = null
   private matrixEquipment: MatrixEquipmentLoadout = { ...defaultMatrixKnightEquipment }
 
   constructor(host: HTMLDivElement, callbacks: PixelKnightGameCallbacks) {
@@ -395,8 +321,8 @@ export class PixelKnightGame {
     window.addEventListener('keyup', this.onKeyUp)
 
     this.phase = 'home'
-    this.villageBackdropCache = null
-    this.villagePlacementRenderItems = null
+    this.mapBackdropCache = null
+    this.mapPlacementRenderItems = null
     this.enterVillage()
     this.emitHud()
     this.animationFrame = requestAnimationFrame(this.loop)
@@ -415,8 +341,10 @@ export class PixelKnightGame {
     stats: PlayerDerivedStats
     equipment?: MatrixEquipmentLoadout
   }) {
+    const mapPack = getOtherworldMapPack(config.dungeonId)
+    if (!mapPack) return false
     this.setEquipment(config.equipment)
-    const built = buildMaze(config.dungeonId)
+    const built = mapPack.map
     const startPos = worldFromCell(built.start)
     this.run = {
       dungeonId: config.dungeonId,
@@ -427,6 +355,7 @@ export class PixelKnightGame {
       rewardGold: 0,
       rewardMaterials: 0,
       map: built,
+      mapPack,
       portalCell: built.portal ?? { x: 0, y: 0 },
     }
     this.player = {
@@ -451,19 +380,23 @@ export class PixelKnightGame {
       attackAnimElapsedMs: 0,
       locomotionAnimElapsedMs: 0,
     }
-    this.enemies = spawnEnemyClusters(built.rows, config.dungeonId, config.difficulty)
+    this.enemies = spawnEnemyClusters(built, config.difficulty)
     this.projectiles = []
     this.trailSegments = []
-    this.lootFeed = ['探索迷宫，靠近尽头的传送点后按 F 返回村庄。']
+    this.lootFeed = ['探索副本，靠近尽头的传送点后按 F 返回村庄。']
     this.pauseRequested = false
     this.portalNearby = false
     this.nearbyHotspot = null
-    this.encounterLabel = '迷宫探索'
-    this.objectiveLabel = '穿越迷宫并带着战利品撤离'
+    this.encounterLabel = '副本探索'
+    this.objectiveLabel = '穿越枫林入口并带着战利品撤离'
     this.phase = 'playing'
-    this.villagePlacementRenderItems = null
+    this.mapBackdropCache = null
+    this.mapBackdropCacheFor = null
+    this.mapPlacementRenderItems = null
+    this.mapPlacementRenderItemsFor = null
     this.lastMinimapPlayerCellSignature = null
     this.emitHud()
+    return true
   }
 
   setPaused(paused: boolean) {
@@ -516,8 +449,10 @@ export class PixelKnightGame {
     this.phase = 'home'
     this.pauseRequested = false
     this.portalNearby = false
-    this.villageBackdropCache = null
-    this.villagePlacementRenderItems = null
+    this.mapBackdropCache = null
+    this.mapBackdropCacheFor = null
+    this.mapPlacementRenderItems = null
+    this.mapPlacementRenderItemsFor = null
     this.lastMinimapPlayerCellSignature = null
     this.encounterLabel = '新手村'
     this.objectiveLabel = '在村庄中移动，靠近地标后按 F 互动'
@@ -528,8 +463,10 @@ export class PixelKnightGame {
 
   /** Backdrop cache can bake before PNG preload finishes — drop canvas so next frame rebuilds once assets exist. */
   invalidateVillageTerrainCache() {
-    this.villageBackdropCache = null
-    this.villagePlacementRenderItems = null
+    this.mapBackdropCache = null
+    this.mapBackdropCacheFor = null
+    this.mapPlacementRenderItems = null
+    this.mapPlacementRenderItemsFor = null
   }
 
   dispose() {
@@ -541,8 +478,10 @@ export class PixelKnightGame {
     }
     window.removeEventListener('keydown', this.onKeyDown)
     window.removeEventListener('keyup', this.onKeyUp)
-    this.villageBackdropCache = null
-    this.villagePlacementRenderItems = null
+    this.mapBackdropCache = null
+    this.mapBackdropCacheFor = null
+    this.mapPlacementRenderItems = null
+    this.mapPlacementRenderItemsFor = null
   }
 
   private onMouseMove = (event: MouseEvent) => {
@@ -735,10 +674,10 @@ export class PixelKnightGame {
 
     const portalPos = worldFromCell(this.run.portalCell)
     this.portalNearby = distance(this.player, portalPos) < PORTAL_RADIUS + 26
-    this.encounterLabel = this.portalNearby ? '传送点已就绪' : '迷宫探索'
+    this.encounterLabel = this.portalNearby ? '传送点已就绪' : '副本探索'
     this.objectiveLabel = this.portalNearby
       ? '按 F 交互并返回村庄'
-      : '探索迷宫深处，靠近尽头传送点后撤离'
+      : '探索副本深处，靠近尽头传送点后撤离'
 
     this.emitHud()
   }
@@ -1037,7 +976,7 @@ export class PixelKnightGame {
     const state: PixelKnightHudState = {
       phase: this.phase,
       mapKind: map?.kind ?? 'village',
-      dungeonName: this.run ? getDungeonById(this.run.dungeonId).name : starterVillage.name,
+      dungeonName: this.run ? this.run.map.name : starterVillage.name,
       difficultyLabel: this.run ? difficultyConfigs[this.run.difficulty].label : '准备中',
       objectiveLabel: this.objectiveLabel,
       encounterLabel: this.encounterLabel,
@@ -1107,7 +1046,7 @@ export class PixelKnightGame {
     ctx.clearRect(0, 0, WIDTH, HEIGHT)
 
     if (this.phase === 'home') {
-      this.renderVillageScene(ctx)
+      this.renderMapScene(ctx)
       return
     }
 
@@ -1117,93 +1056,26 @@ export class PixelKnightGame {
     }
 
     if (!this.run) return
-    const palette = getDungeonById(this.run.dungeonId).palette
     const camera = this.getCamera()
+    this.renderMapBackdrop(ctx, camera)
 
-    ctx.fillStyle = palette.sky
-    ctx.fillRect(0, 0, WIDTH, HEIGHT)
-
-    for (let row = 0; row < this.run.map.rows.length; row += 1) {
-      for (let col = 0; col < this.run.map.rows[row].length; col += 1) {
-        const tile = this.run.map.rows[row][col]
-        const screenX = col * TILE - camera.x
-        const screenY = row * TILE - camera.y
-        if (screenX + TILE < 0 || screenX > WIDTH || screenY + TILE < 0 || screenY > HEIGHT) continue
-
-        if (tile === '#') {
-          ctx.fillStyle = palette.border
-          ctx.fillRect(screenX, screenY, TILE, TILE)
-          ctx.fillStyle = 'rgba(0,0,0,0.12)'
-          ctx.fillRect(screenX + 6, screenY + 6, TILE - 12, TILE - 12)
-        } else {
-          ctx.fillStyle = palette.ground
-          ctx.fillRect(screenX, screenY, TILE, TILE)
-          ctx.fillStyle = 'rgba(255,255,255,0.04)'
-          ctx.fillRect(screenX + 2, screenY + 2, TILE - 4, TILE - 4)
-          if (tile === 'P') {
-            ctx.fillStyle = '#8ce5ff'
-            ctx.beginPath()
-            ctx.arc(screenX + TILE / 2, screenY + TILE / 2, 18, 0, Math.PI * 2)
-            ctx.fill()
-            ctx.strokeStyle = 'rgba(255,255,255,0.7)'
-            ctx.lineWidth = 3
-            ctx.stroke()
-          }
-        }
-      }
-    }
-
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
     for (const segment of this.trailSegments) {
       ctx.fillStyle = `rgba(251,242,176,${segment.lifeMs / 600})`
       ctx.beginPath()
       ctx.arc(segment.x - camera.x, segment.y - camera.y, 18 - (1 - segment.lifeMs / 500) * 6, 0, Math.PI * 2)
       ctx.fill()
     }
+    ctx.restore()
 
-    for (const enemy of this.enemies) {
-      const x = enemy.x - camera.x
-      const y = enemy.y - camera.y
-      ctx.fillStyle =
-        enemy.kind === 'vinebrute'
-          ? '#567a3d'
-          : enemy.kind === 'sunpriest'
-            ? '#c39d52'
-            : enemy.kind === 'needlebat'
-              ? '#6d5cb0'
-              : '#5e8b48'
-      ctx.beginPath()
-      ctx.arc(x, y, enemy.radius, 0, Math.PI * 2)
-      ctx.fill()
-      if (enemy.elite) {
-        ctx.strokeStyle = '#ffdc75'
-        ctx.lineWidth = 3
-        ctx.stroke()
-      }
-      ctx.fillStyle = 'rgba(17,21,18,0.85)'
-      ctx.fillRect(x - 18, y - enemy.radius - 18, 36, 5)
-      ctx.fillStyle = '#f4cd73'
-      ctx.fillRect(x - 18, y - enemy.radius - 18, 36 * (enemy.health / enemy.maxHealth), 5)
-    }
+    this.renderDepthSortedEntities(ctx, camera)
 
     for (const projectile of this.projectiles) {
       ctx.fillStyle = projectile.from === 'enemy' ? '#ffd6b3' : '#f7ffab'
       ctx.beginPath()
       ctx.arc(projectile.x - camera.x, projectile.y - camera.y, projectile.radius, 0, Math.PI * 2)
       ctx.fill()
-    }
-
-    if (this.player) {
-      const x = this.player.x - camera.x
-      const y = this.player.y - camera.y
-      const facing = this.getFacingDirection(camera)
-      this.renderMatrixPlayer(ctx, x, y, facing, this.player)
-      if (this.player.whirlMs > 0) {
-        ctx.strokeStyle = 'rgba(255,243,173,0.8)'
-        ctx.lineWidth = 4
-        ctx.beginPath()
-        ctx.arc(x, y, 38, 0, Math.PI * 2)
-        ctx.stroke()
-      }
     }
 
     if (this.portalNearby && this.player) {
@@ -1216,10 +1088,10 @@ export class PixelKnightGame {
     }
   }
 
-  private renderVillageScene(ctx: CanvasRenderingContext2D) {
+  private renderMapScene(ctx: CanvasRenderingContext2D) {
     const camera = this.getCamera()
-    this.renderVillageBackdrop(ctx, camera)
-    this.renderVillageDepthSortedEntities(ctx, camera)
+    this.renderMapBackdrop(ctx, camera)
+    this.renderDepthSortedEntities(ctx, camera)
     this.renderVillageHotspotPrompt(ctx, camera)
   }
 
@@ -1276,18 +1148,25 @@ export class PixelKnightGame {
     ctx.restore()
   }
 
-  private buildVillagePlacementRenderItems() {
-    if (this.villagePlacementRenderItems) return this.villagePlacementRenderItems
+  private buildMapPlacementRenderItems() {
     const map = this.getActiveMap()
-    if (!map || map.id !== 'starter-village') return []
-    const backdrop = getPixelKnightVillageAsset('starter-village-v7-backdrop')
+    if (!map) return []
+    if (this.mapPlacementRenderItems && this.mapPlacementRenderItemsFor === map.id) return this.mapPlacementRenderItems
+    const backdrop =
+      map.id === 'starter-village'
+        ? getPixelKnightVillageAsset('starter-village-v7-backdrop')
+        : getPixelKnightOtherworldMapAsset(getOtherworldMapBackdropAssetId(map.id))
     if (!backdrop?.naturalWidth) return []
 
-    const pad = getStarterVillageImagePad(map, backdrop)
-    const items: VillagePlacementRenderItem[] = []
+    const pad = getMapImagePad(map, backdrop)
+    const items: MapPlacementRenderItem[] = []
+    const placements = map.id === 'starter-village' ? starterVillagePlacements : this.run?.mapPack.placements
 
-    for (const placement of starterVillagePlacements.placements) {
-      const image = getPixelKnightVillageAsset(getStarterVillageAtomAssetId(placement.assetKey))
+    for (const placement of placements?.placements ?? []) {
+      const image =
+        map.id === 'starter-village'
+          ? getPixelKnightVillageAsset(getStarterVillageAtomAssetId(placement.assetKey))
+          : getPixelKnightOtherworldMapAsset(getOtherworldMapAtomAssetId(map.id, placement.assetKey))
       if (!image?.naturalWidth) continue
       const worldX = pad.x + placement.x
       const worldY = pad.y + placement.y
@@ -1304,66 +1183,92 @@ export class PixelKnightGame {
     }
 
     items.sort((a, b) => a.sortY - b.sortY)
-    this.villagePlacementRenderItems = items
+    this.mapPlacementRenderItems = items
+    this.mapPlacementRenderItemsFor = map.id
     return items
   }
 
-  private drawVillagePlacement(ctx: CanvasRenderingContext2D, camera: Vector2, item: VillagePlacementRenderItem) {
+  private drawMapPlacement(ctx: CanvasRenderingContext2D, camera: Vector2, item: MapPlacementRenderItem) {
     const x = item.worldX - camera.x
     const y = item.worldY - camera.y
     if (x + item.width < 0 || y + item.height < 0 || x > WIDTH || y > HEIGHT) return
     ctx.drawImage(item.image, x, y, item.width, item.height)
   }
 
-  private renderVillageDepthSortedEntities(ctx: CanvasRenderingContext2D, camera: Vector2) {
-    const placements = this.buildVillagePlacementRenderItems()
+  private drawEnemy(ctx: CanvasRenderingContext2D, camera: Vector2, enemy: EnemyState) {
+    const x = enemy.x - camera.x
+    const y = enemy.y - camera.y
+    ctx.fillStyle =
+      enemy.kind === 'vinebrute'
+        ? '#567a3d'
+        : enemy.kind === 'sunpriest'
+          ? '#c39d52'
+          : enemy.kind === 'needlebat'
+            ? '#6d5cb0'
+            : '#5e8b48'
+    ctx.beginPath()
+    ctx.arc(x, y, enemy.radius, 0, Math.PI * 2)
+    ctx.fill()
+    if (enemy.elite) {
+      ctx.strokeStyle = '#ffdc75'
+      ctx.lineWidth = 3
+      ctx.stroke()
+    }
+    ctx.fillStyle = 'rgba(17,21,18,0.85)'
+    ctx.fillRect(x - 18, y - enemy.radius - 18, 36, 5)
+    ctx.fillStyle = '#f4cd73'
+    ctx.fillRect(x - 18, y - enemy.radius - 18, 36 * (enemy.health / enemy.maxHealth), 5)
+  }
+
+  private drawPlayer(ctx: CanvasRenderingContext2D, camera: Vector2) {
+    if (!this.player) return
+    const x = this.player.x - camera.x
+    const y = this.player.y - camera.y
+    const facing = this.getFacingDirection(camera)
+    this.renderMatrixPlayer(ctx, x, y, facing, this.player)
+    if (this.player.whirlMs > 0) {
+      ctx.strokeStyle = 'rgba(255,243,173,0.8)'
+      ctx.lineWidth = 4
+      ctx.beginPath()
+      ctx.arc(x, y, 38, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+  }
+
+  private renderDepthSortedEntities(ctx: CanvasRenderingContext2D, camera: Vector2) {
+    const placements = this.buildMapPlacementRenderItems()
+    const entities: Array<
+      | { type: 'placement'; sortY: number; item: MapPlacementRenderItem }
+      | { type: 'enemy'; sortY: number; enemy: EnemyState }
+      | { type: 'player'; sortY: number }
+    > = placements.map((item) => ({ type: 'placement', sortY: item.sortY, item }))
+    for (const enemy of this.enemies) entities.push({ type: 'enemy', sortY: enemy.y + enemy.radius, enemy })
+    if (this.player) entities.push({ type: 'player', sortY: this.player.y + 8 })
+    entities.sort((a, b) => a.sortY - b.sortY)
 
     ctx.save()
     ctx.imageSmoothingEnabled = false
 
-    if (!this.player) {
-      for (const item of placements) this.drawVillagePlacement(ctx, camera, item)
-      ctx.restore()
-      return
-    }
-
-    const playerSortY = this.player.y + 8
-    let index = 0
-    while (index < placements.length && placements[index].sortY <= playerSortY) {
-      this.drawVillagePlacement(ctx, camera, placements[index])
-      index += 1
-    }
-
-    if (this.player) {
-      const x = this.player.x - camera.x
-      const y = this.player.y - camera.y
-      const facing = this.getFacingDirection(camera)
-      this.renderMatrixPlayer(ctx, x, y, facing, this.player)
-      if (this.player.whirlMs > 0) {
-        ctx.strokeStyle = 'rgba(255,243,173,0.8)'
-        ctx.lineWidth = 4
-        ctx.beginPath()
-        ctx.arc(x, y, 38, 0, Math.PI * 2)
-        ctx.stroke()
-      }
-    }
-
-    while (index < placements.length) {
-      this.drawVillagePlacement(ctx, camera, placements[index])
-      index += 1
+    for (const entity of entities) {
+      if (entity.type === 'placement') this.drawMapPlacement(ctx, camera, entity.item)
+      if (entity.type === 'enemy') this.drawEnemy(ctx, camera, entity.enemy)
+      if (entity.type === 'player') this.drawPlayer(ctx, camera)
     }
 
     ctx.restore()
   }
 
-  private bakeVillageBackdropCacheIfNeeded() {
-    if (this.villageBackdropCache) return
-    const image = getPixelKnightVillageAsset('starter-village-v7-backdrop')
-    if (!image?.naturalWidth) return
+  private bakeMapBackdropCacheIfNeeded() {
     const map = this.getActiveMap()
-    if (!map || map.id !== 'starter-village') return
+    if (!map) return
+    if (this.mapBackdropCache && this.mapBackdropCacheFor === map.id) return
+    const image =
+      map.id === 'starter-village'
+        ? getPixelKnightVillageAsset('starter-village-v7-backdrop')
+        : getPixelKnightOtherworldMapAsset(getOtherworldMapBackdropAssetId(map.id))
+    if (!image?.naturalWidth) return
 
-    const pad = getStarterVillageImagePad(map, image)
+    const pad = getMapImagePad(map, image)
     const worldWidth = map.rows[0].length * TILE
     const worldHeight = map.rows.length * TILE
 
@@ -1375,12 +1280,13 @@ export class PixelKnightGame {
     bctx.imageSmoothingEnabled = false
     bctx.clearRect(0, 0, canvas.width, canvas.height)
     bctx.drawImage(image, pad.x, pad.y)
-    this.villageBackdropCache = canvas
+    this.mapBackdropCache = canvas
+    this.mapBackdropCacheFor = map.id
   }
 
-  private renderVillageBackdrop(ctx: CanvasRenderingContext2D, camera: Vector2) {
-    this.bakeVillageBackdropCacheIfNeeded()
-    const cache = this.villageBackdropCache
+  private renderMapBackdrop(ctx: CanvasRenderingContext2D, camera: Vector2) {
+    this.bakeMapBackdropCacheIfNeeded()
+    const cache = this.mapBackdropCache
     if (!cache) return
     const sx = camera.x
     const sy = camera.y

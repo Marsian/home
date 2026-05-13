@@ -38,33 +38,31 @@ export default function PixelKnightMapEditorFilesView() {
 
         <div className="space-y-3">
           <div className="text-xs tracking-[0.26em] text-[#6c7753] uppercase">地图列表</div>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {maps.map((map) => (
               <div
                 key={map.slug}
-                className="rounded-[1.2rem] border border-[#2f4328]/10 bg-[#fffdf4] p-3 shadow-[0_18px_70px_rgba(60,66,31,0.14)]"
+                className="flex min-h-24 items-center gap-3 rounded-lg border border-[#2f4328]/10 bg-[#fffdf4] p-2.5 shadow-[0_10px_30px_rgba(60,66,31,0.1)]"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-black tracking-[0.08em] text-[#243019]">{displayNameForMapFolder(map)}</div>
-                    <div className="mt-1 font-mono text-[0.65rem] text-[#5b6646]">maps/{map.slug}</div>
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={() => navigate(`/games/pixel-knight/map-editor/edit/${encodeURIComponent(map.slug)}`)}
-                    className="bg-[#30422a] text-[#fbf5e5] hover:bg-[#23321d]"
-                  >
-                    <Hammer />
-                    编辑
-                  </Button>
-                </div>
-                <div className="mt-3 overflow-hidden rounded-[0.95rem] border border-[#2f4328]/10 bg-[#1f2a19]">
+                <div className="h-20 w-32 shrink-0 overflow-hidden rounded-md border border-[#2f4328]/10 bg-[#1f2a19] sm:w-36">
                   <img
                     src={map.backdropUrl}
                     alt=""
-                    className="block aspect-[16/9] w-full object-cover"
+                    className="block h-full w-full object-cover"
                   />
                 </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-black tracking-[0.08em] text-[#243019]">{displayNameForMapFolder(map)}</div>
+                  <div className="mt-1 truncate font-mono text-[0.65rem] text-[#5b6646]">maps/{map.slug}</div>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => navigate(`/games/pixel-knight/map-editor/edit/${encodeURIComponent(map.slug)}`)}
+                  className="h-10 shrink-0 bg-[#30422a] px-3 text-[#fbf5e5] hover:bg-[#23321d] sm:px-4"
+                >
+                  <Hammer />
+                  编辑
+                </Button>
               </div>
             ))}
           </div>

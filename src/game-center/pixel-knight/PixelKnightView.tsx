@@ -61,6 +61,7 @@ import {
   slotLabel,
 } from './content/data'
 import { clearPixelKnightPreloadCache, preloadPixelKnightAssets } from './game/preload'
+import { availableOtherworldDungeonIds } from './maps/otherworldRegistry'
 import { PixelKnightGame } from './pixelKnightGame'
 import {
   applyPixelKnightRunResult,
@@ -88,7 +89,7 @@ import { OtherworldMapOverlay } from './ui/OtherworldMapOverlay'
 
 const initialPreload: PreloadProgress = {
   loaded: 0,
-  total: 3,
+  total: 4,
   ratio: 0,
   label: '正在校准副本与词条表',
 }
@@ -483,12 +484,13 @@ export default function PixelKnightView() {
   }, [gameEquipment])
 
   const startRun = () => {
-    gameRef.current?.startRun({
+    const didStart = gameRef.current?.startRun({
       dungeonId: selected.dungeonId,
       difficulty: selected.selectedDifficulty,
       stats: playerStats,
       equipment: gameEquipment,
     })
+    if (!didStart) return
     setPhase('playing')
     setActiveVillagePanel(null)
     setInventoryOpen(false)
@@ -780,6 +782,7 @@ export default function PixelKnightView() {
               <OtherworldMapOverlay
                 selectedDungeonId={selected.dungeonId}
                 unlockedDifficultiesByDungeon={profile.unlockedDifficultiesByDungeon}
+                availableDungeonIds={availableOtherworldDungeonIds}
                 onSelectDungeon={(dungeonId) =>
                   setSelected({
                     dungeonId,

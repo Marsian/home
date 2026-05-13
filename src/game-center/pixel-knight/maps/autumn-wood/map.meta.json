@@ -1,0 +1,67 @@
+{
+  "id": "autumn-wood",
+  "kind": "dungeon",
+  "dungeonId": "autumn-wood",
+  "name": "枫林入口",
+  "start": {
+    "x": 14,
+    "y": 69
+  },
+  "portal": {
+    "x": 114,
+    "y": 12
+  },
+  "monsterClusters": [
+    {
+      "id": "maple-grove-patrols",
+      "kinds": [
+        "mossling",
+        "needlebat"
+      ],
+      "clusterCount": {
+        "min": 3,
+        "max": 4
+      },
+      "membersPerCluster": {
+        "min": 2,
+        "max": 4
+      },
+      "eliteChance": 0.16,
+      "safeRadiusFromStart": 13,
+      "safeRadiusFromPortal": 8,
+      "archetype": "mixed"
+    },
+    {
+      "id": "ruin-guardians",
+      "kinds": [
+        "vinebrute",
+        "sunpriest"
+      ],
+      "clusterCount": {
+        "min": 2,
+        "max": 3
+      },
+      "membersPerCluster": {
+        "min": 2,
+        "max": 3
+      },
+      "eliteChance": 0.28,
+      "safeRadiusFromStart": 24,
+      "safeRadiusFromPortal": 6,
+      "archetype": "mixed"
+    }
+  ],
+  "hotspots": [
+    {
+      "id": "portal",
+      "kind": "portal",
+      "label": "返回",
+      "prompt": "按 F：返回",
+      "cell": {
+        "x": 108,
+        "y": 12
+      },
+      "radius": 40
+    }
+  ]
+}

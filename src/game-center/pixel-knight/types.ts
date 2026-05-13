@@ -63,14 +63,27 @@ export type MapHotspot = {
   radius: number
 }
 
+export type MapMonsterClusterDef = {
+  id: string
+  kinds: Exclude<EnemyKind, 'boss'>[]
+  clusterCount: { min: number; max: number }
+  membersPerCluster: { min: number; max: number }
+  eliteChance: number
+  safeRadiusFromStart: number
+  safeRadiusFromPortal: number
+  archetype: 'melee' | 'ranged' | 'mixed'
+}
+
 export type MapDef = {
   id: string
   kind: PixelKnightMapKind
+  dungeonId?: DungeonId
   name: string
   rows: string[]
   start: { x: number; y: number }
   portal?: { x: number; y: number }
   hotspots?: MapHotspot[]
+  monsterClusters?: MapMonsterClusterDef[]
 }
 
 export type VillageLandmarkPlacement = {

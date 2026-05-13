@@ -44,12 +44,14 @@ import statGoldIconUrl from '@/game-center/pixel-knight/assets/ui/inventory/stat
 import statHealthIconUrl from '@/game-center/pixel-knight/assets/ui/inventory/stats/health.png'
 import statMoveSpeedIconUrl from '@/game-center/pixel-knight/assets/ui/inventory/stats/move-speed.png'
 import statSkillIconUrl from '@/game-center/pixel-knight/assets/ui/inventory/stats/skill.png'
+import { type OtherworldMapAssetId, otherworldMapAssetSources } from '../rendering/otherworldMapAssets'
 import { type VillageAssetId, villageAssetSources } from '../rendering/villageAssets'
 import type { PreloadProgress } from '../types'
 
 let cachedPromise: Promise<void> | null = null
 let warmLoaded = false
 let villageAssetCache: Record<VillageAssetId, HTMLImageElement> | null = null
+let otherworldMapAssetCache: Record<OtherworldMapAssetId, HTMLImageElement> | null = null
 let uiAssetsLoaded = false
 let otherworldAssetsLoaded = false
 
@@ -155,6 +157,10 @@ function getAllVillageAssets(): VillageAssetId[] {
   return Object.keys(villageAssetSources) as VillageAssetId[]
 }
 
+function getAllOtherworldMapAssets(): OtherworldMapAssetId[] {
+  return Object.keys(otherworldMapAssetSources) as OtherworldMapAssetId[]
+}
+
 async function preloadUiAssets() {
   if (uiAssetsLoaded) return
   await Promise.all(pixelKnightUiAssetSources.map((src) => loadImage(src)))
@@ -180,6 +186,25 @@ async function preloadVillageAssets(required: VillageAssetId[]) {
   }
 }
 
+async function preloadOtherworldMapAssets(required: OtherworldMapAssetId[]) {
+  const missing = required.filter((id) => !otherworldMapAssetCache?.[id])
+  if (!missing.length) return
+
+  const entries = await Promise.all(
+    missing.map(async (id) => {
+      const src = otherworldMapAssetSources[id]
+      const image = await loadImage(src)
+      return [id, image] as const
+    }),
+  )
+  primeImageDraws(entries.map(([, image]) => image))
+
+  otherworldMapAssetCache = {
+    ...(otherworldMapAssetCache ?? ({} as Record<OtherworldMapAssetId, HTMLImageElement>)),
+    ...(Object.fromEntries(entries) as Record<OtherworldMapAssetId, HTMLImageElement>),
+  }
+}
+
 async function preloadOtherworldAssets() {
   if (otherworldAssetsLoaded) return
   const images = await Promise.all(pixelKnightOtherworldAssetSources.map((src) => loadImage(src)))
@@ -191,6 +216,9 @@ export function getPixelKnightVillageAsset(id: VillageAssetId) {
   return villageAssetCache?.[id] ?? null
 }
 
+export function getPixelKnightOtherworldMapAsset(id: OtherworldMapAssetId) {
+  return otherworldMapAssetCache?.[id] ?? null
+}
 
 export async function preloadGameData() {
   validateStaticData()
@@ -201,6 +229,7 @@ export function clearPixelKnightPreloadCache() {
   cachedPromise = null
   warmLoaded = false
   villageAssetCache = null
+  otherworldMapAssetCache = null
   uiAssetsLoaded = false
   otherworldAssetsLoaded = false
 }
@@ -210,6 +239,7 @@ export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress)
     const params = new URLSearchParams(window.location.search)
     const shouldFail = params.get('pixelKnightPreloadFail') === '1'
     const villageAssets = getAllVillageAssets()
+    const otherworldMapAssets = getAllOtherworldMapAssets()
 
     for (let index = 0; index < preloadSteps.length; index += 1) {
       const step = preloadSteps[index]
@@ -219,7 +249,10 @@ export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress)
       if (index === 0) await preloadGameData()
       if (index === 1) await preloadUiAssets()
       if (index === 2) await preloadVillageAssets(villageAssets)
-      if (index === 3) await preloadOtherworldAssets()
+      if (index === 3) {
+        await preloadOtherworldAssets()
+        await preloadOtherworldMapAssets(otherworldMapAssets)
+      }
 
       await sleep(warmLoaded ? Math.max(35, step.wait * 0.22) : step.wait)
       onProgress({

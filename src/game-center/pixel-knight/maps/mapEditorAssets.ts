@@ -4,6 +4,7 @@
  */
 
 export type PixelKnightMapFolderMeta = {
+  [key: string]: unknown
   id?: string
   kind?: string
   name?: string
@@ -92,11 +93,13 @@ export type EditorHotspotPayload = {
 export type EditorMapMetaFile = PixelKnightMapFolderMeta
 
 export type EditorPlacementsFileV1 = {
+  [key: string]: unknown
   image?: { width: number; height: number }
   placements?: EditorPlacementPayload[]
 }
 
 export type EditorObstaclesFileV1 = {
+  [key: string]: unknown
   tile?: number
   cols?: number
   rows?: number

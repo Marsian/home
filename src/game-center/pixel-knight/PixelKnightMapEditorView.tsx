@@ -1,6 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import { ArrowLeft, Crosshair, Download, Grid3X3, Hand, Layers, MapPin, Plus, RotateCcw, X } from 'lucide-react'
+import {
+  ArrowLeft,
+  Brush,
+  Crosshair,
+  Download,
+  Eraser,
+  Grid3X3,
+  Hand,
+  Layers,
+  MapPin,
+  Plus,
+  RotateCcw,
+  Save,
+  Square,
+  X,
+} from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -15,17 +30,25 @@ import {
   isKnownPixelKnightMapSlug,
   listPixelKnightMapFolders,
   type EditorHotspotPayload,
+  type EditorMapMetaFile,
+  type EditorObstaclesFileV1,
   type EditorPlacementPayload,
+  type EditorPlacementsFileV1,
 } from '@/game-center/pixel-knight/maps/mapEditorAssets'
 
 const TILE = 16
 
 type EditorTab = 'placement' | 'obstacles' | 'interactions'
+type ObstacleTool = 'brush' | 'eraser' | 'rect-add' | 'rect-erase'
 type AtomAsset = { key: string; src: string }
 type Placement = EditorPlacementPayload
 type Hotspot = EditorHotspotPayload
+type SaveStatus = { tone: 'success' | 'error' | 'idle'; message: string } | null
+type Cell = { col: number; row: number }
+type CellRect = { left: number; top: number; right: number; bottom: number }
 
 const HOTSPOT_KINDS = ['portal', 'shop', 'stash', 'blacksmith', 'notice-board', 'gemsmith'] as const
+const OBSTACLE_BRUSH_SIZES = [1, 3, 5, 9, 15, 25] as const
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value))
@@ -37,6 +60,25 @@ function normalizeScale(value: number) {
 
 function worldFromCell(cell: { x: number; y: number }) {
   return { x: cell.x * TILE + TILE / 2, y: cell.y * TILE + TILE / 2 }
+}
+
+function normalizeCellRect(a: Cell, b: Cell): CellRect {
+  return {
+    left: Math.min(a.col, b.col),
+    top: Math.min(a.row, b.row),
+    right: Math.max(a.col, b.col),
+    bottom: Math.max(a.row, b.row),
+  }
+}
+
+function rectFromBrush(center: Cell, brushSize: number, maxCols: number, maxRows: number): CellRect {
+  const radius = Math.floor(brushSize / 2)
+  return {
+    left: clamp(center.col - radius, 0, maxCols - 1),
+    top: clamp(center.row - radius, 0, maxRows - 1),
+    right: clamp(center.col + radius, 0, maxCols - 1),
+    bottom: clamp(center.row + radius, 0, maxRows - 1),
+  }
 }
 
 function downloadJson(filename: string, value: unknown) {
@@ -86,8 +128,15 @@ export default function PixelKnightMapEditorView() {
   const rows = Math.ceil(imgSize.height / TILE)
 
   const [placements, setPlacements] = useState<Placement[]>([])
+  const [placementsBase, setPlacementsBase] = useState<EditorPlacementsFileV1>({})
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [blocked, setBlocked] = useState<Uint8Array>(() => new Uint8Array(cols * rows))
+  const [obstaclesBase, setObstaclesBase] = useState<EditorObstaclesFileV1>({})
+  const [obstacleTool, setObstacleTool] = useState<ObstacleTool>('brush')
+  const [obstacleBrushSize, setObstacleBrushSize] = useState<(typeof OBSTACLE_BRUSH_SIZES)[number]>(5)
+  const [obstacleHoverCell, setObstacleHoverCell] = useState<Cell | null>(null)
+  const [obstacleDragPreview, setObstacleDragPreview] = useState<{ rect: CellRect; mode: 'add' | 'erase' } | null>(null)
+  const [mapMetaBase, setMapMetaBase] = useState<EditorMapMetaFile>({})
   const [mapMeta, setMapMeta] = useState({
     id: mapSlug || 'map',
     kind: 'village',
@@ -97,6 +146,8 @@ export default function PixelKnightMapEditorView() {
   })
   const [hotspots, setHotspots] = useState<Hotspot[]>([])
   const [selectedHotspotId, setSelectedHotspotId] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>(null)
 
   const selected = useMemo(() => placements.find((p) => p.id === selectedId) ?? null, [placements, selectedId])
   const selectedHotspot = useMemo(
@@ -133,6 +184,7 @@ export default function PixelKnightMapEditorView() {
 
   useEffect(() => {
     const pack = mapSlug ? getPlacementsFileForMapSlug(mapSlug) : null
+    setPlacementsBase(pack ?? {})
     const list = pack?.placements
     if (Array.isArray(list) && list.every((p) => p && typeof p.id === 'string' && typeof p.assetKey === 'string')) {
       setPlacements(list as Placement[])
@@ -140,10 +192,12 @@ export default function PixelKnightMapEditorView() {
       setPlacements([])
     }
     setSelectedId(null)
+    setSaveStatus(null)
   }, [mapSlug])
 
   useEffect(() => {
     const meta = mapSlug ? getMapMetaFileForMapSlug(mapSlug) : null
+    setMapMetaBase(meta ?? {})
     setMapMeta({
       id: typeof meta?.id === 'string' ? meta.id : mapSlug || 'map',
       kind: typeof meta?.kind === 'string' ? meta.kind : 'village',
@@ -164,6 +218,7 @@ export default function PixelKnightMapEditorView() {
     const r = Math.ceil(imgSize.height / TILE)
     const next = new Uint8Array(c * r)
     const obs = mapSlug ? getObstaclesFileForMapSlug(mapSlug) : null
+    setObstaclesBase(obs ?? {})
     if (obs?.blocked?.length) {
       for (const cell of obs.blocked) {
         if (cell.col >= 0 && cell.col < c && cell.row >= 0 && cell.row < r) {
@@ -326,14 +381,13 @@ export default function PixelKnightMapEditorView() {
     window.addEventListener('pointerup', onUp)
   }
 
-  const exportPlacements = () => {
-    downloadJson('placements.v1.json', {
-      image: imgSize,
-      placements,
-    })
-  }
+  const buildPlacementsPayload = () => ({
+    ...placementsBase,
+    image: imgSize,
+    placements,
+  })
 
-  const exportObstacles = () => {
+  const buildObstaclesPayload = () => {
     const currentCols = Math.ceil(imgSize.width / TILE)
     const currentRows = Math.ceil(imgSize.height / TILE)
     const blockedCells: Array<{ col: number; row: number }> = []
@@ -343,20 +397,59 @@ export default function PixelKnightMapEditorView() {
         if (blocked[index]) blockedCells.push({ col, row })
       }
     }
-    downloadJson('obstacles16.v1.json', {
+    return {
+      ...obstaclesBase,
       tile: TILE,
       cols: currentCols,
       rows: currentRows,
       image: imgSize,
       blocked: blockedCells,
-    })
+    }
+  }
+
+  const buildMapMetaPayload = () => ({
+    ...mapMetaBase,
+    ...mapMeta,
+    hotspots,
+  })
+
+  const exportPlacements = () => {
+    downloadJson('placements.v1.json', buildPlacementsPayload())
+  }
+
+  const exportObstacles = () => {
+    downloadJson('obstacles16.v1.json', buildObstaclesPayload())
   }
 
   const exportMapMeta = () => {
-    downloadJson('map.meta.json', {
-      ...mapMeta,
-      hotspots,
-    })
+    downloadJson('map.meta.json', buildMapMetaPayload())
+  }
+
+  const saveMapPack = async () => {
+    setIsSaving(true)
+    setSaveStatus({ tone: 'idle', message: '正在保存到地图包…' })
+    try {
+      const response = await fetch('/api/pixel-knight/map-editor/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: mapSlug,
+          mapMeta: buildMapMetaPayload(),
+          placements: buildPlacementsPayload(),
+          obstacles: buildObstaclesPayload(),
+        }),
+      })
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null
+      if (!response.ok) {
+        throw new Error(payload?.error || `保存失败：HTTP ${response.status}`)
+      }
+      setSaveStatus({ tone: 'success', message: `已保存到 maps/${mapSlug}/` })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '保存失败'
+      setSaveStatus({ tone: 'error', message })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const addHotspot = () => {
@@ -420,45 +513,88 @@ export default function PixelKnightMapEditorView() {
     window.addEventListener('pointerup', onUp)
   }
 
-  const toggleObstacleAt = (worldX: number, worldY: number, value: 0 | 1) => {
+  const cellFromWorld = (worldX: number, worldY: number): Cell | null => {
     const col = Math.floor(worldX / TILE)
     const row = Math.floor(worldY / TILE)
     const currentCols = Math.ceil(imgSize.width / TILE)
     const currentRows = Math.ceil(imgSize.height / TILE)
-    if (col < 0 || row < 0 || col >= currentCols || row >= currentRows) return
-    const index = row * currentCols + col
+    if (col < 0 || row < 0 || col >= currentCols || row >= currentRows) return null
+    return { col, row }
+  }
+
+  const cellFromPointer = (event: Pick<ReactPointerEvent, 'clientX' | 'clientY'>): Cell | null => {
+    if (!canvasRef.current) return null
+    const rect = canvasRef.current.getBoundingClientRect()
+    const screen = { x: event.clientX - rect.left, y: event.clientY - rect.top }
+    const world = viewport.screenToWorld(screen)
+    return cellFromWorld(world.x, world.y)
+  }
+
+  const applyObstacleRect = (rect: CellRect, value: 0 | 1) => {
+    const currentCols = Math.ceil(imgSize.width / TILE)
+    const currentRows = Math.ceil(imgSize.height / TILE)
+    const left = clamp(rect.left, 0, currentCols - 1)
+    const top = clamp(rect.top, 0, currentRows - 1)
+    const right = clamp(rect.right, 0, currentCols - 1)
+    const bottom = clamp(rect.bottom, 0, currentRows - 1)
     setBlocked((prev) => {
       const next = new Uint8Array(prev)
-      next[index] = value
+      for (let row = top; row <= bottom; row += 1) {
+        for (let col = left; col <= right; col += 1) {
+          next[row * currentCols + col] = value
+        }
+      }
       return next
     })
   }
 
-  const obstaclePaintRef = useRef<{ mode: 'add' | 'erase' } | null>(null)
+  const obstaclePaintRef = useRef<{ tool: ObstacleTool; mode: 'add' | 'erase'; start: Cell } | null>(null)
+
+  const obstacleModeForEvent = (tool: ObstacleTool, event: ReactPointerEvent): 'add' | 'erase' => {
+    const baseMode = tool === 'eraser' || tool === 'rect-erase' ? 'erase' : 'add'
+    if (event.button === 2 || event.shiftKey) return baseMode === 'add' ? 'erase' : 'add'
+    return baseMode
+  }
 
   const onPointerDownObstacles = (event: ReactPointerEvent) => {
     if (!canvasRef.current) return
     if (spacePanning) return
     event.preventDefault()
-    const rect = canvasRef.current.getBoundingClientRect()
-    const screen = { x: event.clientX - rect.left, y: event.clientY - rect.top }
-    const world = viewport.screenToWorld(screen)
-    const mode: 'add' | 'erase' = event.button === 2 || event.shiftKey ? 'erase' : 'add'
-    obstaclePaintRef.current = { mode }
-    toggleObstacleAt(world.x, world.y, mode === 'add' ? 1 : 0)
+    const cell = cellFromPointer(event)
+    if (!cell) return
+    const mode = obstacleModeForEvent(obstacleTool, event)
+    obstaclePaintRef.current = { tool: obstacleTool, mode, start: cell }
+    setObstacleHoverCell(cell)
+    if (obstacleTool === 'brush' || obstacleTool === 'eraser') {
+      applyObstacleRect(rectFromBrush(cell, obstacleBrushSize, cols, rows), mode === 'add' ? 1 : 0)
+      return
+    }
+    setObstacleDragPreview({ rect: normalizeCellRect(cell, cell), mode })
   }
 
   const onPointerMoveObstacles = (event: ReactPointerEvent) => {
-    if (!canvasRef.current) return
-    if (!obstaclePaintRef.current) return
-    const rect = canvasRef.current.getBoundingClientRect()
-    const screen = { x: event.clientX - rect.left, y: event.clientY - rect.top }
-    const world = viewport.screenToWorld(screen)
-    toggleObstacleAt(world.x, world.y, obstaclePaintRef.current.mode === 'add' ? 1 : 0)
+    const cell = cellFromPointer(event)
+    setObstacleHoverCell(cell)
+    if (!cell || !obstaclePaintRef.current) return
+    const paint = obstaclePaintRef.current
+    if (paint.tool === 'brush' || paint.tool === 'eraser') {
+      applyObstacleRect(rectFromBrush(cell, obstacleBrushSize, cols, rows), paint.mode === 'add' ? 1 : 0)
+      return
+    }
+    setObstacleDragPreview({ rect: normalizeCellRect(paint.start, cell), mode: paint.mode })
   }
 
   const onPointerUpObstacles = () => {
+    if (obstaclePaintRef.current && obstacleDragPreview) {
+      applyObstacleRect(obstacleDragPreview.rect, obstacleDragPreview.mode === 'add' ? 1 : 0)
+    }
     obstaclePaintRef.current = null
+    setObstacleDragPreview(null)
+  }
+
+  const onPointerLeaveObstacles = () => {
+    onPointerUpObstacles()
+    setObstacleHoverCell(null)
   }
 
   const drawTransformStyle = useMemo(() => {
@@ -467,6 +603,16 @@ export default function PixelKnightMapEditorView() {
       transformOrigin: '0 0',
     } as const
   }, [viewport.pan.x, viewport.pan.y, viewport.zoom])
+
+  const obstaclePreview = useMemo(() => {
+    if (tab !== 'obstacles') return null
+    if (obstacleDragPreview) return obstacleDragPreview
+    if (!obstacleHoverCell || (obstacleTool !== 'brush' && obstacleTool !== 'eraser')) return null
+    return {
+      rect: rectFromBrush(obstacleHoverCell, obstacleBrushSize, cols, rows),
+      mode: obstacleTool === 'eraser' ? 'erase' : 'add',
+    } satisfies { rect: CellRect; mode: 'add' | 'erase' }
+  }, [cols, obstacleBrushSize, obstacleDragPreview, obstacleHoverCell, obstacleTool, rows, tab])
 
   if (!mapSlug || !backdropUrl) {
     return (
@@ -592,7 +738,33 @@ export default function PixelKnightMapEditorView() {
                     导出 map.meta
                   </Button>
                 )}
+
+                <Button
+                  type="button"
+                  onClick={saveMapPack}
+                  disabled={isSaving}
+                  className="h-8 bg-[#bd842b] px-2 text-xs text-[#fffaf0] hover:bg-[#9f6d20] disabled:cursor-not-allowed disabled:opacity-60"
+                  title="保存 map.meta、placements、obstacles 到当前 maps 目录"
+                >
+                  <Save className="size-3" />
+                  {isSaving ? '保存中…' : '一键保存'}
+                </Button>
               </div>
+
+              {saveStatus ? (
+                <div
+                  className={cn(
+                    'rounded-md border px-2 py-1.5 text-xs font-bold',
+                    saveStatus.tone === 'success'
+                      ? 'border-[#4d7c37]/20 bg-[#eef8df] text-[#385525]'
+                      : saveStatus.tone === 'error'
+                        ? 'border-[#b13d34]/20 bg-[#fff0ec] text-[#8b2d25]'
+                        : 'border-[#bd842b]/20 bg-[#fff7df] text-[#76531d]',
+                  )}
+                >
+                  {saveStatus.message}
+                </div>
+              ) : null}
 
               {tab === 'placement' ? (
                 <>
@@ -792,13 +964,97 @@ export default function PixelKnightMapEditorView() {
                   </div>
                 </>
               ) : (
-                <div className="rounded-[1rem] border border-[#2f4328]/10 bg-[#fffdf4] p-3 text-xs text-[#4f5d3e] whitespace-pre-line">
-                  {`- 左键：添加障碍
-- Shift 或右键：移除障碍
-- Space：拖拽平移
-- 滚轮：缩放`}
-                  <div className="mt-2 text-[#5b6646]">
-                    当前网格：{TILE}px/格（{cols}×{rows}）
+                <div className="space-y-3">
+                  <div className="rounded-[1rem] border border-[#2f4328]/10 bg-[#fffdf4] p-3">
+                    <div className="text-xs font-black tracking-[0.18em] text-[#243019] uppercase">障碍工具</div>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setObstacleTool('brush')}
+                        className={cn(
+                          'inline-flex h-8 items-center justify-center gap-1.5 rounded-md border px-2 text-xs font-black',
+                          obstacleTool === 'brush'
+                            ? 'border-[#2f4328]/30 bg-[#30422a] text-[#fbf5e5]'
+                            : 'border-[#2f4328]/12 bg-[#f8efd8]/70 text-[#243019] hover:bg-[#fff7df]',
+                        )}
+                      >
+                        <Brush className="size-3.5" />
+                        画笔
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setObstacleTool('eraser')}
+                        className={cn(
+                          'inline-flex h-8 items-center justify-center gap-1.5 rounded-md border px-2 text-xs font-black',
+                          obstacleTool === 'eraser'
+                            ? 'border-[#2f4328]/30 bg-[#30422a] text-[#fbf5e5]'
+                            : 'border-[#2f4328]/12 bg-[#f8efd8]/70 text-[#243019] hover:bg-[#fff7df]',
+                        )}
+                      >
+                        <Eraser className="size-3.5" />
+                        橡皮
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setObstacleTool('rect-add')}
+                        className={cn(
+                          'inline-flex h-8 items-center justify-center gap-1.5 rounded-md border px-2 text-xs font-black',
+                          obstacleTool === 'rect-add'
+                            ? 'border-[#2f4328]/30 bg-[#30422a] text-[#fbf5e5]'
+                            : 'border-[#2f4328]/12 bg-[#f8efd8]/70 text-[#243019] hover:bg-[#fff7df]',
+                        )}
+                      >
+                        <Square className="size-3.5" />
+                        矩形填充
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setObstacleTool('rect-erase')}
+                        className={cn(
+                          'inline-flex h-8 items-center justify-center gap-1.5 rounded-md border px-2 text-xs font-black',
+                          obstacleTool === 'rect-erase'
+                            ? 'border-[#2f4328]/30 bg-[#30422a] text-[#fbf5e5]'
+                            : 'border-[#2f4328]/12 bg-[#f8efd8]/70 text-[#243019] hover:bg-[#fff7df]',
+                        )}
+                      >
+                        <Square className="size-3.5" />
+                        矩形清除
+                      </button>
+                    </div>
+
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-black tracking-[0.18em] text-[#243019] uppercase">画笔范围</span>
+                        <span className="font-mono text-xs font-bold text-[#5a6647]">{obstacleBrushSize}×{obstacleBrushSize}</span>
+                      </div>
+                      <div className="mt-2 grid grid-cols-6 gap-1">
+                        {OBSTACLE_BRUSH_SIZES.map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            onClick={() => setObstacleBrushSize(size)}
+                            className={cn(
+                              'h-7 rounded-md border text-xs font-black',
+                              obstacleBrushSize === size
+                                ? 'border-[#bd842b]/60 bg-[#f0bd5a] text-[#243019]'
+                                : 'border-[#2f4328]/12 bg-white text-[#4f5d3e] hover:bg-[#fff7df]',
+                            )}
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-[1rem] border border-[#2f4328]/10 bg-[#fffdf4] p-3 text-xs text-[#4f5d3e] whitespace-pre-line">
+                    {`- 画笔/橡皮：按住拖拽连续编辑
+- 矩形工具：按下拖出范围，松开应用
+- Shift 或右键：临时反向添加/移除
+- Space：拖拽平移；滚轮：缩放`}
+                    <div className="mt-2 text-[#5b6646]">
+                      当前网格：{TILE}px/格（{cols}×{rows}）
+                    </div>
                   </div>
                 </div>
               )}
@@ -829,7 +1085,7 @@ export default function PixelKnightMapEditorView() {
                 onPointerDownCapture={tab === 'obstacles' ? onPointerDownObstacles : undefined}
                 onPointerMoveCapture={tab === 'obstacles' ? onPointerMoveObstacles : undefined}
                 onPointerUpCapture={tab === 'obstacles' ? onPointerUpObstacles : undefined}
-                onPointerLeave={tab === 'obstacles' ? onPointerUpObstacles : undefined}
+                onPointerLeave={tab === 'obstacles' ? onPointerLeaveObstacles : undefined}
               >
                 <div className="absolute left-0 top-0" style={drawTransformStyle}>
                   <img
@@ -1008,6 +1264,23 @@ export default function PixelKnightMapEditorView() {
                           return items
                         })()}
                       </div>
+                      {obstaclePreview ? (
+                        <div
+                          className={cn(
+                            'pointer-events-none absolute border-2',
+                            obstaclePreview.mode === 'add'
+                              ? 'border-[#ffd36d] bg-[#ffd36d]/20'
+                              : 'border-[#7ae4ff] bg-[#7ae4ff]/18',
+                          )}
+                          style={{
+                            left: obstaclePreview.rect.left * TILE,
+                            top: obstaclePreview.rect.top * TILE,
+                            width: (obstaclePreview.rect.right - obstaclePreview.rect.left + 1) * TILE,
+                            height: (obstaclePreview.rect.bottom - obstaclePreview.rect.top + 1) * TILE,
+                            boxShadow: '0 0 0 1px rgba(23,32,19,0.5)',
+                          }}
+                        />
+                      ) : null}
                     </>
                   ) : null}
                 </div>

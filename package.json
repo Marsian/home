@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "npm run subset-font && vite",
-    "build": "npm run subset-font && npm run validate:tank90 && tsc -p tsconfig.json --noEmit && vite build && cp dist/index.html dist/404.html",
+    "build": "npm run subset-font && npm run validate:tank90 && npm run validate:pixel-knight-maps && tsc -p tsconfig.json --noEmit && vite build && cp dist/index.html dist/404.html",
     "preview": "vite preview",
     "build:gh-pages": "tsc -p tsconfig.json --noEmit && vite build && cp dist/index.html dist/404.html",
     "subset-font": "npx tsx scripts/extract-resume-chars.ts > scripts/resume-chars.txt && npx tsx scripts/subset-font.ts",
     "test:e2e": "playwright test",
+    "validate:pixel-knight-maps": "node scripts/pixel-knight/validate-otherworld-map-pack.mjs autumn-wood",
     "validate:tank90": "npx tsx scripts/validate-tank90-levels.ts",
     "sync:tank90-maps": "node scripts/sync-nes-battlecity-terrain.mjs"
   },

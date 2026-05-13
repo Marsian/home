@@ -1,0 +1,266 @@
+[
+  {
+    "id": "return-portal",
+    "file": "return-portal.png",
+    "sheet_bbox": [
+      58,
+      113,
+      203,
+      185
+    ],
+    "area": 23436
+  },
+  {
+    "id": "maple-red-tree",
+    "file": "maple-red-tree.png",
+    "sheet_bbox": [
+      331,
+      71,
+      168,
+      220
+    ],
+    "area": 22329
+  },
+  {
+    "id": "maple-orange-tree",
+    "file": "maple-orange-tree.png",
+    "sheet_bbox": [
+      579,
+      73,
+      158,
+      218
+    ],
+    "area": 20779
+  },
+  {
+    "id": "maple-red-shrub",
+    "file": "maple-red-shrub.png",
+    "sheet_bbox": [
+      821,
+      178,
+      120,
+      102
+    ],
+    "area": 7662
+  },
+  {
+    "id": "ruin-pillar-01",
+    "file": "ruin-pillar-01.png",
+    "sheet_bbox": [
+      91,
+      347,
+      111,
+      188
+    ],
+    "area": 12109
+  },
+  {
+    "id": "ruin-pillar-02",
+    "file": "ruin-pillar-02.png",
+    "sheet_bbox": [
+      295,
+      383,
+      84,
+      140
+    ],
+    "area": 6719
+  },
+  {
+    "id": "broken-wall-curved",
+    "file": "broken-wall-curved.png",
+    "sheet_bbox": [
+      388,
+      398,
+      86,
+      132
+    ],
+    "area": 6658
+  },
+  {
+    "id": "broken-wall-straight",
+    "file": "broken-wall-straight.png",
+    "sheet_bbox": [
+      534,
+      383,
+      202,
+      146
+    ],
+    "area": 17824
+  },
+  {
+    "id": "boulder-mossy",
+    "file": "boulder-mossy.png",
+    "sheet_bbox": [
+      796,
+      428,
+      170,
+      97
+    ],
+    "area": 12847
+  },
+  {
+    "id": "stone-marker",
+    "file": "stone-marker.png",
+    "sheet_bbox": [
+      58,
+      630,
+      183,
+      123
+    ],
+    "area": 14472
+  },
+  {
+    "id": "wood-bridge",
+    "file": "wood-bridge.png",
+    "sheet_bbox": [
+      332,
+      631,
+      100,
+      117
+    ],
+    "area": 7130
+  },
+  {
+    "id": "wood-stairs",
+    "file": "wood-stairs.png",
+    "sheet_bbox": [
+      543,
+      619,
+      169,
+      150
+    ],
+    "area": 19444
+  },
+  {
+    "id": "shrine-gate",
+    "file": "shrine-gate.png",
+    "sheet_bbox": [
+      803,
+      609,
+      159,
+      157
+    ],
+    "area": 17530
+  },
+  {
+    "id": "fence-segment",
+    "file": "fence-segment.png",
+    "sheet_bbox": [
+      63,
+      833,
+      186,
+      163
+    ],
+    "area": 19484
+  },
+  {
+    "id": "stone-stairs",
+    "file": "stone-stairs.png",
+    "sheet_bbox": [
+      306,
+      854,
+      192,
+      139
+    ],
+    "area": 16906
+  },
+  {
+    "id": "signpost",
+    "file": "signpost.png",
+    "sheet_bbox": [
+      554,
+      867,
+      174,
+      131
+    ],
+    "area": 18910
+  },
+  {
+    "id": "stone-altar",
+    "file": "stone-altar.png",
+    "sheet_bbox": [
+      826,
+      836,
+      91,
+      158
+    ],
+    "area": 7109
+  },
+  {
+    "id": "broken-stone-leaves",
+    "file": "broken-stone-leaves.png",
+    "sheet_bbox": [
+      59,
+      1075,
+      184,
+      139
+    ],
+    "area": 20097
+  },
+  {
+    "id": "cliff-wall-cap",
+    "file": "cliff-wall-cap.png",
+    "sheet_bbox": [
+      308,
+      1084,
+      158,
+      120
+    ],
+    "area": 11617
+  },
+  {
+    "id": "waterfall-lip",
+    "file": "waterfall-lip.png",
+    "sheet_bbox": [
+      544,
+      1076,
+      173,
+      139
+    ],
+    "area": 19276
+  },
+  {
+    "id": "wooden-crate",
+    "file": "wooden-crate.png",
+    "sheet_bbox": [
+      796,
+      1075,
+      165,
+      143
+    ],
+    "area": 17877
+  },
+  {
+    "id": "stepping-stones-leaves",
+    "file": "stepping-stones-leaves.png",
+    "sheet_bbox": [
+      75,
+      1328,
+      127,
+      109
+    ],
+    "area": 9982
+  },
+  {
+    "id": "mossy-cliff-corner",
+    "file": "mossy-cliff-corner.png",
+    "sheet_bbox": [
+      537,
+      1287,
+      161,
+      166
+    ],
+    "area": 18669
+  },
+  {
+    "id": "maple-red-edge-tree",
+    "file": "maple-red-edge-tree.png",
+    "sheet_bbox": [
+      795,
+      1252,
+      150,
+      209
+    ],
+    "area": 18664
+  }
+]
