@@ -77,7 +77,7 @@ export const dungeons: DungeonDef[] = [
       accent: '#ff6a22',
       border: '#3b211d',
     },
-    enemyKinds: ['mossling', 'needlebat', 'vinebrute'],
+    enemyKinds: ['slime', 'boar'],
     bossName: '炉心守卫',
   },
   {
@@ -91,7 +91,7 @@ export const dungeons: DungeonDef[] = [
       accent: '#e7fbff',
       border: '#31566a',
     },
-    enemyKinds: ['needlebat', 'sunpriest', 'vinebrute'],
+    enemyKinds: ['slime', 'boar'],
     bossName: '霜冠执事',
   },
   {
@@ -105,7 +105,7 @@ export const dungeons: DungeonDef[] = [
       accent: '#8ee2a9',
       border: '#314c2f',
     },
-    enemyKinds: ['mossling', 'vinebrute', 'sunpriest'],
+    enemyKinds: ['slime', 'boar'],
     bossName: '残塔根须',
   },
   {
@@ -119,7 +119,7 @@ export const dungeons: DungeonDef[] = [
       accent: '#f0b84c',
       border: '#6b3f27',
     },
-    enemyKinds: ['mossling', 'needlebat', 'sunpriest'],
+    enemyKinds: ['slime', 'boar'],
     bossName: '沙碑司祭',
   },
   {
@@ -133,7 +133,7 @@ export const dungeons: DungeonDef[] = [
       accent: '#a35bff',
       border: '#2d2440',
     },
-    enemyKinds: ['needlebat', 'vinebrute', 'sunpriest'],
+    enemyKinds: ['slime', 'boar'],
     bossName: '裂隙晶核',
   },
   {
@@ -147,7 +147,7 @@ export const dungeons: DungeonDef[] = [
       accent: '#e2a33a',
       border: '#5a4a2a',
     },
-    enemyKinds: ['mossling', 'vinebrute', 'sunpriest'],
+    enemyKinds: ['slime', 'boar'],
     bossName: '金叶守门者',
   },
   {
@@ -161,7 +161,7 @@ export const dungeons: DungeonDef[] = [
       accent: '#45d7d1',
       border: '#2c5c58',
     },
-    enemyKinds: ['needlebat', 'mossling', 'vinebrute'],
+    enemyKinds: ['slime', 'boar'],
     bossName: '潮穴尖翼',
   },
   {
@@ -175,7 +175,7 @@ export const dungeons: DungeonDef[] = [
       accent: '#d49b2e',
       border: '#453722',
     },
-    enemyKinds: ['vinebrute', 'sunpriest', 'needlebat'],
+    enemyKinds: ['slime', 'boar'],
     bossName: '发条监工',
   },
   {
@@ -189,7 +189,7 @@ export const dungeons: DungeonDef[] = [
       accent: '#94d957',
       border: '#314329',
     },
-    enemyKinds: ['mossling', 'needlebat', 'sunpriest'],
+    enemyKinds: ['slime', 'boar'],
     bossName: '菌沼领主',
   },
   {
@@ -203,7 +203,7 @@ export const dungeons: DungeonDef[] = [
       accent: '#76c8ff',
       border: '#526b80',
     },
-    enemyKinds: ['sunpriest', 'needlebat', 'vinebrute'],
+    enemyKinds: ['slime', 'boar'],
     bossName: '云坛辉卫',
   },
 ]

@@ -252,14 +252,15 @@ function drawMatrixPart(
   pixelSize: number,
   facing: MatrixFacing = 'right',
 ) {
+  const resolvedPixelSize = Math.max(1, Math.round(pixelSize))
   for (const point of part.points) {
     const drawX = facing === 'right' ? point.x : part.size[0] - 1 - point.x
     ctx.fillStyle = point.color
     ctx.fillRect(
-      Math.round(x0 + drawX * pixelSize),
-      Math.round(y0 + point.y * pixelSize),
-      pixelSize,
-      pixelSize,
+      Math.round(x0 + drawX * resolvedPixelSize),
+      Math.round(y0 + point.y * resolvedPixelSize),
+      resolvedPixelSize,
+      resolvedPixelSize,
     )
   }
 }
@@ -275,9 +276,10 @@ function drawRotatedMatrixPart(
   pivotX: number,
   pivotY: number,
 ) {
+  const resolvedPixelSize = Math.max(1, Math.round(pixelSize))
   const resolvedPivotX = facing === 'right' ? pivotX : part.size[0] - 1 - pivotX
-  const partWidthPx = part.size[0] * pixelSize
-  const partHeightPx = part.size[1] * pixelSize
+  const partWidthPx = Math.ceil(part.size[0] * resolvedPixelSize)
+  const partHeightPx = Math.ceil(part.size[1] * resolvedPixelSize)
   const partCanvas = document.createElement('canvas')
   partCanvas.width = partWidthPx
   partCanvas.height = partHeightPx
@@ -289,15 +291,15 @@ function drawRotatedMatrixPart(
     const drawX = facing === 'right' ? point.x : part.size[0] - 1 - point.x
     partCtx.fillStyle = point.color
     partCtx.fillRect(
-      drawX * pixelSize,
-      point.y * pixelSize,
-      pixelSize,
-      pixelSize,
+      drawX * resolvedPixelSize,
+      point.y * resolvedPixelSize,
+      resolvedPixelSize,
+      resolvedPixelSize,
     )
   }
 
-  const pivotXPx = resolvedPivotX * pixelSize
-  const pivotYPx = pivotY * pixelSize
+  const pivotXPx = resolvedPivotX * resolvedPixelSize
+  const pivotYPx = pivotY * resolvedPixelSize
   const originX = Math.round(x0 + pivotXPx)
   const originY = Math.round(y0 + pivotYPx)
 
@@ -350,10 +352,11 @@ export function drawMatrixCharacter(
   },
 ) {
   const bounds = buildCompositeBounds(manifest.parts)
+  const pixelSize = Math.max(1, Math.round(options.pixelSize))
   const totalWidth = bounds.maxX - bounds.minX
   const totalHeight = bounds.maxY - bounds.minY
-  const groupLeft = options.actorX - (totalWidth * options.pixelSize) / 2
-  const groupTop = options.actorFeetY - totalHeight * options.pixelSize
+  const groupLeft = Math.round(options.actorX - (totalWidth * pixelSize) / 2)
+  const groupTop = Math.round(options.actorFeetY - totalHeight * pixelSize)
 
   const locomotionTimeMs = options.mode === 'static' ? 0 : options.locomotionTimeMs ?? options.timeMs
   const forward = options.facing === 'right' ? 1 : -1
@@ -437,9 +440,9 @@ export function drawMatrixCharacter(
     drawMatrixPart(
       ctx,
       part,
-      groupLeft + baseX * options.pixelSize,
-      groupTop + baseY * options.pixelSize,
-      options.pixelSize,
+      groupLeft + baseX * pixelSize,
+      groupTop + baseY * pixelSize,
+      pixelSize,
       options.facing,
     )
   }
@@ -453,8 +456,8 @@ export function drawMatrixCharacter(
     const baseX = getPartBaseX(part, dx)
     const baseY = part.offset[1] - bounds.minY + dy
     return {
-      x: groupLeft + baseX * options.pixelSize,
-      y: groupTop + baseY * options.pixelSize,
+      x: groupLeft + baseX * pixelSize,
+      y: groupTop + baseY * pixelSize,
     }
   }
 
@@ -466,9 +469,9 @@ export function drawMatrixCharacter(
     drawRotatedMatrixPart(
       ctx,
       part,
-      groupLeft + baseX * options.pixelSize,
-      groupTop + baseY * options.pixelSize,
-      options.pixelSize,
+      groupLeft + baseX * pixelSize,
+      groupTop + baseY * pixelSize,
+      pixelSize,
       options.facing,
       angle,
       pivotX,
@@ -484,9 +487,9 @@ export function drawMatrixCharacter(
     drawRotatedMatrixPart(
       ctx,
       part,
-      groupLeft + baseX * options.pixelSize,
-      groupTop + baseY * options.pixelSize,
-      options.pixelSize,
+      groupLeft + baseX * pixelSize,
+      groupTop + baseY * pixelSize,
+      pixelSize,
       options.facing,
       angle,
       pivotX,
@@ -557,9 +560,9 @@ export function drawMatrixCharacter(
         drawMatrixPart(
           ctx,
           piecePart,
-          groupLeft + drawX * options.pixelSize,
-          groupTop + drawY * options.pixelSize,
-          options.pixelSize,
+          groupLeft + drawX * pixelSize,
+          groupTop + drawY * pixelSize,
+          pixelSize,
           options.facing,
         )
         continue
@@ -587,18 +590,18 @@ export function drawMatrixCharacter(
         const rotatedAttachmentX = dx * cosA - dy * sinA + resolvedPartPivotX
         const rotatedAttachmentY = dx * sinA + dy * cosA + partPivotY
         const effectivePivotX = options.facing === 'right' ? pivot[0] : entry.size[0] - 1 - pivot[0]
-        const x0 = partWorld.x + (rotatedAttachmentX - effectivePivotX) * options.pixelSize
-        const y0 = partWorld.y + (rotatedAttachmentY - pivot[1]) * options.pixelSize
-        drawRotatedMatrixPart(ctx, piecePart, x0, y0, options.pixelSize, options.facing, angle, pivot[0], pivot[1])
+        const x0 = partWorld.x + (rotatedAttachmentX - effectivePivotX) * pixelSize
+        const y0 = partWorld.y + (rotatedAttachmentY - pivot[1]) * pixelSize
+        drawRotatedMatrixPart(ctx, piecePart, x0, y0, pixelSize, options.facing, angle, pivot[0], pivot[1])
         continue
       }
 
       const drawLocalX =
         options.facing === 'right' ? resolvedAnchorX : anchorPart.size[0] - resolvedAnchorX - entry.size[0]
       const drawLocalY = resolvedAnchorY
-      const x0 = partWorld.x + drawLocalX * options.pixelSize
-      const y0 = partWorld.y + drawLocalY * options.pixelSize
-      drawMatrixPart(ctx, piecePart, x0, y0, options.pixelSize, options.facing)
+      const x0 = partWorld.x + drawLocalX * pixelSize
+      const y0 = partWorld.y + drawLocalY * pixelSize
+      drawMatrixPart(ctx, piecePart, x0, y0, pixelSize, options.facing)
     }
   }
 

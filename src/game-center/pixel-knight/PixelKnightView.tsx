@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { ArrowLeft, Bug, Database, Map, Pause, Play, Swords } from 'lucide-react'
+import { ArrowLeft, Bug, Database, Map, Swords } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,6 @@ import hudHealthFrameFront from '@/game-center/pixel-knight/assets/ui/inventory/
 import hudHpFill from '@/game-center/pixel-knight/assets/ui/inventory/hud-hp-fill-core-v2.png'
 import hudKnightPortrait from '@/game-center/pixel-knight/assets/ui/inventory/hud-portrait-knight-v4.png'
 import hudMinimapFrame from '@/game-center/pixel-knight/assets/ui/inventory/hud-minimap-frame-v2.png'
-import hudPauseButton from '@/game-center/pixel-knight/assets/ui/inventory/hud-pause-button-v2.png'
 import inventoryBgFrame from '@/game-center/pixel-knight/assets/ui/inventory/inventory-bg-v2.png'
 import inventoryGridPanel from '@/game-center/pixel-knight/assets/ui/inventory/inventory-grid-6x6-v2.png'
 import inventorySlotFrame from '@/game-center/pixel-knight/assets/ui/inventory/inventory-slot-v2.png'
@@ -89,7 +88,7 @@ import { OtherworldMapOverlay } from './ui/OtherworldMapOverlay'
 
 const initialPreload: PreloadProgress = {
   loaded: 0,
-  total: 4,
+  total: 5,
   ratio: 0,
   label: '正在校准副本与词条表',
 }
@@ -845,27 +844,6 @@ export default function PixelKnightView() {
                         style={{ imageRendering: 'pixelated' }}
                       />
                     </button>
-                    {hud.mapKind === 'dungeon' ? (
-                      <button
-                        type="button"
-                        onClick={() => gameRef.current?.setPaused(hud.phase !== 'paused')}
-                        className="pointer-events-auto relative h-14 w-14 transition hover:scale-105 active:scale-95"
-                        aria-label={hud.phase === 'paused' ? '继续' : '暂停'}
-                      >
-                        <img
-                          src={hudPauseButton}
-                          alt=""
-                          className="absolute inset-0 h-full w-full object-contain"
-                          draggable={false}
-                          style={{ imageRendering: 'pixelated' }}
-                        />
-                        {hud.phase === 'paused' ? (
-                          <Play className="absolute left-1/2 top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 text-[#f8e0a6]" />
-                        ) : (
-                          <Pause className="absolute left-1/2 top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 text-[#f8e0a6]" />
-                        )}
-                      </button>
-                    ) : null}
                   </div>
                 </div>
 

@@ -4,6 +4,7 @@ import path from 'node:path'
 const ROOT = process.cwd()
 const TILE = 16
 const VIEWPORT = { width: 960, height: 540 }
+const ALLOWED_MONSTER_KINDS = new Set(['slime', 'boar'])
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'))
@@ -26,6 +27,14 @@ function validateMap(slug) {
   if (obstacles.tile !== TILE) fail(`${slug}: tile must be ${TILE}`)
   if (!fs.existsSync(path.join(dir, 'backdrop.png'))) fail(`${slug}: missing backdrop.png`)
   if (!Array.isArray(meta.monsterClusters) || meta.monsterClusters.length === 0) fail(`${slug}: missing monsterClusters`)
+  for (const cluster of meta.monsterClusters) {
+    if (!Array.isArray(cluster.kinds) || cluster.kinds.length === 0) fail(`${slug}: ${cluster.id} missing monster kinds`)
+    for (const kind of cluster.kinds) {
+      if (!ALLOWED_MONSTER_KINDS.has(kind)) {
+        fail(`${slug}: ${cluster.id} uses unsupported monster kind "${kind}"`)
+      }
+    }
+  }
 
   const cells = new Set(obstacles.blocked.map((cell) => key({ x: cell.col, y: cell.row })))
   const rows = Array.from({ length: obstacles.rows }, (_, y) =>

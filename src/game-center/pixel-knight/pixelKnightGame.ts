@@ -2,7 +2,8 @@ import { difficultyConfigs, generateLootItems, getDungeonById, skills } from './
 import knightManifestData from '@/game-center/pixel-knight/assets/characters/knight.json'
 import shieldMatrixData from '@/game-center/pixel-knight/assets/equipment/off-hand/wood-shield.json'
 import swordMatrixData from '@/game-center/pixel-knight/assets/equipment/main-hand/iron-sword.json'
-import { getPixelKnightOtherworldMapAsset, getPixelKnightVillageAsset } from './game/preload'
+import { getPixelKnightMonsterFrames, getPixelKnightOtherworldMapAsset, getPixelKnightVillageAsset } from './game/preload'
+import { isCombatEnemyKind, monsterAiConfigs, type CombatEnemyKind, type MonsterAiState } from './game/monsterAi'
 import { getOtherworldMapPack, type OtherworldMapPack } from './maps/otherworldRegistry'
 import { starterVillageMap, starterVillagePlacements } from './maps/starter-village/starterVillageMap'
 import {
@@ -13,11 +14,13 @@ import {
   type MatrixFacing,
   type MatrixManifest,
 } from './rendering/matrixCharacterRenderer'
+import { drawMonster, type MonsterFacing, type MonsterState } from './rendering/monsterRenderer'
 import { getOtherworldMapAtomAssetId, getOtherworldMapBackdropAssetId } from './rendering/otherworldMapAssets'
 import { getStarterVillageAtomAssetId } from './rendering/villageAssets'
 import type {
   DifficultyTier,
   DungeonId,
+  EnemyKind,
   FacingDirection,
   MapDef,
   MapHotspot,
@@ -61,11 +64,9 @@ type PlayerState = {
   locomotionAnimElapsedMs: number
 }
 
-type EnemyKind = 'mossling' | 'needlebat' | 'vinebrute' | 'sunpriest'
-
 type EnemyState = {
   id: string
-  kind: EnemyKind
+  kind: CombatEnemyKind
   x: number
   y: number
   radius: number
@@ -76,7 +77,17 @@ type EnemyState = {
   range: number
   attackCooldownMs: number
   elite: boolean
-  archetype: 'melee' | 'ranged'
+  state: MonsterState
+  stateTimeMs: number
+  animationTimeMs: number
+  facing: MonsterFacing
+  aiState: MonsterAiState
+  aiTimerMs: number
+  aggroMs: number
+  attackHitDone: boolean
+  hurtAnimMs: number
+  wanderDir: Vector2
+  chargeDir: Vector2
 }
 
 type ProjectileState = {
@@ -108,7 +119,7 @@ const WIDTH = 960
 const HEIGHT = 540
 const TILE = 16
 const PORTAL_RADIUS = 30
-const MATRIX_PLAYER_PIXEL_SIZE = 2.1
+const MATRIX_PLAYER_PIXEL_SIZE = 2
 const MATRIX_ATTACK_DURATION_MS = 420
 const matrixKnightManifest = knightManifestData as MatrixManifest
 type MatrixEquipmentLoadout = Partial<Record<MatrixEquipmentSlot, MatrixEquipmentPiece | null>>
@@ -179,6 +190,65 @@ function randomInt(min: number, max: number) {
   return Math.floor(randomBetween(min, max + 1))
 }
 
+function randomDirection() {
+  const angle = randomBetween(0, Math.PI * 2)
+  return { x: Math.cos(angle), y: Math.sin(angle) }
+}
+
+function isSpawnTile(mapRows: string[], col: number, row: number) {
+  if (row < 0 || row >= mapRows.length || col < 0 || col >= mapRows[0].length) return false
+  const value = mapRows[row][col]
+  return value !== '#' && value !== 'S' && value !== 'P'
+}
+
+function isSpawnCircleClear(mapRows: string[], cell: { x: number; y: number }, radius: number) {
+  if (!isSpawnTile(mapRows, cell.x, cell.y)) return false
+  const world = worldFromCell(cell)
+  return !collidesWithWalls(mapRows, world.x, world.y, radius)
+}
+
+function openSpaceScore(mapRows: string[], cell: { x: number; y: number }) {
+  let openCells = 0
+  const scanRadius = 5
+  for (let row = cell.y - scanRadius; row <= cell.y + scanRadius; row += 1) {
+    for (let col = cell.x - scanRadius; col <= cell.x + scanRadius; col += 1) {
+      const dx = col - cell.x
+      const dy = row - cell.y
+      if (dx * dx + dy * dy > scanRadius * scanRadius) continue
+      if (isSpawnTile(mapRows, col, row)) openCells += 1
+    }
+  }
+
+  let squareClearance = 0
+  for (let radius = 1; radius <= 4; radius += 1) {
+    let clear = true
+    for (let row = cell.y - radius; row <= cell.y + radius && clear; row += 1) {
+      for (let col = cell.x - radius; col <= cell.x + radius; col += 1) {
+        if (!isSpawnTile(mapRows, col, row)) {
+          clear = false
+          break
+        }
+      }
+    }
+    if (!clear) break
+    squareClearance = radius
+  }
+
+  const runLength = (dx: number, dy: number) => {
+    let length = 0
+    for (let step = 1; step <= 7; step += 1) {
+      if (!isSpawnTile(mapRows, cell.x + dx * step, cell.y + dy * step)) break
+      length += 1
+    }
+    return length
+  }
+  const horizontalRun = runLength(-1, 0) + runLength(1, 0) + 1
+  const verticalRun = runLength(0, -1) + runLength(0, 1) + 1
+  const corridorWidth = Math.min(horizontalRun, verticalRun)
+
+  return openCells + squareClearance * 34 + corridorWidth * 8
+}
+
 function getMapImagePad(map: MapDef, image: HTMLImageElement) {
   const worldWidth = map.rows[0].length * TILE
   const worldHeight = map.rows.length * TILE
@@ -192,73 +262,125 @@ function randomWalkableCell(
   mapRows: string[],
   blocked: Array<{ cell: { x: number; y: number }; radius: number }>,
   preferredArchetype: 'melee' | 'ranged' | 'mixed',
+  spawnRadius: number,
 ) {
-  const floorCells: Array<{ x: number; y: number }> = []
+  const floorCells: Array<{ x: number; y: number; score: number }> = []
   for (let row = 0; row < mapRows.length; row += 1) {
     for (let col = 0; col < mapRows[row].length; col += 1) {
-      const value = mapRows[row][col]
-      if (value === '#' || value === 'S' || value === 'P') continue
+      if (!isSpawnCircleClear(mapRows, { x: col, y: row }, spawnRadius)) continue
       const tooClose = blocked.some(({ cell, radius }) => Math.hypot(cell.x - col, cell.y - row) < radius)
-      if (!tooClose) floorCells.push({ x: col, y: row })
+      if (!tooClose) floorCells.push({ x: col, y: row, score: openSpaceScore(mapRows, { x: col, y: row }) })
     }
   }
   if (preferredArchetype === 'ranged') {
-    floorCells.sort((a, b) => a.y - b.y)
+    floorCells.sort((a, b) => b.score - a.score || a.y - b.y)
+  } else {
+    floorCells.sort((a, b) => b.score - a.score)
   }
-  return floorCells[Math.floor(Math.random() * floorCells.length)]
+  const pickCount = Math.max(1, Math.min(floorCells.length, Math.ceil(floorCells.length * 0.28), 40))
+  return floorCells[Math.floor(Math.random() * pickCount)]
+}
+
+function findClusterMemberSpawnCell(
+  mapRows: string[],
+  center: { x: number; y: number },
+  radius: number,
+  occupiedCells: Set<string>,
+) {
+  const candidates: Array<{ x: number; y: number; score: number }> = []
+  for (let row = center.y - 4; row <= center.y + 4; row += 1) {
+    for (let col = center.x - 4; col <= center.x + 4; col += 1) {
+      const dist = Math.hypot(col - center.x, row - center.y)
+      if (dist > 4) continue
+      const cell = { x: col, y: row }
+      if (occupiedCells.has(`${cell.x}:${cell.y}`)) continue
+      if (!isSpawnCircleClear(mapRows, cell, radius)) continue
+      candidates.push({ ...cell, score: openSpaceScore(mapRows, cell) - dist * 6 })
+    }
+  }
+  candidates.sort((a, b) => b.score - a.score)
+  const pickCount = Math.max(1, Math.min(candidates.length, 8))
+  return candidates[Math.floor(Math.random() * pickCount)] ?? null
 }
 
 function spawnEnemyClusters(map: MapDef, difficulty: DifficultyTier) {
   const difficultyConfig = difficultyConfigs[difficulty]
   const portal = map.portal ?? map.start
+  const portalHotspots = (map.hotspots ?? []).filter((hotspot) => hotspot.kind === 'portal')
   const clusterDefs = map.monsterClusters ?? []
   const enemies: EnemyState[] = []
+  const occupiedCells = new Set<string>()
+  if (clusterDefs.length === 0) return enemies
 
-  for (const clusterDef of clusterDefs) {
-    const clusterCount = randomInt(clusterDef.clusterCount.min, clusterDef.clusterCount.max) + difficultyConfig.eliteSpawnBonus
+  const authoredClusterCount = clusterDefs.reduce(
+    (sum, clusterDef) => sum + randomInt(clusterDef.clusterCount.min, clusterDef.clusterCount.max),
+    0,
+  )
+  const targetClusterCount = clamp(authoredClusterCount + difficultyConfig.eliteSpawnBonus, 3, 5)
+  let successfulClusterCount = 0
+  let attempts = 0
+  const maxAttempts = targetClusterCount * 14
 
-    for (let clusterIndex = 0; clusterIndex < clusterCount; clusterIndex += 1) {
-      const center = randomWalkableCell(
-        map.rows,
-        [
-          { cell: map.start, radius: clusterDef.safeRadiusFromStart },
-          { cell: portal, radius: clusterDef.safeRadiusFromPortal },
-        ],
-        clusterDef.archetype,
-      )
-      if (!center) continue
-      const clusterSize = randomInt(clusterDef.membersPerCluster.min, clusterDef.membersPerCluster.max)
-      const clusterKind = clusterDef.kinds[Math.floor(Math.random() * clusterDef.kinds.length)] as EnemyKind
+  while (successfulClusterCount < targetClusterCount && attempts < maxAttempts) {
+    const clusterDef = clusterDefs[attempts % clusterDefs.length]
+    attempts += 1
+    const clusterIndex = successfulClusterCount
+    const requestedKind = clusterDef.kinds[Math.floor(Math.random() * clusterDef.kinds.length)] as EnemyKind
+    const clusterKind = isCombatEnemyKind(requestedKind) ? requestedKind : 'slime'
+    const ai = monsterAiConfigs[clusterKind]
+    const center = randomWalkableCell(
+      map.rows,
+      [
+        { cell: map.start, radius: clusterDef.safeRadiusFromStart },
+        { cell: portal, radius: clusterDef.safeRadiusFromPortal },
+        ...portalHotspots.map((hotspot) => ({
+          cell: hotspot.cell,
+          radius: Math.max(clusterDef.safeRadiusFromPortal, Math.ceil(hotspot.radius / TILE) + 2),
+        })),
+      ],
+      clusterDef.archetype,
+      ai.radius * 1.08,
+    )
+    if (!center) continue
+    const clusterSize = randomInt(clusterDef.membersPerCluster.min, clusterDef.membersPerCluster.max)
+    let spawnedMembers = 0
 
-      for (let memberIndex = 0; memberIndex < clusterSize; memberIndex += 1) {
-        const candidate = {
-          x: center.x + Math.floor(randomBetween(-3, 4)),
-          y: center.y + Math.floor(randomBetween(-3, 4)),
-        }
-        if (isWall(map.rows, candidate.x, candidate.y)) continue
-        if (map.rows[candidate.y][candidate.x] === 'S' || map.rows[candidate.y][candidate.x] === 'P') continue
+    for (let memberIndex = 0; memberIndex < clusterSize; memberIndex += 1) {
+      const elite = memberIndex === 0 && Math.random() < clusterDef.eliteChance
+      const radius = ai.radius * (elite ? 1.08 : 1)
+      const candidate = findClusterMemberSpawnCell(map.rows, center, radius, occupiedCells)
+      if (!candidate) continue
+      const maxHealth = ai.baseHealth * difficultyConfig.enemyHealthMultiplier * (elite ? 1.42 : 1)
 
-        const elite = memberIndex === 0 && Math.random() < clusterDef.eliteChance
-        const melee = clusterKind === 'mossling' || clusterKind === 'vinebrute'
-        const baseHealth = clusterKind === 'vinebrute' ? 92 : clusterKind === 'sunpriest' ? 56 : clusterKind === 'needlebat' ? 44 : 52
-        const baseDamage = clusterKind === 'vinebrute' ? 16 : clusterKind === 'sunpriest' ? 15 : clusterKind === 'needlebat' ? 11 : 12
-
-        enemies.push({
-          id: `${clusterDef.id}-${clusterKind}-${clusterIndex}-${memberIndex}-${performance.now()}`,
-          kind: clusterKind,
-          ...worldFromCell(candidate),
-          radius: melee ? 16 : 13,
-          health: baseHealth * difficultyConfig.enemyHealthMultiplier * (elite ? 1.4 : 1),
-          maxHealth: baseHealth * difficultyConfig.enemyHealthMultiplier * (elite ? 1.4 : 1),
-          speed: melee ? (clusterKind === 'vinebrute' ? 92 : 108) : 0,
-          damage: baseDamage * difficultyConfig.enemyDamageMultiplier * (elite ? 1.16 : 1),
-          range: melee ? 38 : clusterKind === 'sunpriest' ? 270 : 240,
-          attackCooldownMs: randomBetween(520, 980),
-          elite,
-          archetype: melee ? 'melee' : 'ranged',
-        })
-      }
+      enemies.push({
+        id: `${clusterDef.id}-${clusterKind}-${clusterIndex}-${memberIndex}-${performance.now()}`,
+        kind: clusterKind,
+        ...worldFromCell(candidate),
+        radius,
+        health: maxHealth,
+        maxHealth,
+        speed: ai.baseSpeed * (elite ? 1.08 : 1),
+        damage: ai.baseDamage * difficultyConfig.enemyDamageMultiplier * (elite ? 1.16 : 1),
+        range: ai.attackRange,
+        attackCooldownMs: randomBetween(ai.attackCooldownMs[0], ai.attackCooldownMs[1]),
+        elite,
+        state: 'idle',
+        stateTimeMs: 0,
+        animationTimeMs: randomBetween(0, 1200),
+        facing: Math.random() > 0.5 ? 'right' : 'left',
+        aiState: 'idle',
+        aiTimerMs: randomBetween(ai.wanderIntervalMs[0], ai.wanderIntervalMs[1]),
+        aggroMs: 0,
+        attackHitDone: false,
+        hurtAnimMs: 0,
+        wanderDir: randomDirection(),
+        chargeDir: { x: 0, y: 0 },
+      })
+      occupiedCells.add(`${candidate.x}:${candidate.y}`)
+      spawnedMembers += 1
     }
+
+    if (spawnedMembers > 0) successfulClusterCount += 1
   }
   return enemies
 }
@@ -613,36 +735,7 @@ export class PixelKnightGame {
     }
 
     for (const enemy of this.enemies) {
-      enemy.attackCooldownMs = Math.max(0, enemy.attackCooldownMs - dt)
-      const delta = { x: this.player.x - enemy.x, y: this.player.y - enemy.y }
-      const dir = normalize(delta)
-      const dist = Math.hypot(delta.x, delta.y)
-
-      if (enemy.archetype === 'melee') {
-        if (dist > enemy.range) {
-          this.tryMoveEnemy(enemy, dir.x * enemy.speed * (dt / 1000), dir.y * enemy.speed * (dt / 1000))
-        }
-      }
-
-      if (dist <= enemy.range && enemy.attackCooldownMs <= 0) {
-        enemy.attackCooldownMs = enemy.archetype === 'ranged' ? 1400 : 920
-        if (enemy.archetype === 'ranged') {
-          const speedFactor = 160 + (enemy.elite ? 15 : 0)
-          this.projectiles.push({
-            id: `enemy-${enemy.id}-${performance.now()}`,
-            x: enemy.x,
-            y: enemy.y,
-            vx: dir.x * speedFactor,
-            vy: dir.y * speedFactor,
-            radius: enemy.kind === 'sunpriest' ? 9 : 7,
-            damage: enemy.damage,
-            from: 'enemy',
-            lifeMs: 2500,
-          })
-        } else {
-          this.damagePlayer(enemy.damage)
-        }
-      }
+      this.updateEnemy(enemy, dt)
     }
 
     this.projectiles = this.projectiles
@@ -672,11 +765,13 @@ export class PixelKnightGame {
         return !hit
       })
 
-    const portalPos = worldFromCell(this.run.portalCell)
-    this.portalNearby = distance(this.player, portalPos) < PORTAL_RADIUS + 26
+    const portalHotspot = this.getRunPortalHotspot()
+    const portalPos = worldFromCell(portalHotspot?.cell ?? this.run.portalCell)
+    this.portalNearby = distance(this.player, portalPos) < (portalHotspot?.radius ?? PORTAL_RADIUS + 26)
+    this.nearbyHotspot = this.portalNearby ? portalHotspot : null
     this.encounterLabel = this.portalNearby ? '传送点已就绪' : '副本探索'
     this.objectiveLabel = this.portalNearby
-      ? '按 F 交互并返回村庄'
+      ? (portalHotspot?.prompt ?? '按 F 交互并返回村庄')
       : '探索副本深处，靠近尽头传送点后撤离'
 
     this.emitHud()
@@ -694,11 +789,116 @@ export class PixelKnightGame {
   }
 
   private tryMoveEnemy(enemy: EnemyState, dx: number, dy: number) {
-    if (!this.run) return
+    if (!this.run) return false
+    const prevX = enemy.x
+    const prevY = enemy.y
     const nextX = enemy.x + dx
     const nextY = enemy.y + dy
     if (!collidesWithWalls(this.run.map.rows, nextX, enemy.y, enemy.radius)) enemy.x = nextX
     if (!collidesWithWalls(this.run.map.rows, enemy.x, nextY, enemy.radius)) enemy.y = nextY
+    return Math.abs(enemy.x - prevX) > 0.01 || Math.abs(enemy.y - prevY) > 0.01
+  }
+
+  private setEnemyAiState(enemy: EnemyState, state: MonsterAiState) {
+    if (enemy.aiState === state) return
+    enemy.aiState = state
+    enemy.stateTimeMs = 0
+    enemy.attackHitDone = false
+    enemy.state = state === 'chase' || state === 'wander' || state === 'charge' ? 'walk' : state === 'idle' ? 'idle' : 'attack'
+  }
+
+  private resetEnemyWander(enemy: EnemyState) {
+    const ai = monsterAiConfigs[enemy.kind]
+    enemy.wanderDir = randomDirection()
+    enemy.aiTimerMs = randomBetween(ai.wanderIntervalMs[0], ai.wanderIntervalMs[1])
+    this.setEnemyAiState(enemy, 'idle')
+  }
+
+  private updateEnemy(enemy: EnemyState, dt: number) {
+    if (!this.player) return
+    const ai = monsterAiConfigs[enemy.kind]
+    enemy.attackCooldownMs = Math.max(0, enemy.attackCooldownMs - dt)
+    enemy.hurtAnimMs = Math.max(0, enemy.hurtAnimMs - dt)
+    enemy.stateTimeMs += dt
+    enemy.animationTimeMs += dt
+
+    const delta = { x: this.player.x - enemy.x, y: this.player.y - enemy.y }
+    const dir = normalize(delta)
+    const dist = Math.hypot(delta.x, delta.y)
+    if (Math.abs(dir.x) > 0.08) enemy.facing = dir.x < 0 ? 'left' : 'right'
+
+    if (dist <= ai.aggroRange) {
+      enemy.aggroMs = ai.aggroMemoryMs
+    } else {
+      enemy.aggroMs = Math.max(0, enemy.aggroMs - dt)
+    }
+
+    if (enemy.aiState === 'windup') {
+      if (enemy.kind === 'slime' && !enemy.attackHitDone && enemy.stateTimeMs >= ai.attackHitDelayMs) {
+        if (dist <= ai.attackRange + this.player.radius) this.damagePlayer(enemy.damage)
+        enemy.attackHitDone = true
+      }
+      if (enemy.stateTimeMs >= ai.attackWindupMs) {
+        if (enemy.kind === 'boar') {
+          enemy.chargeDir = dir
+          this.setEnemyAiState(enemy, 'charge')
+        } else {
+          this.setEnemyAiState(enemy, 'recover')
+        }
+      }
+      return
+    }
+
+    if (enemy.aiState === 'charge') {
+      const chargeSpeed = ai.chargeSpeed ?? ai.baseSpeed
+      const moved = this.tryMoveEnemy(enemy, enemy.chargeDir.x * chargeSpeed * (dt / 1000), enemy.chargeDir.y * chargeSpeed * (dt / 1000))
+      if (!enemy.attackHitDone && distance(enemy, this.player) <= ai.attackRange + this.player.radius) {
+        this.damagePlayer(enemy.damage)
+        enemy.attackHitDone = true
+      }
+      if (!moved || enemy.stateTimeMs >= (ai.chargeDurationMs ?? 280)) {
+        this.setEnemyAiState(enemy, 'recover')
+      }
+      return
+    }
+
+    if (enemy.aiState === 'recover') {
+      if (enemy.stateTimeMs >= ai.attackRecoverMs) {
+        this.setEnemyAiState(enemy, enemy.aggroMs > 0 ? 'chase' : 'idle')
+        enemy.attackCooldownMs = randomBetween(ai.attackCooldownMs[0], ai.attackCooldownMs[1])
+      }
+      return
+    }
+
+    const boarChargeRange = enemy.kind === 'boar' ? Math.min(170, ai.aggroRange) : ai.attackRange
+    const wantsAttack = enemy.attackCooldownMs <= 0 && dist <= boarChargeRange
+    if ((enemy.aggroMs > 0 || dist <= ai.aggroRange) && dist <= ai.leashRange) {
+      if (wantsAttack) {
+        enemy.chargeDir = dir
+        this.setEnemyAiState(enemy, 'windup')
+        return
+      }
+      this.setEnemyAiState(enemy, 'chase')
+      if (dist > ai.attackRange * 0.8) {
+        this.tryMoveEnemy(enemy, dir.x * enemy.speed * (dt / 1000), dir.y * enemy.speed * (dt / 1000))
+      }
+      return
+    }
+
+    enemy.aiTimerMs -= dt
+    if (enemy.aiState === 'wander') {
+      this.tryMoveEnemy(enemy, enemy.wanderDir.x * ai.wanderSpeed * (dt / 1000), enemy.wanderDir.y * ai.wanderSpeed * (dt / 1000))
+      if (enemy.aiTimerMs <= 0) this.resetEnemyWander(enemy)
+      return
+    }
+
+    if (enemy.aiTimerMs <= 0) {
+      enemy.wanderDir = randomDirection()
+      enemy.aiTimerMs = randomBetween(ai.wanderDurationMs[0], ai.wanderDurationMs[1])
+      this.setEnemyAiState(enemy, 'wander')
+    } else {
+      this.setEnemyAiState(enemy, 'idle')
+    }
   }
 
   private useBasicAttack() {
@@ -820,7 +1020,10 @@ export class PixelKnightGame {
   private damageEnemy(enemy: EnemyState, rawDamage: number) {
     if (!this.run) return
     enemy.health -= rawDamage
-    if (enemy.health > 0) return
+    if (enemy.health > 0) {
+      enemy.hurtAnimMs = 320
+      return
+    }
 
     const difficulty = difficultyConfigs[this.run.difficulty]
     const xpValue = enemy.elite ? 40 : 16
@@ -881,6 +1084,10 @@ export class PixelKnightGame {
 
   private getActiveMap() {
     return this.run?.map ?? (this.phase === 'home' ? starterVillage : null)
+  }
+
+  private getRunPortalHotspot() {
+    return this.run?.map.hotspots?.find((hotspot) => hotspot.kind === 'portal') ?? null
   }
 
   private updateVillage(dt: number) {
@@ -1079,12 +1286,18 @@ export class PixelKnightGame {
     }
 
     if (this.portalNearby && this.player) {
-      const portal = worldFromCell(this.run.portalCell)
+      const portalHotspot = this.getRunPortalHotspot()
+      const portal = worldFromCell(portalHotspot?.cell ?? this.run.portalCell)
+      const text = portalHotspot?.prompt ?? 'Press F'
       ctx.fillStyle = 'rgba(8,12,10,0.58)'
-      ctx.fillRect(portal.x - camera.x - 52, portal.y - camera.y - 56, 104, 28)
-      ctx.fillStyle = '#f7efcf'
       ctx.font = '700 15px sans-serif'
-      ctx.fillText('Press F', portal.x - camera.x - 24, portal.y - camera.y - 37)
+      const textWidth = Math.ceil(ctx.measureText(text).width)
+      const bubbleWidth = Math.max(96, textWidth + 32)
+      ctx.fillRect(portal.x - camera.x - bubbleWidth / 2, portal.y - camera.y - 56, bubbleWidth, 28)
+      ctx.fillStyle = '#f7efcf'
+      ctx.textAlign = 'center'
+      ctx.fillText(text, portal.x - camera.x, portal.y - camera.y - 37)
+      ctx.textAlign = 'start'
     }
   }
 
@@ -1198,20 +1411,33 @@ export class PixelKnightGame {
   private drawEnemy(ctx: CanvasRenderingContext2D, camera: Vector2, enemy: EnemyState) {
     const x = enemy.x - camera.x
     const y = enemy.y - camera.y
-    ctx.fillStyle =
-      enemy.kind === 'vinebrute'
-        ? '#567a3d'
-        : enemy.kind === 'sunpriest'
-          ? '#c39d52'
-          : enemy.kind === 'needlebat'
-            ? '#6d5cb0'
-            : '#5e8b48'
-    ctx.beginPath()
-    ctx.arc(x, y, enemy.radius, 0, Math.PI * 2)
-    ctx.fill()
+    const cached = getPixelKnightMonsterFrames(enemy.kind)
+    const drawState: MonsterState = enemy.hurtAnimMs > 0 ? 'attacked' : enemy.state
+    if (cached) {
+      drawMonster(ctx, cached.meta, cached.frames, {
+        x,
+        y: y + 8,
+        state: drawState,
+        timeMs:
+          drawState === 'attacked'
+            ? 320 - enemy.hurtAnimMs
+            : drawState === 'idle' || drawState === 'walk'
+              ? enemy.animationTimeMs
+              : enemy.stateTimeMs,
+        scale: (enemy.kind === 'boar' ? 0.48 : 0.25) * (enemy.elite ? 1.12 : 1),
+        facing: enemy.facing,
+      })
+    } else {
+      ctx.fillStyle = enemy.kind === 'boar' ? '#8f6a44' : '#5eaa60'
+      ctx.beginPath()
+      ctx.arc(x, y, enemy.radius, 0, Math.PI * 2)
+      ctx.fill()
+    }
     if (enemy.elite) {
       ctx.strokeStyle = '#ffdc75'
       ctx.lineWidth = 3
+      ctx.beginPath()
+      ctx.ellipse(x, y + 10, enemy.radius * 1.25, enemy.radius * 0.54, 0, 0, Math.PI * 2)
       ctx.stroke()
     }
     ctx.fillStyle = 'rgba(17,21,18,0.85)'

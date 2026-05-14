@@ -15,8 +15,8 @@
     {
       "id": "maple-grove-patrols",
       "kinds": [
-        "mossling",
-        "needlebat"
+        "slime",
+        "boar"
       ],
       "clusterCount": {
         "min": 3,
@@ -34,8 +34,8 @@
     {
       "id": "ruin-guardians",
       "kinds": [
-        "vinebrute",
-        "sunpriest"
+        "slime",
+        "boar"
       ],
       "clusterCount": {
         "min": 2,

@@ -3,12 +3,12 @@
     "id": "return-portal",
     "file": "return-portal.png",
     "sheet_bbox": [
-      58,
+      107,
       113,
-      203,
-      185
+      120,
+      124
     ],
-    "area": 23436
+    "area": 6671
   },
   {
     "id": "maple-red-tree",

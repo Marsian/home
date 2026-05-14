@@ -126,7 +126,7 @@ export type ItemStats = Partial<Record<StatKey, number>>
 
 export type SkillHotkey = 'LMB' | 'RMB' | 'Q' | 'E' | 'R' | 'SPACE'
 
-export type EnemyKind = 'mossling' | 'needlebat' | 'vinebrute' | 'sunpriest' | 'boss'
+export type EnemyKind = 'slime' | 'boar' | 'boss'
 
 export type DungeonPalette = {
   sky: string

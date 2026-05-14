@@ -25,7 +25,6 @@ import hudHealthFrameFrontUrl from '@/game-center/pixel-knight/assets/ui/invento
 import hudHpFillUrl from '@/game-center/pixel-knight/assets/ui/inventory/hud-hp-fill-core-v2.png'
 import hudKnightPortraitUrl from '@/game-center/pixel-knight/assets/ui/inventory/hud-portrait-knight-v4.png'
 import hudMinimapFrameUrl from '@/game-center/pixel-knight/assets/ui/inventory/hud-minimap-frame-v2.png'
-import hudPauseButtonUrl from '@/game-center/pixel-knight/assets/ui/inventory/hud-pause-button-v2.png'
 import hudPromptPlaqueUrl from '@/game-center/pixel-knight/assets/ui/inventory/hud-prompt-plaque-v2.png'
 import inventoryBgFrameUrl from '@/game-center/pixel-knight/assets/ui/inventory/inventory-bg-v2.png'
 import inventoryGridPanelUrl from '@/game-center/pixel-knight/assets/ui/inventory/inventory-grid-6x6-v2.png'
@@ -44,6 +43,8 @@ import statGoldIconUrl from '@/game-center/pixel-knight/assets/ui/inventory/stat
 import statHealthIconUrl from '@/game-center/pixel-knight/assets/ui/inventory/stats/health.png'
 import statMoveSpeedIconUrl from '@/game-center/pixel-knight/assets/ui/inventory/stats/move-speed.png'
 import statSkillIconUrl from '@/game-center/pixel-knight/assets/ui/inventory/stats/skill.png'
+import { monsterCatalog } from '../monsters/monsterCatalog'
+import { loadMonsterFrames, type MonsterFrameSet, type MonsterMeta } from '../rendering/monsterRenderer'
 import { type OtherworldMapAssetId, otherworldMapAssetSources } from '../rendering/otherworldMapAssets'
 import { type VillageAssetId, villageAssetSources } from '../rendering/villageAssets'
 import type { PreloadProgress } from '../types'
@@ -52,12 +53,15 @@ let cachedPromise: Promise<void> | null = null
 let warmLoaded = false
 let villageAssetCache: Record<VillageAssetId, HTMLImageElement> | null = null
 let otherworldMapAssetCache: Record<OtherworldMapAssetId, HTMLImageElement> | null = null
+let monsterFrameCache: Record<string, { meta: MonsterMeta; frames: MonsterFrameSet }> | null = null
 let uiAssetsLoaded = false
 let otherworldAssetsLoaded = false
+let monsterAssetsLoaded = false
 
 const preloadSteps = [
   { label: '正在校准副本与词条表', wait: 220 },
   { label: '正在同步界面图集', wait: 220 },
+  { label: '正在唤醒史莱姆与野猪', wait: 220 },
   { label: '正在铺设新手村地砖', wait: 220 },
   { label: '正在绘制异界地图', wait: 220 },
 ] as const
@@ -78,7 +82,6 @@ const pixelKnightUiAssetSources = [
   hudHpFillUrl,
   hudKnightPortraitUrl,
   hudMinimapFrameUrl,
-  hudPauseButtonUrl,
   hudPromptPlaqueUrl,
   inventoryBgFrameUrl,
   inventoryGridPanelUrl,
@@ -212,12 +215,34 @@ async function preloadOtherworldAssets() {
   otherworldAssetsLoaded = true
 }
 
+async function preloadMonsterAssets() {
+  if (monsterAssetsLoaded) return
+  const required = monsterCatalog.filter((entry) => entry.meta.id === 'slime' || entry.meta.id === 'boar')
+  const entries = await Promise.all(
+    required.map(async (entry) => {
+      const frames = await loadMonsterFrames(entry.meta, entry.frameUrls)
+      return [entry.meta.id, { meta: entry.meta, frames }] as const
+    }),
+  )
+  primeImageDraws(
+    entries.flatMap(([, cached]) =>
+      Object.values(cached.frames).flatMap((frames) => frames ?? []),
+    ),
+  )
+  monsterFrameCache = Object.fromEntries(entries)
+  monsterAssetsLoaded = true
+}
+
 export function getPixelKnightVillageAsset(id: VillageAssetId) {
   return villageAssetCache?.[id] ?? null
 }
 
 export function getPixelKnightOtherworldMapAsset(id: OtherworldMapAssetId) {
   return otherworldMapAssetCache?.[id] ?? null
+}
+
+export function getPixelKnightMonsterFrames(id: string) {
+  return monsterFrameCache?.[id] ?? null
 }
 
 export async function preloadGameData() {
@@ -230,8 +255,10 @@ export function clearPixelKnightPreloadCache() {
   warmLoaded = false
   villageAssetCache = null
   otherworldMapAssetCache = null
+  monsterFrameCache = null
   uiAssetsLoaded = false
   otherworldAssetsLoaded = false
+  monsterAssetsLoaded = false
 }
 
 export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress) => void) {
@@ -248,8 +275,9 @@ export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress)
       }
       if (index === 0) await preloadGameData()
       if (index === 1) await preloadUiAssets()
-      if (index === 2) await preloadVillageAssets(villageAssets)
-      if (index === 3) {
+      if (index === 2) await preloadMonsterAssets()
+      if (index === 3) await preloadVillageAssets(villageAssets)
+      if (index === 4) {
         await preloadOtherworldAssets()
         await preloadOtherworldMapAssets(otherworldMapAssets)
       }

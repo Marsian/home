@@ -1,4 +1,4 @@
-import type { DungeonId, MapDef, MapMonsterClusterDef } from '../../types'
+import type { DungeonId, MapDef, MapHotspot, MapMonsterClusterDef } from '../../types'
 import { buildMapRowsFromObstacles } from '../buildMapRowsFromObstacles'
 import type { EditorObstaclesV1, EditorPlacementsV1 } from '../editorFormats'
 import obstaclesJson from './obstacles16.v1.json'
@@ -15,6 +15,7 @@ const meta = mapMeta as {
   name: string
   start: { x: number; y: number }
   portal: { x: number; y: number }
+  hotspots: MapHotspot[]
   monsterClusters: MapMonsterClusterDef[]
 }
 
@@ -26,7 +27,7 @@ export const autumnWoodMap: MapDef = {
   rows: buildMapRowsFromObstacles(autumnWoodObstacles, meta.start, meta.portal),
   start: meta.start,
   portal: meta.portal,
-  hotspots: [],
+  hotspots: meta.hotspots,
   monsterClusters: meta.monsterClusters,
 }
 
