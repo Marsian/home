@@ -77,7 +77,7 @@ const equipmentAnchorsBySlot: Record<MatrixEquipmentSlot, MatrixEquipmentAnchor>
   },
 }
 
-function resolvePartRotationPivot(partKey: MatrixPartKey, part: MatrixPart): [number, number] {
+export function resolvePartRotationPivot(partKey: MatrixPartKey, part: MatrixPart): [number, number] {
   // IMPORTANT: Always return the pivot in the unmirrored part-local coordinate space (facing = 'right').
   // Mirroring is handled by `drawRotatedMatrixPart`, and equipment attachment math relies on this.
   const basePivotX = part.size[0] / 2
@@ -122,7 +122,7 @@ function resolveUnarmedAttackPose(progress: number, facing: MatrixFacing): Attac
   }
 }
 
-function resolveSwordAttackPose(progress: number, facing: MatrixFacing): AttackPose {
+export function resolveSwordAttackPose(progress: number, facing: MatrixFacing): AttackPose {
   const p = Math.max(0, Math.min(1, progress))
   const forward = facing === 'right' ? 1 : -1
 
@@ -251,11 +251,18 @@ function drawMatrixPart(
   y0: number,
   pixelSize: number,
   facing: MatrixFacing = 'right',
+  tint?: { color: string; alpha: number },
 ) {
   const resolvedPixelSize = Math.max(1, Math.round(pixelSize))
+  if (tint) {
+    ctx.save()
+    ctx.globalCompositeOperation = 'lighter'
+    ctx.globalAlpha *= tint.alpha
+    ctx.fillStyle = tint.color
+  }
   for (const point of part.points) {
     const drawX = facing === 'right' ? point.x : part.size[0] - 1 - point.x
-    ctx.fillStyle = point.color
+    if (!tint) ctx.fillStyle = point.color
     ctx.fillRect(
       Math.round(x0 + drawX * resolvedPixelSize),
       Math.round(y0 + point.y * resolvedPixelSize),
@@ -263,6 +270,7 @@ function drawMatrixPart(
       resolvedPixelSize,
     )
   }
+  if (tint) ctx.restore()
 }
 
 function drawRotatedMatrixPart(
@@ -275,6 +283,7 @@ function drawRotatedMatrixPart(
   angleRad: number,
   pivotX: number,
   pivotY: number,
+  tint?: { color: string; alpha: number },
 ) {
   const resolvedPixelSize = Math.max(1, Math.round(pixelSize))
   const resolvedPivotX = facing === 'right' ? pivotX : part.size[0] - 1 - pivotX
@@ -289,7 +298,7 @@ function drawRotatedMatrixPart(
   partCtx.imageSmoothingEnabled = false
   for (const point of part.points) {
     const drawX = facing === 'right' ? point.x : part.size[0] - 1 - point.x
-    partCtx.fillStyle = point.color
+    partCtx.fillStyle = tint ? tint.color : point.color
     partCtx.fillRect(
       drawX * resolvedPixelSize,
       point.y * resolvedPixelSize,
@@ -305,6 +314,10 @@ function drawRotatedMatrixPart(
 
   ctx.save()
   ctx.imageSmoothingEnabled = false
+  if (tint) {
+    ctx.globalCompositeOperation = 'lighter'
+    ctx.globalAlpha *= tint.alpha
+  }
   ctx.translate(originX, originY)
   ctx.rotate(angleRad)
   ctx.drawImage(partCanvas, -pivotXPx, -pivotYPx)
@@ -349,6 +362,7 @@ export function drawMatrixCharacter(
     locomotionTimeMs?: number
     attackTimeMs?: number
     equipment?: Partial<Record<MatrixEquipmentSlot, MatrixEquipmentPiece | null>>
+    bodyFlashAlpha?: number
   },
 ) {
   const bounds = buildCompositeBounds(manifest.parts)
@@ -357,6 +371,10 @@ export function drawMatrixCharacter(
   const totalHeight = bounds.maxY - bounds.minY
   const groupLeft = Math.round(options.actorX - (totalWidth * pixelSize) / 2)
   const groupTop = Math.round(options.actorFeetY - totalHeight * pixelSize)
+  const bodyFlashTint =
+    options.bodyFlashAlpha && options.bodyFlashAlpha > 0
+      ? { color: '#fff0b8', alpha: Math.min(1, options.bodyFlashAlpha) }
+      : null
 
   const locomotionTimeMs = options.mode === 'static' ? 0 : options.locomotionTimeMs ?? options.timeMs
   const forward = options.facing === 'right' ? 1 : -1
@@ -437,14 +455,17 @@ export function drawMatrixCharacter(
   const drawPartPixels = (part: MatrixPart, dx: number, dy: number) => {
     const baseX = getPartBaseX(part, dx)
     const baseY = part.offset[1] - bounds.minY + dy
+    const x0 = groupLeft + baseX * pixelSize
+    const y0 = groupTop + baseY * pixelSize
     drawMatrixPart(
       ctx,
       part,
-      groupLeft + baseX * pixelSize,
-      groupTop + baseY * pixelSize,
+      x0,
+      y0,
       pixelSize,
       options.facing,
     )
+    if (bodyFlashTint) drawMatrixPart(ctx, part, x0, y0, pixelSize, options.facing, bodyFlashTint)
   }
 
   const drawPart = (key: MatrixPartKey, dx: number, dy: number) => {
@@ -477,6 +498,20 @@ export function drawMatrixCharacter(
       pivotX,
       pivotY,
     )
+    if (bodyFlashTint) {
+      drawRotatedMatrixPart(
+        ctx,
+        part,
+        groupLeft + baseX * pixelSize,
+        groupTop + baseY * pixelSize,
+        pixelSize,
+        options.facing,
+        angle,
+        pivotX,
+        pivotY,
+        bodyFlashTint,
+      )
+    }
   }
 
   const drawLegPart = (key: 'leftLeg' | 'rightLeg', dx: number, dy: number, angle: number) => {
@@ -495,6 +530,20 @@ export function drawMatrixCharacter(
       pivotX,
       pivotY,
     )
+    if (bodyFlashTint) {
+      drawRotatedMatrixPart(
+        ctx,
+        part,
+        groupLeft + baseX * pixelSize,
+        groupTop + baseY * pixelSize,
+        pixelSize,
+        options.facing,
+        angle,
+        pivotX,
+        pivotY,
+        bodyFlashTint,
+      )
+    }
   }
 
   const armBackKey: 'leftArm' | 'rightArm' = 'rightArm'

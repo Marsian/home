@@ -26,12 +26,16 @@ function resolveFolder(path: string) {
 function resolveFrameUrls(folder: string, meta: MonsterMeta): MonsterFrameUrls {
   return Object.fromEntries(
     Object.values(meta.animations)
+      .filter((animation) => !!animation)
       .flatMap((animation) => animation.frames)
-      .map((framePath) => {
+      .flatMap((framePath) => {
         const modulePath = `./${folder}/${framePath}`
         const url = frameModules[modulePath]
-        if (!url) throw new Error(`Missing monster frame asset: ${modulePath}`)
-        return [framePath, url] as const
+        if (!url) {
+          console.warn(`Missing monster frame asset: ${modulePath}`)
+          return []
+        }
+        return [[framePath, url] as const]
       }),
   )
 }

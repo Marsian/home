@@ -2,7 +2,12 @@ import { difficultyConfigs, generateLootItems, getDungeonById, skills } from './
 import knightManifestData from '@/game-center/pixel-knight/assets/characters/knight.json'
 import shieldMatrixData from '@/game-center/pixel-knight/assets/equipment/off-hand/wood-shield.json'
 import swordMatrixData from '@/game-center/pixel-knight/assets/equipment/main-hand/iron-sword.json'
-import { getPixelKnightMonsterFrames, getPixelKnightOtherworldMapAsset, getPixelKnightVillageAsset } from './game/preload'
+import {
+  getPixelKnightMonsterFrames,
+  getPixelKnightOtherworldMapAsset,
+  getPixelKnightSwordSlashFrames,
+  getPixelKnightVillageAsset,
+} from './game/preload'
 import { isCombatEnemyKind, monsterAiConfigs, type CombatEnemyKind, type MonsterAiState } from './game/monsterAi'
 import { getOtherworldMapPack, type OtherworldMapPack } from './maps/otherworldRegistry'
 import { starterVillageMap, starterVillagePlacements } from './maps/starter-village/starterVillageMap'
@@ -14,8 +19,9 @@ import {
   type MatrixFacing,
   type MatrixManifest,
 } from './rendering/matrixCharacterRenderer'
-import { drawMonster, type MonsterFacing, type MonsterState } from './rendering/monsterRenderer'
+import { drawMonster, getMonsterAnimationDuration, type MonsterFacing, type MonsterState } from './rendering/monsterRenderer'
 import { getOtherworldMapAtomAssetId, getOtherworldMapBackdropAssetId } from './rendering/otherworldMapAssets'
+import { drawSwordSlashEffect, SWORD_SLASH_LIFE_MS } from './rendering/swordSlashRenderer'
 import { getStarterVillageAtomAssetId } from './rendering/villageAssets'
 import type {
   DifficultyTier,
@@ -52,6 +58,7 @@ type PlayerState = {
   dashGuardMs: number
   blessingMs: number
   whirlMs: number
+  hurtFlashMs: number
   attackCooldownMs: number
   shieldCooldownMs: number
   holyCooldownMs: number
@@ -86,9 +93,18 @@ type EnemyState = {
   aggroMs: number
   attackHitDone: boolean
   hurtAnimMs: number
+  vanished: boolean
   wanderDir: Vector2
   chargeDir: Vector2
 }
+
+type CombatFxState =
+  | {
+      type: 'sword-slash'
+      facing: FacingDirection
+      ageMs: number
+      lifeMs: number
+    }
 
 type ProjectileState = {
   id: string
@@ -121,6 +137,8 @@ const TILE = 16
 const PORTAL_RADIUS = 30
 const MATRIX_PLAYER_PIXEL_SIZE = 2
 const MATRIX_ATTACK_DURATION_MS = 420
+const PLAYER_HURT_FLASH_MS = 180
+const MONSTER_DEATH_HOLD_MS = 120
 const matrixKnightManifest = knightManifestData as MatrixManifest
 type MatrixEquipmentLoadout = Partial<Record<MatrixEquipmentSlot, MatrixEquipmentPiece | null>>
 
@@ -373,6 +391,7 @@ function spawnEnemyClusters(map: MapDef, difficulty: DifficultyTier) {
         aggroMs: 0,
         attackHitDone: false,
         hurtAnimMs: 0,
+        vanished: false,
         wanderDir: randomDirection(),
         chargeDir: { x: 0, y: 0 },
       })
@@ -395,6 +414,7 @@ export class PixelKnightGame {
   private player: PlayerState | null = null
   private enemies: EnemyState[] = []
   private projectiles: ProjectileState[] = []
+  private combatFx: CombatFxState[] = []
   private run: ActiveRun | null = null
   private mouse: Vector2 = { x: WIDTH / 2, y: HEIGHT / 2 }
   private keys = new Set<string>()
@@ -491,6 +511,7 @@ export class PixelKnightGame {
       dashGuardMs: 0,
       blessingMs: 0,
       whirlMs: 0,
+      hurtFlashMs: 0,
       attackCooldownMs: 0,
       shieldCooldownMs: 0,
       holyCooldownMs: 0,
@@ -504,6 +525,7 @@ export class PixelKnightGame {
     }
     this.enemies = spawnEnemyClusters(built, config.difficulty)
     this.projectiles = []
+    this.combatFx = []
     this.trailSegments = []
     this.lootFeed = ['探索副本，靠近尽头的传送点后按 F 返回村庄。']
     this.pauseRequested = false
@@ -532,6 +554,7 @@ export class PixelKnightGame {
     this.run = null
     this.enemies = []
     this.projectiles = []
+    this.combatFx = []
     this.trailSegments = []
     this.portalNearby = false
     this.enterVillage()
@@ -545,6 +568,7 @@ export class PixelKnightGame {
     this.run = null
     this.enemies = []
     this.projectiles = []
+    this.combatFx = []
     this.trailSegments = []
     this.player = {
       x: startPos.x,
@@ -557,6 +581,7 @@ export class PixelKnightGame {
       dashGuardMs: 0,
       blessingMs: 0,
       whirlMs: 0,
+      hurtFlashMs: 0,
       attackCooldownMs: 0,
       shieldCooldownMs: 0,
       holyCooldownMs: 0,
@@ -686,6 +711,9 @@ export class PixelKnightGame {
     this.trailSegments = this.trailSegments
       .map((segment) => ({ ...segment, lifeMs: segment.lifeMs - dt }))
       .filter((segment) => segment.lifeMs > 0)
+    this.combatFx = this.combatFx
+      .map((effect) => ({ ...effect, ageMs: effect.ageMs + dt }))
+      .filter((effect) => effect.ageMs < effect.lifeMs)
 
     if (this.phase === 'paused' || this.pauseRequested) return
     if (this.phase === 'home') {
@@ -709,6 +737,7 @@ export class PixelKnightGame {
     this.player.dashGuardMs = Math.max(0, this.player.dashGuardMs - dt)
     this.player.blessingMs = Math.max(0, this.player.blessingMs - dt)
     this.player.whirlMs = Math.max(0, this.player.whirlMs - dt)
+    this.player.hurtFlashMs = Math.max(0, this.player.hurtFlashMs - dt)
 
     const input: Vector2 = {
       x: (this.keys.has('KeyD') ? 1 : 0) - (this.keys.has('KeyA') ? 1 : 0),
@@ -727,7 +756,7 @@ export class PixelKnightGame {
     }
     if (this.player.blessingMs > 0 && this.run.stats.activeLegendaryPowers.includes('blessing-chain')) {
       if (Math.floor(this.player.blessingMs / 1000) !== Math.floor((this.player.blessingMs + dt) / 1000)) {
-        const nearest = [...this.enemies].sort(
+        const nearest = this.enemies.filter((enemy) => !this.isEnemyDying(enemy)).sort(
           (a, b) => distance(a, this.player as Vector2) - distance(b, this.player as Vector2),
         )[0]
         if (nearest) this.spawnPlayerBolt(nearest)
@@ -737,6 +766,7 @@ export class PixelKnightGame {
     for (const enemy of this.enemies) {
       this.updateEnemy(enemy, dt)
     }
+    this.enemies = this.enemies.filter((enemy) => !enemy.vanished)
 
     this.projectiles = this.projectiles
       .map((projectile) => ({
@@ -757,6 +787,7 @@ export class PixelKnightGame {
         }
         let hit = false
         for (const enemy of this.enemies) {
+          if (this.isEnemyDying(enemy)) continue
           if (distance(projectile, enemy) <= projectile.radius + enemy.radius) {
             this.damageEnemy(enemy, projectile.damage)
             hit = true
@@ -814,8 +845,46 @@ export class PixelKnightGame {
     this.setEnemyAiState(enemy, 'idle')
   }
 
+  private isEnemyDying(enemy: EnemyState) {
+    return enemy.state === 'death' || enemy.state === 'vaporize' || enemy.vanished
+  }
+
+  private getEnemyAnimationDuration(enemy: EnemyState, state: MonsterState, fallbackMs: number) {
+    const cached = getPixelKnightMonsterFrames(enemy.kind)
+    const animation = cached?.meta.animations[state]
+    return animation ? getMonsterAnimationDuration(animation) : fallbackMs
+  }
+
+  private hasEnemyAnimation(enemy: EnemyState, state: MonsterState) {
+    const cached = getPixelKnightMonsterFrames(enemy.kind)
+    const animation = cached?.meta.animations[state]
+    const frames = cached?.frames[state]
+    return !!animation && !!frames?.length
+  }
+
   private updateEnemy(enemy: EnemyState, dt: number) {
     if (!this.player) return
+    if (enemy.state === 'death') {
+      enemy.stateTimeMs += dt
+      if (enemy.stateTimeMs >= this.getEnemyAnimationDuration(enemy, 'death', 540) + MONSTER_DEATH_HOLD_MS) {
+        if (!this.hasEnemyAnimation(enemy, 'vaporize')) {
+          enemy.vanished = true
+          return
+        }
+        enemy.state = 'vaporize'
+        enemy.stateTimeMs = 0
+      }
+      return
+    }
+    if (enemy.state === 'vaporize') {
+      if (!this.hasEnemyAnimation(enemy, 'vaporize')) {
+        enemy.vanished = true
+        return
+      }
+      enemy.stateTimeMs += dt
+      if (enemy.stateTimeMs >= this.getEnemyAnimationDuration(enemy, 'vaporize', 560)) enemy.vanished = true
+      return
+    }
     const ai = monsterAiConfigs[enemy.kind]
     enemy.attackCooldownMs = Math.max(0, enemy.attackCooldownMs - dt)
     enemy.hurtAnimMs = Math.max(0, enemy.hurtAnimMs - dt)
@@ -909,12 +978,15 @@ export class PixelKnightGame {
     const camera = this.getCamera()
     const worldMouse = { x: this.mouse.x + camera.x, y: this.mouse.y + camera.y }
     const direction = normalize({ x: worldMouse.x - this.player.x, y: worldMouse.y - this.player.y })
+    const slashDirection = Math.hypot(direction.x, direction.y) > 0.01 ? direction : { x: 1, y: 0 }
+    this.spawnSwordSlash(this.getFacingDirection(camera))
     for (const enemy of this.enemies) {
+      if (this.isEnemyDying(enemy)) continue
       const delta = { x: enemy.x - this.player.x, y: enemy.y - this.player.y }
       const dist = Math.hypot(delta.x, delta.y)
       if (dist > 90) continue
       const enemyDir = normalize(delta)
-      const dot = direction.x * enemyDir.x + direction.y * enemyDir.y
+      const dot = slashDirection.x * enemyDir.x + slashDirection.y * enemyDir.y
       if (dot < 0.05) continue
       const crit = Math.random() < this.run.stats.critChance
       this.damageEnemy(enemy, this.run.stats.attack * (crit ? 1 + this.run.stats.critDamage : 1))
@@ -922,6 +994,15 @@ export class PixelKnightGame {
         this.player.health = Math.min(this.player.maxHealth, this.player.health + 2)
       }
     }
+  }
+
+  private spawnSwordSlash(facing: FacingDirection) {
+    this.combatFx.push({
+      type: 'sword-slash',
+      facing,
+      ageMs: 0,
+      lifeMs: SWORD_SLASH_LIFE_MS,
+    })
   }
 
   private useWhirlwind() {
@@ -995,6 +1076,7 @@ export class PixelKnightGame {
 
   private applyAreaDamage(x: number, y: number, radius: number, damage: number, soft = false) {
     for (const enemy of [...this.enemies]) {
+      if (this.isEnemyDying(enemy)) continue
       if (distance({ x, y }, enemy) <= radius + enemy.radius) {
         this.damageEnemy(enemy, soft ? damage : damage * (1 + this.run!.stats.skillPower / 180))
       }
@@ -1019,6 +1101,7 @@ export class PixelKnightGame {
 
   private damageEnemy(enemy: EnemyState, rawDamage: number) {
     if (!this.run) return
+    if (this.isEnemyDying(enemy)) return
     enemy.health -= rawDamage
     if (enemy.health > 0) {
       enemy.hurtAnimMs = 320
@@ -1032,7 +1115,14 @@ export class PixelKnightGame {
     this.run.rewardGold += Math.round(goldValue * difficulty.goldMultiplier)
     this.run.rewardMaterials += enemy.elite ? 2 : 1
     if (enemy.elite) this.pushLootFeed('精英被击破，奖励提升。')
-    this.enemies = this.enemies.filter((candidate) => candidate.id !== enemy.id)
+    enemy.health = 0
+    enemy.state = 'death'
+    enemy.stateTimeMs = 0
+    enemy.animationTimeMs = 0
+    enemy.hurtAnimMs = 0
+    enemy.attackHitDone = true
+    enemy.attackCooldownMs = Number.POSITIVE_INFINITY
+    enemy.aggroMs = 0
     if (this.run.stats.activeLegendaryPowers.includes('sunburst') && enemy.elite) {
       this.applyAreaDamage(enemy.x, enemy.y, 94, this.run.stats.attack * 1.1)
     }
@@ -1046,6 +1136,7 @@ export class PixelKnightGame {
     const damageTaken = Math.max(5, rawDamage - armorTotal * 0.16)
     this.player.health -= damageTaken
     this.player.invulnerableMs = 220
+    this.player.hurtFlashMs = PLAYER_HURT_FLASH_MS
     if (this.player.health <= 0) this.finishRun(false)
   }
 
@@ -1072,6 +1163,7 @@ export class PixelKnightGame {
     this.player = null
     this.enemies = []
     this.projectiles = []
+    this.combatFx = []
     this.trailSegments = []
     this.portalNearby = false
     this.emitHud()
@@ -1160,6 +1252,12 @@ export class PixelKnightGame {
     player: PlayerState,
   ) {
     const matrixFacing: MatrixFacing = facing === 'left' ? 'left' : 'right'
+    const hurtFlashPhase =
+      player.hurtFlashMs > 0 ? Math.floor((PLAYER_HURT_FLASH_MS - player.hurtFlashMs) / 45) : -1
+    const bodyFlashAlpha =
+      player.hurtFlashMs > 0 && hurtFlashPhase % 2 === 0
+        ? 0.38 + (player.hurtFlashMs / PLAYER_HURT_FLASH_MS) * 0.28
+        : 0
     drawMatrixCharacter(ctx, matrixKnightManifest, {
       actorX: x,
       actorFeetY: y + 8,
@@ -1172,11 +1270,13 @@ export class PixelKnightGame {
       locomotionTimeMs: player.locomotionAnimElapsedMs,
       attackTimeMs: player.attackAnimElapsedMs,
       equipment: this.matrixEquipment,
+      bodyFlashAlpha,
     })
   }
 
   private emitHud() {
     const map = this.getActiveMap()
+    const aliveEnemies = this.enemies.filter((enemy) => !this.isEnemyDying(enemy)).length
     const playerCell = this.player
       ? { x: Math.floor(this.player.x / TILE), y: Math.floor(this.player.y / TILE) }
       : { x: 0, y: 0 }
@@ -1189,7 +1289,7 @@ export class PixelKnightGame {
       encounterLabel: this.encounterLabel,
       health: this.player?.health ?? 0,
       maxHealth: this.player?.maxHealth ?? 0,
-      enemiesLeft: this.enemies.length,
+      enemiesLeft: aliveEnemies,
       elapsedMs: this.run ? performance.now() - this.run.startedAt : 0,
       blessingActive: (this.player?.blessingMs ?? 0) > 0,
       portalNearby: this.portalNearby,
@@ -1265,6 +1365,7 @@ export class PixelKnightGame {
     if (!this.run) return
     const camera = this.getCamera()
     this.renderMapBackdrop(ctx, camera)
+    this.drawCombatFx(ctx, camera)
 
     ctx.save()
     ctx.imageSmoothingEnabled = false
@@ -1412,20 +1513,26 @@ export class PixelKnightGame {
     const x = enemy.x - camera.x
     const y = enemy.y - camera.y
     const cached = getPixelKnightMonsterFrames(enemy.kind)
-    const drawState: MonsterState = enemy.hurtAnimMs > 0 ? 'attacked' : enemy.state
+    const drawState: MonsterState = this.isEnemyDying(enemy) ? enemy.state : enemy.hurtAnimMs > 0 ? 'attacked' : enemy.state
     if (cached) {
       drawMonster(ctx, cached.meta, cached.frames, {
         x,
         y: y + 8,
         state: drawState,
         timeMs:
-          drawState === 'attacked'
+          drawState === 'death' || drawState === 'vaporize'
+            ? enemy.stateTimeMs
+            : drawState === 'attacked'
             ? 320 - enemy.hurtAnimMs
             : drawState === 'idle' || drawState === 'walk'
               ? enemy.animationTimeMs
               : enemy.stateTimeMs,
         scale: (enemy.kind === 'boar' ? 0.48 : 0.25) * (enemy.elite ? 1.12 : 1),
         facing: enemy.facing,
+        alpha:
+          drawState === 'vaporize'
+            ? Math.max(0, 1 - enemy.stateTimeMs / Math.max(1, this.getEnemyAnimationDuration(enemy, 'vaporize', 560)))
+            : 1,
       })
     } else {
       ctx.fillStyle = enemy.kind === 'boar' ? '#8f6a44' : '#5eaa60'
@@ -1433,6 +1540,7 @@ export class PixelKnightGame {
       ctx.arc(x, y, enemy.radius, 0, Math.PI * 2)
       ctx.fill()
     }
+    if (this.isEnemyDying(enemy)) return
     if (enemy.elite) {
       ctx.strokeStyle = '#ffdc75'
       ctx.lineWidth = 3
@@ -1443,7 +1551,7 @@ export class PixelKnightGame {
     ctx.fillStyle = 'rgba(17,21,18,0.85)'
     ctx.fillRect(x - 18, y - enemy.radius - 18, 36, 5)
     ctx.fillStyle = '#f4cd73'
-    ctx.fillRect(x - 18, y - enemy.radius - 18, 36 * (enemy.health / enemy.maxHealth), 5)
+    ctx.fillRect(x - 18, y - enemy.radius - 18, 36 * clamp(enemy.health / enemy.maxHealth, 0, 1), 5)
   }
 
   private drawPlayer(ctx: CanvasRenderingContext2D, camera: Vector2) {
@@ -1458,6 +1566,25 @@ export class PixelKnightGame {
       ctx.beginPath()
       ctx.arc(x, y, 38, 0, Math.PI * 2)
       ctx.stroke()
+    }
+  }
+
+  private drawCombatFx(ctx: CanvasRenderingContext2D, camera: Vector2) {
+    if (!this.player) return
+    const swordSlashFrames = getPixelKnightSwordSlashFrames()
+    for (const effect of this.combatFx) {
+      if (effect.type !== 'sword-slash') continue
+      const attackProgress = clamp(effect.ageMs / MATRIX_ATTACK_DURATION_MS, 0, 1)
+      drawSwordSlashEffect(ctx, {
+        frames: swordSlashFrames,
+        manifest: matrixKnightManifest,
+        equipment: this.matrixEquipment,
+        actorX: this.player.x - camera.x,
+        actorFeetY: this.player.y + 8 - camera.y,
+        pixelSize: MATRIX_PLAYER_PIXEL_SIZE,
+        facing: effect.facing === 'left' ? 'left' : 'right',
+        attackProgress,
+      })
     }
   }
 

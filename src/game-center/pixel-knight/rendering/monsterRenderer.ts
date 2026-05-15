@@ -1,4 +1,4 @@
-export type MonsterState = 'idle' | 'walk' | 'attack' | 'attacked'
+export type MonsterState = 'idle' | 'walk' | 'attack' | 'attacked' | 'death' | 'vaporize'
 export type MonsterFacing = 'left' | 'right'
 
 export type MonsterAnimation = {
@@ -13,7 +13,7 @@ export type MonsterMeta = {
   defaultState: MonsterState
   frameSize: [number, number]
   anchor: [number, number]
-  animations: Record<MonsterState, MonsterAnimation>
+  animations: Partial<Record<MonsterState, MonsterAnimation>> & Record<'idle', MonsterAnimation>
 }
 
 export type MonsterFrameSet = Partial<Record<MonsterState, HTMLImageElement[]>>

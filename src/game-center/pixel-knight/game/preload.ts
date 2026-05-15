@@ -54,9 +54,11 @@ let warmLoaded = false
 let villageAssetCache: Record<VillageAssetId, HTMLImageElement> | null = null
 let otherworldMapAssetCache: Record<OtherworldMapAssetId, HTMLImageElement> | null = null
 let monsterFrameCache: Record<string, { meta: MonsterMeta; frames: MonsterFrameSet }> | null = null
+let swordSlashFrameCache: HTMLImageElement[] | null = null
 let uiAssetsLoaded = false
 let otherworldAssetsLoaded = false
 let monsterAssetsLoaded = false
+let combatFxAssetsLoaded = false
 
 const preloadSteps = [
   { label: '正在校准副本与词条表', wait: 220 },
@@ -115,6 +117,12 @@ const pixelKnightOtherworldAssetSources = [
   otherworldMushroomMarshEntranceUrl,
   otherworldCloudAltarEntranceUrl,
 ]
+
+const swordSlashFrameModules = import.meta.glob('../effects/sword-slash/frame-*.png', {
+  eager: true,
+  import: 'default',
+  query: '?url',
+}) as Record<string, string>
 
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms))
@@ -233,6 +241,16 @@ async function preloadMonsterAssets() {
   monsterAssetsLoaded = true
 }
 
+export async function preloadPixelKnightCombatFxAssets() {
+  if (combatFxAssetsLoaded) return
+  const frameUrls = Object.entries(swordSlashFrameModules)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, src]) => src)
+  swordSlashFrameCache = await Promise.all(frameUrls.map((src) => loadImage(src)))
+  primeImageDraws(swordSlashFrameCache)
+  combatFxAssetsLoaded = true
+}
+
 export function getPixelKnightVillageAsset(id: VillageAssetId) {
   return villageAssetCache?.[id] ?? null
 }
@@ -243,6 +261,10 @@ export function getPixelKnightOtherworldMapAsset(id: OtherworldMapAssetId) {
 
 export function getPixelKnightMonsterFrames(id: string) {
   return monsterFrameCache?.[id] ?? null
+}
+
+export function getPixelKnightSwordSlashFrames() {
+  return swordSlashFrameCache ?? []
 }
 
 export async function preloadGameData() {
@@ -256,9 +278,11 @@ export function clearPixelKnightPreloadCache() {
   villageAssetCache = null
   otherworldMapAssetCache = null
   monsterFrameCache = null
+  swordSlashFrameCache = null
   uiAssetsLoaded = false
   otherworldAssetsLoaded = false
   monsterAssetsLoaded = false
+  combatFxAssetsLoaded = false
 }
 
 export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress) => void) {
@@ -275,7 +299,7 @@ export function preloadPixelKnightAssets(onProgress: (progress: PreloadProgress)
       }
       if (index === 0) await preloadGameData()
       if (index === 1) await preloadUiAssets()
-      if (index === 2) await preloadMonsterAssets()
+      if (index === 2) await Promise.all([preloadMonsterAssets(), preloadPixelKnightCombatFxAssets()])
       if (index === 3) await preloadVillageAssets(villageAssets)
       if (index === 4) {
         await preloadOtherworldAssets()

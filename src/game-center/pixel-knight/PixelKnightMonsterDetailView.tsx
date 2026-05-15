@@ -13,9 +13,11 @@ const stateLabels: Record<MonsterState, string> = {
   walk: 'Walk',
   attack: 'Attack',
   attacked: 'Attacked',
+  death: 'Death',
+  vaporize: 'Vaporize',
 }
 
-const stateOrder: MonsterState[] = ['idle', 'walk', 'attack', 'attacked']
+const stateOrder: MonsterState[] = ['idle', 'walk', 'attack', 'attacked', 'death', 'vaporize']
 
 export default function PixelKnightMonsterDetailView() {
   const navigate = useNavigate()

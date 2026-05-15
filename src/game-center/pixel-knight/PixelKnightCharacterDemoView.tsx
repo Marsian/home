@@ -10,6 +10,10 @@ import helmetAzureData from '@/game-center/pixel-knight/assets/equipment/helmet/
 import shieldData from '@/game-center/pixel-knight/assets/equipment/off-hand/wood-shield.json'
 import swordData from '@/game-center/pixel-knight/assets/equipment/main-hand/iron-sword.json'
 import {
+  getPixelKnightSwordSlashFrames,
+  preloadPixelKnightCombatFxAssets,
+} from '@/game-center/pixel-knight/game/preload'
+import {
   drawMatrixCharacter,
   type MatrixEquipmentPiece,
   type MatrixEquipmentSlot,
@@ -17,6 +21,7 @@ import {
   type MatrixFacing,
   type MatrixManifest,
 } from '@/game-center/pixel-knight/rendering/matrixCharacterRenderer'
+import { drawSwordSlashEffect } from '@/game-center/pixel-knight/rendering/swordSlashRenderer'
 
 const CANVAS_WIDTH = 960
 const CANVAS_HEIGHT = 540
@@ -132,6 +137,7 @@ export default function PixelKnightCharacterDemoView() {
   const [paused, setPaused] = useState(false)
   const [mode, setMode] = useState<DemoMode>('walk')
   const [ready, setReady] = useState(false)
+  const [swordSlashReady, setSwordSlashReady] = useState(false)
   const [selectedHelmetId, setSelectedHelmetId] = useState(helmetAzureData.id as string)
   const [facingOverride, setFacingOverride] = useState<Facing | null>(null)
   const [equippedSlots, setEquippedSlots] = useState<Record<MatrixEquipmentSlot, boolean>>({
@@ -158,6 +164,20 @@ export default function PixelKnightCharacterDemoView() {
     manifestRef.current = pointMatrixData as MatrixManifest
     setReady(true)
   }, [pointMatrixData])
+
+  useEffect(() => {
+    let cancelled = false
+    preloadPixelKnightCombatFxAssets()
+      .then(() => {
+        if (!cancelled) setSwordSlashReady(true)
+      })
+      .catch(() => {
+        if (!cancelled) setSwordSlashReady(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -245,6 +265,23 @@ export default function PixelKnightCharacterDemoView() {
           attackDurationMs: attackDurationMsRef.current,
           equipment: equippedPieces,
         })
+        if (
+          swordSlashReady &&
+          modeRef.current === 'attack' &&
+          attackStartMsRef.current !== null &&
+          equippedPieces.mainHand?.weaponType === 'sword'
+        ) {
+          drawSwordSlashEffect(ctx, {
+            frames: getPixelKnightSwordSlashFrames(),
+            manifest: manifestRef.current,
+            equipment: equippedPieces,
+            actorX,
+            actorFeetY,
+            pixelSize: PIXEL_SIZE,
+            facing,
+            attackProgress: Math.max(0, actionTimeMs / attackDurationMsRef.current),
+          })
+        }
       }
 
       animationFrame = requestAnimationFrame(render)
@@ -255,7 +292,7 @@ export default function PixelKnightCharacterDemoView() {
       disposed = true
       cancelAnimationFrame(animationFrame)
     }
-  }, [ready, equippedSlots, selectedHelmet])
+  }, [ready, swordSlashReady, equippedSlots, selectedHelmet])
 
   const triggerAttack = () => {
     if (modeRef.current === 'attack' && attackStartMsRef.current !== null) {

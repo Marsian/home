@@ -58,6 +58,18 @@
         "frames/attacked/frame-03.png",
         "frames/attacked/frame-04.png"
       ]
+    },
+    "death": {
+      "frameDurationMs": 115,
+      "loop": false,
+      "frames": [
+        "frames/death/frame-01.png",
+        "frames/death/frame-02.png",
+        "frames/death/frame-03.png",
+        "frames/death/frame-04.png",
+        "frames/death/frame-05.png",
+        "frames/death/frame-06.png"
+      ]
     }
   }
 }
