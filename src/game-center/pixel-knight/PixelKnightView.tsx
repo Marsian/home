@@ -52,8 +52,6 @@ import {
 import {
   createStarterShield,
   createStarterSword,
-  difficultyConfigs,
-  getDungeonById,
   rarityLabel,
   rarityTone,
   skills,
@@ -80,7 +78,6 @@ import type {
   PixelKnightSave,
   PreloadProgress,
   RenderableEquipmentAssetId,
-  RunResult,
   VillageHotspotKind,
 } from './types'
 import { LoadingOverlay } from './ui/LoadingOverlay'
@@ -141,13 +138,6 @@ const minimapPlayerCellStore = (() => {
   }
 })()
 
-function formatTime(ms: number) {
-  const total = Math.floor(ms / 1000)
-  const mm = String(Math.floor(total / 60)).padStart(2, '0')
-  const ss = String(total % 60).padStart(2, '0')
-  return `${mm}:${ss}`
-}
-
 const selectKnightManifest = knightManifestData as MatrixManifest
 const selectKnightEquipment: Partial<Record<MatrixEquipmentSlot, MatrixEquipmentPiece | null>> = {
   mainHand: swordMatrixData as MatrixEquipmentPiece,
@@ -164,6 +154,9 @@ const equipmentSlotOrder: EquipmentSlot[] = [
   'amulet',
   'ring',
 ]
+
+const BACKPACK_VISIBLE_CAPACITY = 36
+const STORAGE_CAPACITY = 36
 
 const matrixEquipmentByAssetId: Record<RenderableEquipmentAssetId, MatrixEquipmentPiece> = {
   'cloth-cap': clothCapMatrixData as MatrixEquipmentPiece,
@@ -374,9 +367,10 @@ export default function PixelKnightView() {
   const gameRef = useRef<PixelKnightGame | null>(null)
 
   const [save, setSave] = useState<PixelKnightSave>(() => loadPixelKnightSave())
+  const saveRef = useRef(save)
   const [preload, setPreload] = useState(initialPreload)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [phase, setPhase] = useState<'loading' | 'home' | 'playing' | 'results' | 'error'>('loading')
+  const [phase, setPhase] = useState<'loading' | 'home' | 'playing' | 'error'>('loading')
   const [hud, setHud] = useState(defaultHud)
   const [selected, setSelected] = useState<DungeonSelectState>({
     dungeonId: 'ember-forge',
@@ -385,11 +379,11 @@ export default function PixelKnightView() {
   })
   const [inventoryOpen, setInventoryOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [lastResult, setLastResult] = useState<RunResult | null>(null)
   const [homeStage, setHomeStage] = useState<'character' | 'village'>('character')
   const [activeVillagePanel, setActiveVillagePanel] = useState<VillageHotspotKind | null>(null)
 
   useEffect(() => {
+    saveRef.current = save
     savePixelKnightSave(save)
   }, [save])
 
@@ -428,12 +422,25 @@ export default function PixelKnightView() {
       onMinimapPlayerCell: (cell) => minimapPlayerCellStore.set(cell),
       onHotspotInteract: (hotspot: MapHotspot) => {
         setInventoryOpen(false)
+        setSettingsOpen(false)
         setActiveVillagePanel(hotspot.kind)
       },
+      onPickupGold: (amount) => {
+        updateActiveProfile((current) => ({ ...current, gold: current.gold + amount }))
+      },
+      onPickupItem: (item) => {
+        const currentProfile = saveRef.current.profilesByClassId[saveRef.current.activeClassId]
+        if (currentProfile.stash.length >= BACKPACK_VISIBLE_CAPACITY) return false
+        updateActiveProfile((current) => ({ ...current, stash: [item, ...current.stash] }))
+        return true
+      },
       onRunComplete: (result) => {
-        setLastResult(result)
         updateActiveProfile((current) => applyPixelKnightRunResult(current, result))
-        setPhase('results')
+        setPhase('home')
+        setHomeStage('village')
+        setInventoryOpen(false)
+        setSettingsOpen(false)
+        setActiveVillagePanel(null)
       },
       onError: (message) => {
         setLoadError(message)
@@ -540,6 +547,30 @@ export default function PixelKnightView() {
           [slot]: null,
         },
         stash: [...current.stash, existing],
+      }
+    })
+  }
+
+  const moveBackpackItemToStorage = (item: ItemInstance) => {
+    updateActiveProfile((current) => {
+      if (current.storage.length >= STORAGE_CAPACITY) return current
+      if (!current.stash.some((candidate) => candidate.id === item.id)) return current
+      return {
+        ...current,
+        stash: current.stash.filter((candidate) => candidate.id !== item.id),
+        storage: [item, ...current.storage].slice(0, STORAGE_CAPACITY),
+      }
+    })
+  }
+
+  const moveStorageItemToBackpack = (item: ItemInstance) => {
+    updateActiveProfile((current) => {
+      if (current.stash.length >= BACKPACK_VISIBLE_CAPACITY) return current
+      if (!current.storage.some((candidate) => candidate.id === item.id)) return current
+      return {
+        ...current,
+        stash: [item, ...current.stash],
+        storage: current.storage.filter((candidate) => candidate.id !== item.id),
       }
     })
   }
@@ -794,7 +825,16 @@ export default function PixelKnightView() {
               />
             ) : null}
 
-            {phase === 'home' && homeStage === 'village' && activeVillagePanel && activeVillagePanel !== 'portal' ? (
+            {phase === 'home' && homeStage === 'village' && activeVillagePanel === 'stash' ? (
+              <StorageOverlay
+                profile={profile}
+                onClose={() => setActiveVillagePanel(null)}
+                onMoveToStorage={moveBackpackItemToStorage}
+                onMoveToBackpack={moveStorageItemToBackpack}
+              />
+            ) : null}
+
+            {phase === 'home' && homeStage === 'village' && activeVillagePanel && activeVillagePanel !== 'portal' && activeVillagePanel !== 'stash' ? (
               <VillageSystemPanel
                 kind={activeVillagePanel}
                 profile={profile}
@@ -871,70 +911,6 @@ export default function PixelKnightView() {
                   </div>
                 </div>
               </>
-            ) : null}
-
-            {phase === 'results' && lastResult ? (
-              <div className="absolute inset-0 z-30 flex items-center justify-center bg-[linear-gradient(180deg,rgba(29,41,31,0.54),rgba(12,16,13,0.84))] p-4">
-                <div className="w-full max-w-3xl rounded-[1.9rem] border border-[#f3d48f]/16 bg-[#1a241d]/92 p-6 text-[#f7f0d5] shadow-[0_24px_70px_rgba(0,0,0,0.42)]">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <div className="text-[0.72rem] tracking-[0.32em] text-[#f9c76a]/78 uppercase">Run Result</div>
-                      <h2 className="mt-2 text-[clamp(1.8rem,4vw,2.8rem)] leading-none font-black tracking-[0.06em]">
-                        {lastResult.victory ? '副本凯旋' : '本次退场'}
-                      </h2>
-                      <div className="mt-2 text-sm text-[#d6ceb4]">
-                        {getDungeonById(lastResult.dungeonId).name} · {difficultyConfigs[lastResult.difficulty].label} · {formatTime(lastResult.durationMs)}
-                      </div>
-                    </div>
-                    {lastResult.rewards.unlockedDifficulty ? (
-                      <div className="rounded-full border border-[#f3d48f]/16 bg-[#f3d48f]/10 px-3 py-1 text-sm text-[#f6dfab]">
-                        已解锁 {difficultyConfigs[lastResult.rewards.unlockedDifficulty].label}
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                    <ResultStat label="经验" value={`+${lastResult.rewards.experienceGained}`} />
-                    <ResultStat label="金币" value={`+${lastResult.rewards.goldGained}`} />
-                    <ResultStat label="材料" value={`+${lastResult.rewards.materialsGained}`} />
-                  </div>
-
-                  <div className="mt-5 grid gap-3 md:grid-cols-2">
-                    {lastResult.rewards.items.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => equipItem(item)}
-                        className="rounded-[1.3rem] border border-white/10 bg-white/6 px-4 py-3 text-left transition hover:bg-white/10"
-                      >
-                        <div className={cn('text-sm font-black', rarityTone(item.rarity))}>{item.name}</div>
-                        <div className="mt-1 text-xs tracking-[0.18em] text-[#cad8c9] uppercase">
-                          {rarityLabel(item.rarity)} · {slotLabel(item.slot)}
-                        </div>
-                        <div className="mt-2 text-sm text-[#f2ead2]">{pixelKnightItemStatLine(item)}</div>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="mt-5 flex flex-wrap gap-3">
-                    <Button
-                      type="button"
-                      onClick={startRun}
-                      className="h-11 rounded-full bg-[#f3d48f] px-5 text-[#2e2414] hover:bg-[#ffe2a6]"
-                    >
-                      再来一局
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={backToHome}
-                      className="h-11 rounded-full border-white/12 bg-white/4 text-[#f6f0d6] hover:bg-white/8"
-                    >
-                      返回村庄
-                    </Button>
-                  </div>
-                </div>
-              </div>
             ) : null}
 
             {inventoryOpen ? (
@@ -1169,19 +1145,141 @@ function HudHealth({
   )
 }
 
-function HomeStat({ label, value }: { label: string; value: string | number }) {
+function StorageOverlay({
+  profile,
+  onClose,
+  onMoveToStorage,
+  onMoveToBackpack,
+}: {
+  profile: PixelKnightCharacterProfile
+  onClose: () => void
+  onMoveToStorage: (item: ItemInstance) => void
+  onMoveToBackpack: (item: ItemInstance) => void
+}) {
+  const storageCells = Array.from({ length: STORAGE_CAPACITY }, (_, index) => profile.storage[index] ?? null)
+  const backpackCells = Array.from({ length: BACKPACK_VISIBLE_CAPACITY }, (_, index) => profile.stash[index] ?? null)
+  const backpackFull = profile.stash.length >= BACKPACK_VISIBLE_CAPACITY
+  const storageFull = profile.storage.length >= STORAGE_CAPACITY
+
   return (
-    <div className="rounded-[1rem] border border-white/10 bg-white/5 px-3 py-3">
-      <div className="text-[0.68rem] tracking-[0.22em] text-[#c8d7c8] uppercase">{label}</div>
-      <div className="mt-1 text-lg font-black text-[#fbf4dd]">{value}</div>
+    <div className="absolute inset-0 z-40 overflow-hidden bg-[#11150f]/82 p-3 text-[#f7ecd0] sm:p-5">
+      <img
+        src={inventoryBgFrame}
+        alt=""
+        className="absolute left-[2%] top-[3%] h-[94%] w-[96%] object-fill opacity-95"
+        draggable={false}
+        style={{ imageRendering: 'pixelated' }}
+      />
+
+      <div className="relative h-full w-full">
+        <div className="absolute left-[7%] top-[6%] text-lg font-black tracking-[0.18em] text-[#f6dfac] sm:text-2xl">
+          储物箱
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-[5%] top-[6%] z-10 h-11 w-11 transition hover:scale-105 active:scale-95 sm:h-14 sm:w-14"
+          aria-label="关闭储物箱"
+        >
+          <img
+            src={closeButtonFrame}
+            alt=""
+            className="h-full w-full object-contain"
+            draggable={false}
+            style={{ imageRendering: 'pixelated' }}
+          />
+        </button>
+
+        <section className="absolute left-[5%] top-[20%] h-[66%] w-[34%]">
+          <div className="mb-2 flex items-center justify-between px-2 text-xs font-black tracking-[0.16em] text-[#f1d99d] sm:text-sm">
+            <span>箱子</span>
+            <span className={storageFull ? 'text-[#ffb38d]' : 'text-[#d9c391]'}>{profile.storage.length}/{STORAGE_CAPACITY}</span>
+          </div>
+          <img
+            src={inventoryGridPanel}
+            alt=""
+            className="absolute inset-x-0 bottom-0 h-[calc(100%-1.75rem)] w-full object-fill"
+            draggable={false}
+            style={{ imageRendering: 'pixelated' }}
+          />
+          <div className="absolute left-[9%] right-[9%] top-[13%] bottom-[9%] grid grid-cols-6 grid-rows-6 gap-[1.5%]">
+            {storageCells.map((item, index) => (
+              <StorageItemCell
+                key={item?.id ?? `storage-empty-${index}`}
+                item={item}
+                actionLabel="取出"
+                disabled={Boolean(item) && backpackFull}
+                onClick={onMoveToBackpack}
+              />
+            ))}
+          </div>
+        </section>
+
+        <section className="absolute right-[5%] top-[20%] h-[66%] w-[34%]">
+          <div className="mb-2 flex items-center justify-between px-2 text-xs font-black tracking-[0.16em] text-[#f1d99d] sm:text-sm">
+            <span>背包</span>
+            <span className={backpackFull ? 'text-[#ffb38d]' : 'text-[#d9c391]'}>{profile.stash.length}/{BACKPACK_VISIBLE_CAPACITY}</span>
+          </div>
+          <img
+            src={inventoryGridPanel}
+            alt=""
+            className="absolute inset-x-0 bottom-0 h-[calc(100%-1.75rem)] w-full object-fill"
+            draggable={false}
+            style={{ imageRendering: 'pixelated' }}
+          />
+          <div className="absolute left-[9%] right-[9%] top-[13%] bottom-[9%] grid grid-cols-6 grid-rows-6 gap-[1.5%]">
+            {backpackCells.map((item, index) => (
+              <StorageItemCell
+                key={item?.id ?? `backpack-empty-${index}`}
+                item={item}
+                actionLabel="存入"
+                disabled={Boolean(item) && storageFull}
+                onClick={onMoveToStorage}
+              />
+            ))}
+          </div>
+        </section>
+      </div>
     </div>
   )
 }
 
-function ResultStat({ label, value }: { label: string; value: string }) {
+function StorageItemCell({
+  item,
+  actionLabel,
+  disabled,
+  onClick,
+}: {
+  item: ItemInstance | null
+  actionLabel: string
+  disabled: boolean
+  onClick: (item: ItemInstance) => void
+}) {
+  if (!item) return <div className="relative" />
+
   return (
-    <div className="rounded-[1.2rem] border border-white/10 bg-white/6 px-4 py-3">
-      <div className="text-[0.72rem] tracking-[0.22em] text-[#c8d7c8] uppercase">{label}</div>
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onClick(item)}
+      className="group relative min-h-0 disabled:cursor-not-allowed disabled:opacity-55"
+      aria-label={`${actionLabel}${item.name}`}
+    >
+      <span className="pointer-events-none absolute inset-[2px] hidden border-2 border-[#ffd36d] group-hover:block group-focus-visible:block" />
+      <MatrixEquipmentPreview item={item} className="absolute inset-[16%] h-[68%] w-[68%]" />
+      <div className="absolute bottom-[4%] right-[10%] text-[0.48rem] font-black text-[#f3dfb5] sm:text-[0.58rem]">
+        {item.itemLevel}
+      </div>
+      <EquipmentTooltip item={item} slot={item.slot} />
+    </button>
+  )
+}
+
+function HomeStat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-[1rem] border border-white/10 bg-white/5 px-3 py-3">
+      <div className="text-[0.68rem] tracking-[0.22em] text-[#c8d7c8] uppercase">{label}</div>
       <div className="mt-1 text-lg font-black text-[#fbf4dd]">{value}</div>
     </div>
   )
@@ -1200,7 +1298,7 @@ function InventoryOverlay({
   onEquipItem: (item: ItemInstance) => void
   onUnequipItem: (slot: EquipmentSlot) => void
 }) {
-  const inventoryCells = Array.from({ length: 36 }, (_, index) => profile.stash[index] ?? null)
+  const inventoryCells = Array.from({ length: BACKPACK_VISIBLE_CAPACITY }, (_, index) => profile.stash[index] ?? null)
   const stats: Array<[string, string | number, string]> = [
     ['攻击', playerStats.attack, statAttackIcon],
     ['护甲', playerStats.armor, statArmorIcon],

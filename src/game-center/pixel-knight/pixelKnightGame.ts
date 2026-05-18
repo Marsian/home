@@ -1,7 +1,11 @@
-import { difficultyConfigs, generateLootItems, getDungeonById, skills } from './content/data'
+import { difficultyConfigs, generateLootItems, skills } from './content/data'
 import knightManifestData from '@/game-center/pixel-knight/assets/characters/knight.json'
+import armorMatrixData from '@/game-center/pixel-knight/assets/equipment/armor/iron-armor.json'
+import clothCapMatrixData from '@/game-center/pixel-knight/assets/equipment/helmet/cloth-cap.json'
+import helmetMatrixData from '@/game-center/pixel-knight/assets/equipment/helmet/iron-helmet.json'
 import shieldMatrixData from '@/game-center/pixel-knight/assets/equipment/off-hand/wood-shield.json'
 import swordMatrixData from '@/game-center/pixel-knight/assets/equipment/main-hand/iron-sword.json'
+import goldPileUrl from '@/game-center/pixel-knight/assets/loot/gold-pile.png'
 import {
   getPixelKnightMonsterFrames,
   getPixelKnightOtherworldMapAsset,
@@ -28,11 +32,13 @@ import type {
   DungeonId,
   EnemyKind,
   FacingDirection,
+  ItemInstance,
   MapDef,
   MapHotspot,
   PixelKnightGameCallbacks,
   PixelKnightHudState,
   PlayerDerivedStats,
+  RenderableEquipmentAssetId,
   RunResult,
 } from './types'
 
@@ -118,6 +124,32 @@ type ProjectileState = {
   lifeMs: number
 }
 
+type GroundDropState =
+  | {
+      id: string
+      kind: 'gold'
+      x: number
+      y: number
+      startX: number
+      startY: number
+      amount: number
+      pickupRadius: number
+      ageMs: number
+      landMs: number
+    }
+  | {
+      id: string
+      kind: 'item'
+      x: number
+      y: number
+      startX: number
+      startY: number
+      item: ItemInstance
+      pickupRadius: number
+      ageMs: number
+      landMs: number
+    }
+
 type ActiveRun = {
   dungeonId: DungeonId
   difficulty: DifficultyTier
@@ -139,6 +171,7 @@ const MATRIX_PLAYER_PIXEL_SIZE = 2
 const MATRIX_ATTACK_DURATION_MS = 420
 const PLAYER_HURT_FLASH_MS = 180
 const MONSTER_DEATH_HOLD_MS = 120
+const DROP_LAND_MS = 420
 const matrixKnightManifest = knightManifestData as MatrixManifest
 type MatrixEquipmentLoadout = Partial<Record<MatrixEquipmentSlot, MatrixEquipmentPiece | null>>
 
@@ -146,6 +179,17 @@ const defaultMatrixKnightEquipment: MatrixEquipmentLoadout = {
   mainHand: swordMatrixData as MatrixEquipmentPiece,
   offHand: shieldMatrixData as MatrixEquipmentPiece,
 }
+
+const matrixEquipmentByAssetId: Record<RenderableEquipmentAssetId, MatrixEquipmentPiece> = {
+  'cloth-cap': clothCapMatrixData as unknown as MatrixEquipmentPiece,
+  'iron-helmet': helmetMatrixData as unknown as MatrixEquipmentPiece,
+  'iron-armor': armorMatrixData as unknown as MatrixEquipmentPiece,
+  'iron-sword': swordMatrixData as MatrixEquipmentPiece,
+  'wood-shield': shieldMatrixData as MatrixEquipmentPiece,
+}
+
+const goldPileImage = new Image()
+goldPileImage.src = goldPileUrl
 
 type EnterVillageConfig = {
   stats?: PlayerDerivedStats
@@ -415,6 +459,7 @@ export class PixelKnightGame {
   private enemies: EnemyState[] = []
   private projectiles: ProjectileState[] = []
   private combatFx: CombatFxState[] = []
+  private groundDrops: GroundDropState[] = []
   private run: ActiveRun | null = null
   private mouse: Vector2 = { x: WIDTH / 2, y: HEIGHT / 2 }
   private keys = new Set<string>()
@@ -426,6 +471,7 @@ export class PixelKnightGame {
   private objectiveLabel = '准备中'
   private portalNearby = false
   private nearbyHotspot: MapHotspot | null = null
+  private nearbyDrop: GroundDropState | null = null
   private lastHomeHudSignature: string | null = null
   private lastMinimapPlayerCellSignature: string | null = null
   private mapBackdropCache: HTMLCanvasElement | null = null
@@ -526,11 +572,13 @@ export class PixelKnightGame {
     this.enemies = spawnEnemyClusters(built, config.difficulty)
     this.projectiles = []
     this.combatFx = []
+    this.groundDrops = []
     this.trailSegments = []
     this.lootFeed = ['探索副本，靠近尽头的传送点后按 F 返回村庄。']
     this.pauseRequested = false
     this.portalNearby = false
     this.nearbyHotspot = null
+    this.nearbyDrop = null
     this.encounterLabel = '副本探索'
     this.objectiveLabel = '穿越枫林入口并带着战利品撤离'
     this.phase = 'playing'
@@ -555,8 +603,10 @@ export class PixelKnightGame {
     this.enemies = []
     this.projectiles = []
     this.combatFx = []
+    this.groundDrops = []
     this.trailSegments = []
     this.portalNearby = false
+    this.nearbyDrop = null
     this.enterVillage()
     this.emitHud()
   }
@@ -569,6 +619,7 @@ export class PixelKnightGame {
     this.enemies = []
     this.projectiles = []
     this.combatFx = []
+    this.groundDrops = []
     this.trailSegments = []
     this.player = {
       x: startPos.x,
@@ -596,6 +647,7 @@ export class PixelKnightGame {
     this.phase = 'home'
     this.pauseRequested = false
     this.portalNearby = false
+    this.nearbyDrop = null
     this.mapBackdropCache = null
     this.mapBackdropCacheFor = null
     this.mapPlacementRenderItems = null
@@ -672,6 +724,10 @@ export class PixelKnightGame {
     if (this.phase !== 'playing') return
     if (event.code === 'KeyF') {
       event.preventDefault()
+      if (this.nearbyDrop) {
+        this.pickupNearbyDrop()
+        return
+      }
       if (this.portalNearby) {
         this.finishRun(true)
         return
@@ -796,12 +852,17 @@ export class PixelKnightGame {
         return !hit
       })
 
+    this.groundDrops = this.groundDrops.map((drop) => ({ ...drop, ageMs: drop.ageMs + dt }))
+    this.updateNearbyDrop()
+
     const portalHotspot = this.getRunPortalHotspot()
     const portalPos = worldFromCell(portalHotspot?.cell ?? this.run.portalCell)
     this.portalNearby = distance(this.player, portalPos) < (portalHotspot?.radius ?? PORTAL_RADIUS + 26)
     this.nearbyHotspot = this.portalNearby ? portalHotspot : null
-    this.encounterLabel = this.portalNearby ? '传送点已就绪' : '副本探索'
-    this.objectiveLabel = this.portalNearby
+    this.encounterLabel = this.nearbyDrop ? '发现战利品' : this.portalNearby ? '传送点已就绪' : '副本探索'
+    this.objectiveLabel = this.nearbyDrop
+      ? `按 F：拾取${this.nearbyDrop.kind === 'gold' ? `${this.nearbyDrop.amount} 金币` : this.nearbyDrop.item.name}`
+      : this.portalNearby
       ? (portalHotspot?.prompt ?? '按 F 交互并返回村庄')
       : '探索副本深处，靠近尽头传送点后撤离'
 
@@ -1099,6 +1160,92 @@ export class PixelKnightGame {
     })
   }
 
+  private updateNearbyDrop() {
+    if (!this.player) {
+      this.nearbyDrop = null
+      return
+    }
+    let nearest: GroundDropState | null = null
+    let nearestDistance = Number.POSITIVE_INFINITY
+    for (const drop of this.groundDrops) {
+      const dist = distance(this.player, drop)
+      if (drop.ageMs < drop.landMs || dist > drop.pickupRadius || dist >= nearestDistance) continue
+      nearest = drop
+      nearestDistance = dist
+    }
+    this.nearbyDrop = nearest
+  }
+
+  private pickupNearbyDrop() {
+    const drop = this.nearbyDrop
+    if (!drop) return
+    if (drop.kind === 'gold') {
+      this.callbacks.onPickupGold(drop.amount)
+      this.pushLootFeed(`拾取 ${drop.amount} 金币。`)
+      this.groundDrops = this.groundDrops.filter((candidate) => candidate.id !== drop.id)
+      this.nearbyDrop = null
+      this.emitHud()
+      return
+    }
+
+    const accepted = this.callbacks.onPickupItem(drop.item)
+    if (!accepted) {
+      this.pushLootFeed('背包已满，战利品还留在地上。')
+      this.emitHud()
+      return
+    }
+    this.pushLootFeed(`拾取 ${drop.item.name}。`)
+    this.groundDrops = this.groundDrops.filter((candidate) => candidate.id !== drop.id)
+    this.nearbyDrop = null
+    this.emitHud()
+  }
+
+  private spawnEnemyDrops(enemy: EnemyState, goldValue: number) {
+    if (!this.run) return
+    const dropSpread = (index: number) => {
+      const angle = randomBetween(-0.9, 0.9) + index * 1.95
+      const radius = randomBetween(18, 34)
+      return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius * 0.52 + index * 4 }
+    }
+    const goldOffset = dropSpread(0)
+    this.groundDrops.push({
+      id: `gold-${enemy.id}-${performance.now()}`,
+      kind: 'gold',
+      x: enemy.x + goldOffset.x,
+      y: enemy.y + goldOffset.y,
+      startX: enemy.x,
+      startY: enemy.y - enemy.radius * 0.5,
+      amount: goldValue,
+      pickupRadius: 42,
+      ageMs: 0,
+      landMs: DROP_LAND_MS,
+    })
+
+    const difficultyIndex = ['normal', 'hard', 'master', 'legend'].indexOf(this.run.difficulty)
+    const itemChance = (enemy.elite ? 0.48 : 0.18) + difficultyIndex * 0.06
+    if (Math.random() > itemChance) return
+    const [item] = generateLootItems(
+      this.run.dungeonId,
+      this.run.difficulty,
+      3 + difficultyIndex * 2,
+      1,
+    )
+    if (!item) return
+    const itemOffset = dropSpread(1)
+    this.groundDrops.push({
+      id: `item-${item.id}`,
+      kind: 'item',
+      x: enemy.x + itemOffset.x,
+      y: enemy.y + itemOffset.y,
+      startX: enemy.x,
+      startY: enemy.y - enemy.radius * 0.5,
+      item,
+      pickupRadius: 46,
+      ageMs: 0,
+      landMs: DROP_LAND_MS,
+    })
+  }
+
   private damageEnemy(enemy: EnemyState, rawDamage: number) {
     if (!this.run) return
     if (this.isEnemyDying(enemy)) return
@@ -1112,9 +1259,11 @@ export class PixelKnightGame {
     const xpValue = enemy.elite ? 40 : 16
     const goldValue = enemy.elite ? 20 : 8
     this.run.rewardXp += Math.round(xpValue * difficulty.experienceMultiplier)
-    this.run.rewardGold += Math.round(goldValue * difficulty.goldMultiplier)
+    const droppedGold = Math.round(goldValue * difficulty.goldMultiplier)
+    this.run.rewardGold += droppedGold
     this.run.rewardMaterials += enemy.elite ? 2 : 1
     if (enemy.elite) this.pushLootFeed('精英被击破，奖励提升。')
+    this.spawnEnemyDrops(enemy, droppedGold)
     enemy.health = 0
     enemy.state = 'death'
     enemy.stateTimeMs = 0
@@ -1142,32 +1291,27 @@ export class PixelKnightGame {
 
   private finishRun(victory: boolean) {
     if (!this.run) return
-    const clearedRatio = Math.max(0.35, 1 - this.enemies.length / Math.max(1, this.enemies.length + 12))
-    const itemCount = victory ? 2 + difficultyConfigs[this.run.difficulty].eliteSpawnBonus : 1
-    const items = generateLootItems(this.run.dungeonId, this.run.difficulty, 3 + Math.round(clearedRatio * 4), itemCount)
-    const durationMs = performance.now() - this.run.startedAt
+    const completedRun = this.run
+    const durationMs = performance.now() - completedRun.startedAt
     const result: RunResult = {
       victory,
-      dungeonId: this.run.dungeonId,
-      difficulty: this.run.difficulty,
+      dungeonId: completedRun.dungeonId,
+      difficulty: completedRun.difficulty,
       durationMs,
       rewards: {
-        experienceGained: victory ? this.run.rewardXp + 90 : Math.round(this.run.rewardXp * 0.55),
-        goldGained: victory ? this.run.rewardGold + 42 : Math.round(this.run.rewardGold * 0.55),
-        materialsGained: victory ? this.run.rewardMaterials + 3 : Math.round(this.run.rewardMaterials * 0.5),
-        items,
+        experienceGained: victory ? completedRun.rewardXp + 90 : Math.round(completedRun.rewardXp * 0.55),
+        goldGained: 0,
+        materialsGained: victory ? completedRun.rewardMaterials + 3 : Math.round(completedRun.rewardMaterials * 0.5),
+        items: [],
       },
     }
-    this.phase = 'results'
-    this.run = null
-    this.player = null
-    this.enemies = []
-    this.projectiles = []
-    this.combatFx = []
-    this.trailSegments = []
-    this.portalNearby = false
-    this.emitHud()
     this.callbacks.onRunComplete(result)
+    this.enterVillage({
+      stats: completedRun.stats,
+      equipment: this.matrixEquipment,
+    })
+    this.pushLootFeed(victory ? '已返回村庄。' : '你倒下了，已返回村庄。')
+    this.emitHud()
   }
 
   private pushLootFeed(text: string) {
@@ -1357,7 +1501,7 @@ export class PixelKnightGame {
       return
     }
 
-    if (this.phase === 'boot' || this.phase === 'results') {
+    if (this.phase === 'boot') {
       this.renderIdleScene(ctx)
       return
     }
@@ -1386,18 +1530,20 @@ export class PixelKnightGame {
       ctx.fill()
     }
 
-    if (this.portalNearby && this.player) {
+    if ((this.nearbyDrop || this.portalNearby) && this.player) {
       const portalHotspot = this.getRunPortalHotspot()
-      const portal = worldFromCell(portalHotspot?.cell ?? this.run.portalCell)
-      const text = portalHotspot?.prompt ?? 'Press F'
+      const anchor = this.nearbyDrop ?? worldFromCell(portalHotspot?.cell ?? this.run.portalCell)
+      const text = this.nearbyDrop
+        ? `按 F：拾取${this.nearbyDrop.kind === 'gold' ? `${this.nearbyDrop.amount} 金币` : this.nearbyDrop.item.name}`
+        : (portalHotspot?.prompt ?? 'Press F')
       ctx.fillStyle = 'rgba(8,12,10,0.58)'
       ctx.font = '700 15px sans-serif'
       const textWidth = Math.ceil(ctx.measureText(text).width)
       const bubbleWidth = Math.max(96, textWidth + 32)
-      ctx.fillRect(portal.x - camera.x - bubbleWidth / 2, portal.y - camera.y - 56, bubbleWidth, 28)
+      ctx.fillRect(anchor.x - camera.x - bubbleWidth / 2, anchor.y - camera.y - 56, bubbleWidth, 28)
       ctx.fillStyle = '#f7efcf'
       ctx.textAlign = 'center'
-      ctx.fillText(text, portal.x - camera.x, portal.y - camera.y - 37)
+      ctx.fillText(text, anchor.x - camera.x, anchor.y - camera.y - 37)
       ctx.textAlign = 'start'
     }
   }
@@ -1554,6 +1700,64 @@ export class PixelKnightGame {
     ctx.fillRect(x - 18, y - enemy.radius - 18, 36 * clamp(enemy.health / enemy.maxHealth, 0, 1), 5)
   }
 
+  private drawEquipmentDropIcon(ctx: CanvasRenderingContext2D, item: ItemInstance, x: number, y: number) {
+    if (!item.assetId) return
+    const piece = matrixEquipmentByAssetId[item.assetId]
+    if (!piece) return
+    const entries = piece.parts
+      ? Object.values(piece.parts).sort((a, b) => {
+          const rank = (layer?: 'back' | 'base' | 'front') => (layer === 'back' ? 0 : layer === 'front' ? 2 : 1)
+          return rank(a.layer) - rank(b.layer)
+        })
+      : piece.size && piece.points
+        ? [{ size: piece.size, points: piece.points }]
+        : []
+    if (!entries.length) return
+
+    const width = Math.max(...entries.map((entry) => entry.size[0]))
+    const height = Math.max(...entries.map((entry) => entry.size[1]))
+    const pixel = Math.max(1, Math.floor(20 / Math.max(width, height)))
+    const ox = Math.round(x - (width * pixel) / 2)
+    const oy = Math.round(y - (height * pixel) / 2)
+    for (const entry of entries) {
+      const dx = Math.round((width - entry.size[0]) * pixel * 0.5)
+      const dy = Math.round((height - entry.size[1]) * pixel * 0.5)
+      for (const point of entry.points) {
+        ctx.fillStyle = point.color
+        ctx.fillRect(ox + dx + point.x * pixel, oy + dy + point.y * pixel, pixel, pixel)
+      }
+    }
+  }
+
+  private drawGroundDrop(ctx: CanvasRenderingContext2D, camera: Vector2, drop: GroundDropState) {
+    const landProgress = clamp(drop.ageMs / drop.landMs, 0, 1)
+    const eased = 1 - (1 - landProgress) * (1 - landProgress)
+    const arc = Math.sin(landProgress * Math.PI) * 26
+    const worldX = drop.startX + (drop.x - drop.startX) * eased
+    const worldY = drop.startY + (drop.y - drop.startY) * eased - arc
+    const x = worldX - camera.x
+    const y = worldY - camera.y
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+
+    if (drop.kind === 'gold') {
+      if (goldPileImage.complete && goldPileImage.naturalWidth > 0) {
+        ctx.drawImage(goldPileImage, Math.round(x - 18), Math.round(y - 18), 36, 36)
+      }
+    } else {
+      this.drawEquipmentDropIcon(ctx, drop.item, x, y)
+    }
+
+    if (this.nearbyDrop?.id === drop.id && drop.ageMs >= drop.landMs) {
+      ctx.strokeStyle = '#ffe27b'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.ellipse(drop.x - camera.x, drop.y - camera.y + 7, 18, 8, 0, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+    ctx.restore()
+  }
+
   private drawPlayer(ctx: CanvasRenderingContext2D, camera: Vector2) {
     if (!this.player) return
     const x = this.player.x - camera.x
@@ -1592,9 +1796,11 @@ export class PixelKnightGame {
     const placements = this.buildMapPlacementRenderItems()
     const entities: Array<
       | { type: 'placement'; sortY: number; item: MapPlacementRenderItem }
+      | { type: 'drop'; sortY: number; drop: GroundDropState }
       | { type: 'enemy'; sortY: number; enemy: EnemyState }
       | { type: 'player'; sortY: number }
     > = placements.map((item) => ({ type: 'placement', sortY: item.sortY, item }))
+    for (const drop of this.groundDrops) entities.push({ type: 'drop', sortY: drop.y + 10, drop })
     for (const enemy of this.enemies) entities.push({ type: 'enemy', sortY: enemy.y + enemy.radius, enemy })
     if (this.player) entities.push({ type: 'player', sortY: this.player.y + 8 })
     entities.sort((a, b) => a.sortY - b.sortY)
@@ -1604,6 +1810,7 @@ export class PixelKnightGame {
 
     for (const entity of entities) {
       if (entity.type === 'placement') this.drawMapPlacement(ctx, camera, entity.item)
+      if (entity.type === 'drop') this.drawGroundDrop(ctx, camera, entity.drop)
       if (entity.type === 'enemy') this.drawEnemy(ctx, camera, entity.enemy)
       if (entity.type === 'player') this.drawPlayer(ctx, camera)
     }

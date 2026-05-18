@@ -91,6 +91,10 @@ function normalizePixelKnightProfile(profile: PixelKnightProfile): PixelKnightPr
     ...profile,
     equipment: Object.fromEntries(equipmentSlotOrder.map((slot) => [slot, migrated[slot] ?? null])),
     stash,
+    storage: (profile.storage ?? [])
+      .map((item) => normalizeRenderableItem(item))
+      .filter((item): item is ItemInstance => Boolean(item))
+      .slice(0, 36),
     unlockedDifficultiesByDungeon: {
       ...initialDungeonUnlocks,
       ...profile.unlockedDifficultiesByDungeon,
@@ -101,7 +105,7 @@ function normalizePixelKnightProfile(profile: PixelKnightProfile): PixelKnightPr
 function createDefaultSave(activeClassId: BaseClassId = 'knight'): PixelKnightSave {
   const make = () => createInitialCharacterProfile()
   return {
-    version: 2,
+    version: 3,
     activeClassId,
     profilesByClassId: {
       knight: make(),
@@ -127,7 +131,7 @@ function normalizePixelKnightSave(save: PixelKnightSave): PixelKnightSave {
   const fallback = createDefaultSave(save.activeClassId ?? 'knight')
   const profilesByClassId = save.profilesByClassId ?? ({} as PixelKnightSave['profilesByClassId'])
   return {
-    version: 2,
+    version: 3,
     activeClassId: save.activeClassId ?? 'knight',
     profilesByClassId: {
       knight: profilesByClassId.knight ? normalizeCharacterProfile(profilesByClassId.knight) : fallback.profilesByClassId.knight,
@@ -142,8 +146,8 @@ export function loadPixelKnightSave(): PixelKnightSave {
   const stored = window.localStorage.getItem(PIXEL_KNIGHT_STORAGE_KEY)
   if (!stored) return createDefaultSave()
   try {
-    const parsed = JSON.parse(stored) as PixelKnightProfile | PixelKnightSave
-    if (parsed && typeof parsed === 'object' && 'version' in parsed && parsed.version === 2) {
+    const parsed = JSON.parse(stored) as PixelKnightProfile | PixelKnightSave | (Omit<PixelKnightSave, 'version'> & { version: 2 })
+    if (parsed && typeof parsed === 'object' && 'version' in parsed && (parsed.version === 2 || parsed.version === 3)) {
       return normalizePixelKnightSave(parsed as PixelKnightSave)
     }
     if (parsed && typeof parsed === 'object' && 'version' in parsed && parsed.version === 1) {
@@ -202,9 +206,7 @@ export function applyPixelKnightRunResult(
 ): PixelKnightCharacterProfile {
   let nextProfile: PixelKnightCharacterProfile = {
     ...profile,
-    gold: profile.gold + result.rewards.goldGained,
     materials: profile.materials + result.rewards.materialsGained,
-    stash: [...result.rewards.items, ...profile.stash].slice(0, 64),
     completedRuns: profile.completedRuns + 1,
   }
 

@@ -31,7 +31,7 @@ export type DungeonId =
   | 'mushroom-marsh'
   | 'cloud-altar'
 
-export type GamePhase = 'boot' | 'loading' | 'home' | 'playing' | 'paused' | 'results' | 'error'
+export type GamePhase = 'boot' | 'loading' | 'home' | 'playing' | 'paused' | 'error'
 
 export type FacingDirection = 'left' | 'right'
 
@@ -207,6 +207,7 @@ export type PixelKnightProfile = {
   completedRuns: number
   equipment: Partial<Record<EquipmentSlot, ItemInstance | null>>
   stash: ItemInstance[]
+  storage: ItemInstance[]
   unlockedDifficultiesByDungeon: Record<DungeonId, DifficultyTier[]>
   hasCompletedInitialLoad: boolean
 }
@@ -214,7 +215,7 @@ export type PixelKnightProfile = {
 export type PixelKnightCharacterProfile = Omit<PixelKnightProfile, 'version' | 'baseClassId'>
 
 export type PixelKnightSave = {
-  version: 2
+  version: 3
   activeClassId: BaseClassId
   profilesByClassId: Record<BaseClassId, PixelKnightCharacterProfile>
 }
@@ -292,6 +293,8 @@ export type PixelKnightGameCallbacks = {
   onHud: (state: PixelKnightHudState) => void
   onMinimapPlayerCell?: (cell: { x: number; y: number }) => void
   onHotspotInteract: (hotspot: MapHotspot) => void
+  onPickupGold: (amount: number) => void
+  onPickupItem: (item: ItemInstance) => boolean
   onRunComplete: (result: RunResult) => void
   onError: (message: string) => void
 }

@@ -452,6 +452,7 @@ export function createInitialProfile(): PixelKnightProfile {
       createCatalogItem('iron-armor', 1, 'common', 'initial'),
       createCatalogItem('iron-helmet', 1, 'magic', 'initial'),
     ],
+    storage: [],
     unlockedDifficultiesByDungeon: initialDungeonUnlocks,
     hasCompletedInitialLoad: false,
   }

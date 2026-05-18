@@ -97,8 +97,8 @@ export default function PixelKnightDataView() {
 
             <div className="mt-5 rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
               <div className="flex items-center justify-between gap-3">
-                <div className="text-[0.72rem] tracking-[0.22em] text-[#c8d7c8] uppercase">Stash</div>
-                <div className="text-sm text-[#cad8c9]">{profile.stash.length}/64</div>
+                <div className="text-[0.72rem] tracking-[0.22em] text-[#c8d7c8] uppercase">Backpack</div>
+                <div className="text-sm text-[#cad8c9]">{profile.stash.length}/36</div>
               </div>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 {profile.stash.length ? (
@@ -114,6 +114,30 @@ export default function PixelKnightDataView() {
                 ) : (
                   <div className="rounded-[1rem] border border-dashed border-white/12 px-3 py-5 text-sm text-[#c0cfbf]">
                     还没有战利品。
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[0.72rem] tracking-[0.22em] text-[#c8d7c8] uppercase">Storage</div>
+                <div className="text-sm text-[#cad8c9]">{profile.storage.length}/36</div>
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                {profile.storage.length ? (
+                  profile.storage.map((item) => (
+                    <div key={item.id} className="rounded-[1rem] border border-white/10 bg-black/18 px-3 py-3">
+                      <div className={cn('text-sm font-black', rarityTone(item.rarity))}>{item.name}</div>
+                      <div className="mt-1 text-xs tracking-[0.18em] text-[#cad8c9] uppercase">
+                        {rarityLabel(item.rarity)} · {slotLabel(item.slot)}
+                      </div>
+                      <div className="mt-2 text-sm text-[#f2ead2]">{pixelKnightItemStatLine(item)}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-[1rem] border border-dashed border-white/12 px-3 py-5 text-sm text-[#c0cfbf]">
+                    储物箱是空的。
                   </div>
                 )}
               </div>
