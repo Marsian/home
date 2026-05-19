@@ -2,10 +2,11 @@ import { createElement, type ReactNode } from 'react'
 
 import { FruitNinjaThumbnail } from './thumbnails/FruitNinjaThumbnail'
 import { PixelKnightThumbnail } from './thumbnails/PixelKnightThumbnail'
+import { StarTripThumbnail } from './thumbnails/StarTripThumbnail'
 import { Tank90Thumbnail } from './thumbnails/Tank90Thumbnail'
 
 export type GameDescriptor = {
-  id: 'tank90' | 'fruit-ninja' | 'pixel-knight'
+  id: 'tank90' | 'fruit-ninja' | 'pixel-knight' | 'star-trip'
   title: string
   cardLabel: string
   route: string
@@ -37,5 +38,13 @@ export const games: GameDescriptor[] = [
     route: '/games/pixel-knight',
     description: 'Bright dungeon runs, difficulty tiers, knight loot builds',
     thumbnail: createElement(PixelKnightThumbnail, { className: 'h-full w-full' }),
+  },
+  {
+    id: 'star-trip',
+    title: 'A STAR TRIP',
+    cardLabel: 'a star trip',
+    route: '/games/star-trip',
+    description: 'Tiny planet exploration, gardening, fishing & neighbors',
+    thumbnail: createElement(StarTripThumbnail, { className: 'h-full w-full' }),
   },
 ]
