@@ -2,7 +2,7 @@
 
 ## 美术风格
 
-目标是“低多边形 3D 卡通 + 可选像素化渲染”。它要让人想到手心里的微型星球，而不是传统开放世界缩小版。
+目标是“低多边形 3D 卡通 + 可选像素化渲染”。它要让人想到一颗可环绕探索的温柔星球，而不是传统开放世界缩小版，也不是只能摆几个物件的玩具球。
 
 ### 渲染原则
 
@@ -36,20 +36,20 @@
 
 ## 主角设计
 
-参考《A Short Hike》的方向是“轮廓友好、移动时轻盈、角色一眼可亲”，但 `a star trip` 的主角不再是鸟形，而是一只圆脑袋猫星际快递员。滑翔能力来自喷气背包，不来自身体本身。
+参考《A Short Hike》的方向是“轮廓友好、移动时轻盈、角色一眼可亲”。`a star trip` 的主角回归小鸟形象，但身份不是普通徒步者，而是一只坠落在陌生星球上的星际快递员。滑翔能力来自喷气背包与鸟类身体姿态的组合，不直接复制《A Short Hike》的能力来源。
 
 ### 主角暂名
 
-“Pico”。一个年轻的星际快递员，带着一只过大的喷气背包和一条红色短围巾。Pico 的小火箭在送件途中坠毁，通讯装置损坏，只能靠山顶通讯塔联系母星。
+“Pico”。一只年轻的小鸟星际快递员，带着一只过大的喷气背包和一条红色短围巾。Pico 的小火箭在送件途中坠毁，通讯装置损坏，只能靠山顶通讯塔联系母星。
 
 ### 造型原则
 
-- 身体：圆脑袋猫，躯干小，四肢像人类一样能跑、跳、攀爬和使用工具。
-- 头部：圆而干净，猫耳形成稳定剪影；表情极简，用眼睛大小、耳朵角度、头部倾斜表达情绪。
+- 身体：小鸟体型，圆头、小躯干、短腿和翅膀形成稳定剪影；动作可轻量拟人化，便于跑、跳、攀爬和使用工具。
+- 头部：圆而干净，鸟喙和头顶羽冠形成稳定剪影；表情极简，用眼睛大小、羽冠角度、头部倾斜表达情绪。
 - 标志物：红围巾、蓝灰喷气背包、小快递徽章、微微烧焦的火箭钥匙扣。
-- 动作重点：跑动时围巾飘动；短喷气时背包喷出暖黄色小火焰；滑翔时身体前倾、尾巴和围巾提供方向感；钓鱼时双手握竿。
+- 动作重点：跑动时围巾飘动、翅膀轻微摆动；短喷气时背包喷出暖黄色小火焰；滑翔时身体前倾、双翼展开、围巾提供方向感；钓鱼时翅膀/手部以简化姿态握竿。
 - 比例：头身比偏可爱，但不要幼儿化。目标是亲切、敏捷、有一点坠毁后的狼狈感。
-- 读图要求：从远镜头看也能分清猫耳、背包和围巾。
+- 读图要求：从远镜头看也能分清鸟喙、羽冠/翅膀、背包和围巾。
 
 ### NPC 设计
 
@@ -85,13 +85,13 @@ NPC 全部使用动物或星球居民的卡通抽象形态，但避免过度复�
 English prompt:
 
 ```text
-An original cozy indie game theme for a tiny planet exploration adventure about a stranded cat space courier trying to reach a mountain radio tower. Warm nylon guitar, soft upright piano, light marimba, gentle clarinet, tiny bell textures, relaxed walking tempo, hopeful and playful, summer dusk mood, loopable, no vocals, no heavy drums, no cinematic epic build, charming but restrained, suitable for jetpack gliding, gardening, fishing, and trading with villagers on a small star.
+An original cozy indie game theme for a compact spherical planet exploration adventure about a stranded little bird space courier trying to reach a mountain radio tower. Warm nylon guitar, soft upright piano, light marimba, gentle clarinet, tiny bell textures, relaxed walking tempo, hopeful and playful, summer dusk mood, loopable, no vocals, no heavy drums, no cinematic epic build, charming but restrained, suitable for jetpack gliding, gardening, fishing, and trading with villagers on a small star.
 ```
 
 中文辅助描述：
 
 ```text
-一首原创的温柔独立游戏主题曲，适合一只坠落在小星球上的猫快递员探索、滑翔、种植、钓鱼和寻找通讯塔。舒缓但不困倦，轻快但不吵闹。主旋律有记忆点，配器以尼龙吉他、轻钢琴、木琴、单簧管、小钟琴为主，不要史诗感，不要电子舞曲，不要人声，适合循环播放。
+一首原创的温柔独立游戏主题曲，适合一只坠落在球面星球上的小鸟快递员探索、滑翔、种植、钓鱼和寻找通讯塔。舒缓但不困倦，轻快但不吵闹。主旋律有记忆点，配器以尼龙吉他、轻钢琴、木琴、单簧管、小钟琴为主，不要史诗感，不要电子舞曲，不要人声，适合循环播放。
 ```
 
 ### 分层音乐计划

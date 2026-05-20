@@ -15,6 +15,9 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:5173',
     headless: true,
+    launchOptions: {
+      args: ['--use-angle=swiftshader', '--use-gl=angle'],
+    },
     viewport: { width: 1200, height: 800 },
   },
   webServer: {
@@ -24,4 +27,3 @@ export default defineConfig({
     timeout: 120_000,
   },
 })
-
