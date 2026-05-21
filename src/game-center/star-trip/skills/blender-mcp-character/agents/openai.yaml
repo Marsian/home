@@ -1,0 +1,4 @@
+interface:
+  display_name: "Blender MCP Character"
+  short_description: "Generate editable low-poly characters in Blender"
+  default_prompt: "Use $blender-mcp-character to create an editable low-poly character blockout through Blender MCP."

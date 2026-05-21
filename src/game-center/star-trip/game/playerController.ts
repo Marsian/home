@@ -40,7 +40,7 @@ export class PlayerController {
   private jetTimeLeft = 0.55
   private elapsed = 0
   private grounded = true
-  private mode: PlayerAnimMode = 'idle'
+  private mode: PlayerAnimMode = 'walk'
   private currentSpeed = 0
 
   constructor(parts: PicoParts) {
@@ -119,7 +119,7 @@ export class PlayerController {
     } else if (moving || turning || this.currentSpeed > 0.12) {
       this.mode = 'walk'
     } else {
-      this.mode = 'idle'
+      this.mode = 'walk'
     }
 
     this.syncTransform()

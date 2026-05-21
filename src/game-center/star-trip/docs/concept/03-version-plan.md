@@ -47,6 +47,29 @@
 - 连续移动 3 分钟不产生明显眩晕。
 - 所有主要地标从远处可见或可被发现。
 
+## V0.1.1：Pico Blender MCP / GLB 角色建模
+
+状态：已完成。
+
+目标：在 V0.2 玩法开发前，将 V0.1 的 primitive Pico 替换为 Blender 可编辑、GLB 可运行时加载的正式角色资产管线。
+
+范围：
+
+- 配置并验证 Blender MCP 工作流。
+- 在 Blender 中生成 Pico 低多边形 blockout。
+- 将 `.blend`、`.glb` 和检查报告纳入项目资产目录。
+- 新增项目内 `blender-mcp-character` skill，沉淀 MCP 角色建模经验。
+- Three.js 运行时通过 `GLTFLoader` 加载 Pico GLB，不保留旧 primitive fallback。
+- 移除 `idle` 状态，保留 `walk`、`run`、`jump`、`jet`、`glide`。
+
+验收：
+
+- 游戏中可见有颜色的 GLB Pico。
+- 角色 root 仍由球面移动系统控制。
+- 静止时没有 idle 上下晃动。
+- walk 中腿部和翅膀有基础步行动作。
+- `npm run build` 和 Star Trip e2e 通过。
+
 ## V0.2：喷气背包与能量块
 
 目标：让球面星球有“走偏路也值得”的基础回报，并验证能量块提升飞行能力的主循环。

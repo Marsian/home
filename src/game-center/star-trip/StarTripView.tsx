@@ -16,8 +16,32 @@ export default function StarTripView() {
   useEffect(() => {
     const host = hostRef.current
     if (!host) return undefined
-    const game = createStarTripGame(host)
-    return () => game.dispose()
+    let disposed = false
+    let game: { dispose: () => void } | null = null
+
+    createStarTripGame(host)
+      .then((createdGame) => {
+        if (disposed) {
+          createdGame.dispose()
+          return
+        }
+        game = createdGame
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error)
+        host.replaceChildren()
+        const errorEl = document.createElement('pre')
+        errorEl.dataset.testid = 'star-trip-load-error'
+        errorEl.className = 'm-4 whitespace-pre-wrap rounded-lg bg-red-950/80 p-4 text-sm text-red-100'
+        errorEl.textContent = `Star Trip failed to load Pico model:\\n${message}`
+        host.appendChild(errorEl)
+        throw error
+      })
+
+    return () => {
+      disposed = true
+      game?.dispose()
+    }
   }, [])
 
   return (

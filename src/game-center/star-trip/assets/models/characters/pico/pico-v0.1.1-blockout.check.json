@@ -1,0 +1,157 @@
+{
+  "asset_dir": "/Users/transwarp/Documents/Github/home/src/game-center/star-trip/assets/models/characters/pico",
+  "blend": "/Users/transwarp/Documents/Github/home/src/game-center/star-trip/assets/models/characters/pico/pico-v0.1.1-blockout.blend",
+  "glb": "/Users/transwarp/Documents/Github/home/src/game-center/star-trip/assets/models/characters/pico/pico-v0.1.1-blockout.glb",
+  "export_scope": "Selected objects whose names start with Pico_ and type is MESH or ARMATURE.",
+  "object_count": 13,
+  "mesh_count": 12,
+  "armature_count": 1,
+  "materials": [
+    "Pico_Beak_Gold",
+    "Pico_Body_Tunic_Blue",
+    "Pico_Body_Tunic_Light_Blue_Hem",
+    "Pico_Eye_Black",
+    "Pico_Eye_White",
+    "Pico_Feather_Indigo",
+    "Pico_Mat_Limb_Indigo"
+  ],
+  "objects": [
+    {
+      "name": "Pico_Wing_L_whole_faceted_5bands",
+      "type": "MESH",
+      "materials": [
+        "Pico_Mat_Limb_Indigo"
+      ],
+      "vertices": 24,
+      "faces": 22
+    },
+    {
+      "name": "Pico_LegFoot_L_whole_faceted_5bands",
+      "type": "MESH",
+      "materials": [
+        "Pico_Mat_Limb_Indigo"
+      ],
+      "vertices": 32,
+      "faces": 30
+    },
+    {
+      "name": "Pico_Wing_R_whole_faceted_5bands",
+      "type": "MESH",
+      "materials": [
+        "Pico_Mat_Limb_Indigo"
+      ],
+      "vertices": 24,
+      "faces": 22
+    },
+    {
+      "name": "Pico_LegFoot_R_whole_faceted_5bands",
+      "type": "MESH",
+      "materials": [
+        "Pico_Mat_Limb_Indigo"
+      ],
+      "vertices": 32,
+      "faces": 30
+    },
+    {
+      "name": "Pico_Armature_Placeholder_WholeLimbs_v6",
+      "type": "ARMATURE",
+      "materials": [],
+      "bones": [
+        "Root",
+        "Body",
+        "Head",
+        "Wing_L_01",
+        "Wing_L_02",
+        "Wing_L_03",
+        "Wing_L_04",
+        "Wing_L_05",
+        "Wing_R_01",
+        "Wing_R_02",
+        "Wing_R_03",
+        "Wing_R_04",
+        "Wing_R_05",
+        "Leg_L",
+        "Foot_L",
+        "Leg_R",
+        "Foot_R"
+      ]
+    },
+    {
+      "name": "Pico_Head_faceted_large_reference_ratio",
+      "type": "MESH",
+      "materials": [
+        "Pico_Feather_Indigo"
+      ],
+      "vertices": 42,
+      "faces": 80
+    },
+    {
+      "name": "Pico_Eye_L_true_side_disc_white",
+      "type": "MESH",
+      "materials": [
+        "Pico_Eye_White"
+      ],
+      "vertices": 56,
+      "faces": 30
+    },
+    {
+      "name": "Pico_Eye_L_true_side_disc_pupil",
+      "type": "MESH",
+      "materials": [
+        "Pico_Eye_Black"
+      ],
+      "vertices": 44,
+      "faces": 24
+    },
+    {
+      "name": "Pico_Eye_R_true_side_disc_white",
+      "type": "MESH",
+      "materials": [
+        "Pico_Eye_White"
+      ],
+      "vertices": 56,
+      "faces": 30
+    },
+    {
+      "name": "Pico_Eye_R_true_side_disc_pupil",
+      "type": "MESH",
+      "materials": [
+        "Pico_Eye_Black"
+      ],
+      "vertices": 44,
+      "faces": 24
+    },
+    {
+      "name": "Pico_Beak_pointed_pyramid_lowered",
+      "type": "MESH",
+      "materials": [
+        "Pico_Beak_Gold"
+      ],
+      "vertices": 5,
+      "faces": 5
+    },
+    {
+      "name": "Pico_Torso_tall_head_connected_blue_lowpoly",
+      "type": "MESH",
+      "materials": [
+        "Pico_Body_Tunic_Blue"
+      ],
+      "vertices": 84,
+      "faces": 72
+    },
+    {
+      "name": "Pico_Torso_light_blue_bottom_band",
+      "type": "MESH",
+      "materials": [
+        "Pico_Body_Tunic_Light_Blue_Hem"
+      ],
+      "vertices": 8,
+      "faces": 6
+    }
+  ],
+  "notes": [
+    "Blockout asset exported for manual review/import pipeline.",
+    "Game runtime code was not modified by this export.",
+    "Animations are not expected in this blockout unless manually added later."
+  ]
+}

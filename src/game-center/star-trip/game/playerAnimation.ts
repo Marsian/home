@@ -2,7 +2,7 @@ import * as THREE from 'three'
 
 import type { PicoParts } from './playerModel'
 
-export type PlayerAnimMode = 'idle' | 'walk' | 'run' | 'jump' | 'jet' | 'glide'
+export type PlayerAnimMode = 'walk' | 'run' | 'jump' | 'jet' | 'glide'
 
 export type PlayerAnimationState = {
   mode: PlayerAnimMode
@@ -11,64 +11,83 @@ export type PlayerAnimationState = {
   jetActive: boolean
 }
 
+function restore(parts: PicoParts) {
+  for (const [object, transform] of parts.baseTransforms) {
+    object.position.copy(transform.position)
+    object.rotation.copy(transform.rotation)
+    object.scale.copy(transform.scale)
+  }
+}
+
 export function updatePicoAnimation(parts: PicoParts, state: PlayerAnimationState) {
   const stride = state.elapsed * (state.mode === 'run' ? 11 : 7.5)
   const walkAmount = state.mode === 'walk' || state.mode === 'run' ? THREE.MathUtils.clamp(state.speed / 2.5, 0, 1) : 0
-  const breath = Math.sin(state.elapsed * 3.2) * 0.018
+  const activeAmount = state.mode === 'walk' ? walkAmount : 1
+  const breath = Math.sin(state.elapsed * 3.2) * 0.018 * activeAmount
   const strideSwing = Math.sin(stride) * walkAmount
   const strideCounter = Math.sin(stride + Math.PI) * walkAmount
 
-  parts.body.position.y = 0.58 + breath + Math.abs(strideSwing) * 0.025
-  parts.head.position.y = 0.98 + breath * 0.55
-  parts.head.rotation.z = Math.sin(state.elapsed * 1.6) * 0.025
+  restore(parts)
 
-  parts.leftLeg.rotation.x = strideSwing * 0.72
-  parts.rightLeg.rotation.x = strideCounter * 0.72
-  parts.leftWing.rotation.z = -0.12 + strideCounter * 0.18
-  parts.rightWing.rotation.z = 0.12 - strideSwing * 0.18
-  parts.leftWing.rotation.x = strideCounter * 0.16
-  parts.rightWing.rotation.x = strideSwing * 0.16
-  parts.crest.rotation.z = Math.sin(state.elapsed * 3.8) * 0.035
+  parts.model.position.y += breath + Math.abs(strideSwing) * 0.02
+  if (parts.body) parts.body.rotation.x = 0
+  if (parts.head) {
+    parts.head.position.y += breath * 0.35
+    parts.head.rotation.z += Math.sin(state.elapsed * 1.6) * 0.025 * activeAmount
+    parts.head.rotation.x = 0
+  }
 
-  parts.scarfTail.rotation.z = -0.1 + Math.sin(state.elapsed * 5.5) * 0.08 - walkAmount * 0.16
-  parts.scarfTail.rotation.y = -0.45 - walkAmount * 0.16
-
-  parts.body.rotation.x = 0
-  parts.head.rotation.x = 0
+  if (parts.leftLeg) parts.leftLeg.rotation.x += strideSwing * 0.58
+  if (parts.rightLeg) parts.rightLeg.rotation.x += strideCounter * 0.58
+  if (parts.leftWing) {
+    parts.leftWing.rotation.z += -0.08
+    parts.leftWing.rotation.x += strideCounter * 0.62
+  }
+  if (parts.rightWing) {
+    parts.rightWing.rotation.z += 0.08
+    parts.rightWing.rotation.x += strideSwing * 0.62
+  }
 
   if (state.mode === 'jump') {
-    parts.body.rotation.x = -0.16
-    parts.leftLeg.rotation.x = 0.42
-    parts.rightLeg.rotation.x = 0.34
-    parts.leftWing.rotation.z = -0.62
-    parts.rightWing.rotation.z = 0.62
+    if (parts.body) parts.body.rotation.x = -0.1
+    if (parts.leftLeg) parts.leftLeg.rotation.x += 0.28
+    if (parts.rightLeg) parts.rightLeg.rotation.x += 0.22
+    if (parts.leftWing) parts.leftWing.rotation.z += -0.42
+    if (parts.rightWing) parts.rightWing.rotation.z += 0.42
   }
 
   if (state.mode === 'jet') {
-    parts.body.rotation.x = -0.24
-    parts.head.rotation.x = 0.08
-    parts.leftLeg.rotation.x = 0.5
-    parts.rightLeg.rotation.x = 0.48
-    parts.leftWing.rotation.z = -0.74
-    parts.rightWing.rotation.z = 0.74
-    parts.leftWing.rotation.x = -0.18
-    parts.rightWing.rotation.x = -0.18
+    if (parts.body) parts.body.rotation.x = -0.16
+    if (parts.head) parts.head.rotation.x = 0.06
+    if (parts.leftLeg) parts.leftLeg.rotation.x += 0.34
+    if (parts.rightLeg) parts.rightLeg.rotation.x += 0.32
+    if (parts.leftWing) {
+      parts.leftWing.rotation.z += -0.54
+      parts.leftWing.rotation.x += -0.14
+    }
+    if (parts.rightWing) {
+      parts.rightWing.rotation.z += 0.54
+      parts.rightWing.rotation.x += -0.14
+    }
   }
 
   if (state.mode === 'glide') {
-    parts.body.rotation.x = 0.28
-    parts.head.rotation.x = -0.1
-    parts.leftWing.rotation.z = -1.18
-    parts.rightWing.rotation.z = 1.18
-    parts.leftWing.rotation.x = -0.22
-    parts.rightWing.rotation.x = -0.22
-    parts.leftLeg.rotation.x = 0.22
-    parts.rightLeg.rotation.x = 0.22
-    parts.scarfTail.rotation.y = -0.74
+    if (parts.body) parts.body.rotation.x = 0.18
+    if (parts.head) parts.head.rotation.x = -0.08
+    if (parts.leftWing) {
+      parts.leftWing.rotation.z += -0.86
+      parts.leftWing.rotation.x += -0.18
+    }
+    if (parts.rightWing) {
+      parts.rightWing.rotation.z += 0.86
+      parts.rightWing.rotation.x += -0.18
+    }
+    if (parts.leftLeg) parts.leftLeg.rotation.x += 0.16
+    if (parts.rightLeg) parts.rightLeg.rotation.x += 0.16
   }
 
-  parts.flame.visible = state.jetActive
-  if (state.jetActive) {
+  if (parts.flame) parts.flame.visible = state.jetActive
+  if (state.jetActive && parts.flame) {
     const pulse = 0.86 + Math.sin(state.elapsed * 28) * 0.18
     parts.flame.scale.set(0.85 + pulse * 0.16, 0.85 + pulse * 0.16, pulse)
   }

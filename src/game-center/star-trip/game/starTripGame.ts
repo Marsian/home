@@ -56,7 +56,7 @@ function disposeObject(object: THREE.Object3D) {
   else material?.dispose()
 }
 
-export function createStarTripGame(host: HTMLElement) {
+export async function createStarTripGame(host: HTMLElement) {
   const e2eEnabled = shouldEnableE2E()
   host.replaceChildren()
 
@@ -94,7 +94,18 @@ export function createStarTripGame(host: HTMLElement) {
   const stars = createStars()
   scene.add(stars)
 
-  const pico = createPicoModel()
+  const pico = await createPicoModel()
+  if (!host.contains(renderer.domElement)) {
+    scene.add(pico.root)
+    scene.traverse(disposeObject)
+    renderer.dispose()
+    renderer.domElement.remove()
+    return {
+      dispose() {
+        // The async load completed after React had already replaced this canvas.
+      },
+    }
+  }
   scene.add(pico.root)
 
   const input = new InputController()
@@ -117,9 +128,11 @@ export function createStarTripGame(host: HTMLElement) {
 
   const focusCanvas = () => renderer.domElement.focus({ preventScroll: true })
   renderer.domElement.addEventListener('pointerdown', focusCanvas)
+  focusCanvas()
 
   const clock = new THREE.Clock()
   let raf = 0
+  let e2eApi: StarTripE2EApi | null = null
 
   const tick = () => {
     const dt = Math.min(clock.getDelta(), 1 / 30)
@@ -136,7 +149,7 @@ export function createStarTripGame(host: HTMLElement) {
   tick()
 
   if (e2eEnabled) {
-    window.__starTrip_e2e = {
+    e2eApi = {
       getSnapshot: () => {
         const playerPosition = player.getPosition().clone().project(camera)
         return {
@@ -155,6 +168,7 @@ export function createStarTripGame(host: HTMLElement) {
         }
       },
     }
+    window.__starTrip_e2e = e2eApi
   }
 
   return {
@@ -164,7 +178,7 @@ export function createStarTripGame(host: HTMLElement) {
       renderer.domElement.removeEventListener('pointerdown', focusCanvas)
       cameraRig.dispose()
       input.dispose()
-      if (window.__starTrip_e2e?.getSnapshot) delete window.__starTrip_e2e
+      if (window.__starTrip_e2e === e2eApi) delete window.__starTrip_e2e
       scene.traverse(disposeObject)
       renderer.dispose()
       renderer.domElement.remove()
