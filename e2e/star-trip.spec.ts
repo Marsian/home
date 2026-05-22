@@ -71,6 +71,7 @@ test('star trip renders inside a game panel with no visible HUD', async ({ page 
   const canvas = page.locator('[data-testid="star-trip-canvas"]')
   await expect(playfield).toBeVisible()
   await expect(canvas).toBeVisible()
+  expect(snapshot?.player?.picoAsset?.version).toBe('pico-v0.1.4-proportions')
   expect(snapshot?.player?.picoAsset?.detailObjectsPresent).toBe(true)
   expect(snapshot?.player?.picoAsset?.detailObjectNames).toEqual(
     expect.arrayContaining([
@@ -225,7 +226,58 @@ test('star trip moves Pico without scrolling the page', async ({ page }) => {
   expect(after?.player?.modelUpDotSurfaceUp).toBeGreaterThan(0.999)
   expect(Math.abs(after?.player?.modelForwardDotSurfaceUp ?? 1)).toBeLessThan(0.001)
   expect(after?.playerVisible).toBe(true)
+  expect(after?.player?.mode).toBe('run')
+  expect(after?.player?.gait?.runSpeed).toBeGreaterThan(after?.player?.gait?.walkSpeed ?? 0)
+  expect(after?.player?.speed).toBeLessThanOrEqual((after?.player?.gait?.runSpeed ?? 0) * 1.05)
   expect(scrollY).toBe(0)
+  expect(runtimeErrors).toEqual([])
+})
+
+test('star trip derives walk and run speed from Pico gait metrics', async ({ page }) => {
+  const runtimeErrors: string[] = []
+  attachNoErrorGuards(page, runtimeErrors)
+  await page.goto('/games/star-trip?e2e=1')
+  await waitForStarTripReady(page)
+
+  const ready = await getStarTripSnapshot(page)
+  expect(ready?.player?.picoAsset?.version).toBe('pico-v0.1.4-proportions')
+  expect(ready?.player?.gait?.effectiveLegLength).toBeGreaterThan(0.3)
+  expect(ready?.player?.gait?.walkStepLength).toBeGreaterThan(0.35)
+  expect(ready?.player?.gait?.runStepLength).toBeGreaterThan(ready?.player?.gait?.walkStepLength ?? 0)
+  expect(ready?.player?.gait?.runSpeed).toBeGreaterThan(ready?.player?.gait?.walkSpeed ?? 0)
+
+  const beforeWalk = await getStarTripSnapshot(page)
+  await page.keyboard.down('ArrowUp')
+  await page.waitForTimeout(650)
+  const afterWalk = await getStarTripSnapshot(page)
+  await page.keyboard.up('ArrowUp')
+  const walkDistance = Math.hypot(
+    (afterWalk?.player?.position?.x ?? 0) - (beforeWalk?.player?.position?.x ?? 0),
+    (afterWalk?.player?.position?.y ?? 0) - (beforeWalk?.player?.position?.y ?? 0),
+    (afterWalk?.player?.position?.z ?? 0) - (beforeWalk?.player?.position?.z ?? 0),
+  )
+  const walkSpeed = afterWalk?.player?.gait?.walkSpeed ?? 0
+  expect(afterWalk?.player?.mode).toBe('walk')
+  expect(afterWalk?.player?.speed).toBeGreaterThan(walkSpeed * 0.82)
+  expect(afterWalk?.player?.speed).toBeLessThanOrEqual(walkSpeed * 1.05)
+
+  const beforeRun = await getStarTripSnapshot(page)
+  await page.keyboard.down('ArrowUp')
+  await page.keyboard.down('ShiftLeft')
+  await page.waitForTimeout(650)
+  const afterRun = await getStarTripSnapshot(page)
+  await page.keyboard.up('ShiftLeft')
+  await page.keyboard.up('ArrowUp')
+  const runDistance = Math.hypot(
+    (afterRun?.player?.position?.x ?? 0) - (beforeRun?.player?.position?.x ?? 0),
+    (afterRun?.player?.position?.y ?? 0) - (beforeRun?.player?.position?.y ?? 0),
+    (afterRun?.player?.position?.z ?? 0) - (beforeRun?.player?.position?.z ?? 0),
+  )
+  const runSpeed = afterRun?.player?.gait?.runSpeed ?? 0
+  expect(afterRun?.player?.mode).toBe('run')
+  expect(afterRun?.player?.speed).toBeGreaterThan(runSpeed * 0.82)
+  expect(afterRun?.player?.speed).toBeLessThanOrEqual(runSpeed * 1.05)
+  expect(runDistance).toBeGreaterThan(walkDistance * 1.25)
   expect(runtimeErrors).toEqual([])
 })
 
@@ -235,6 +287,7 @@ test('star trip left and right keys turn Pico instead of strafing', async ({ pag
   await page.goto('/games/star-trip?e2e=1')
   await waitForStarTripReady(page)
 
+  await page.locator('[data-testid="star-trip-canvas"]').click()
   const before = await getStarTripSnapshot(page)
   await page.keyboard.down('ArrowRight')
   await page.waitForTimeout(520)

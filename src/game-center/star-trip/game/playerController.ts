@@ -1,8 +1,9 @@
 import * as THREE from 'three'
 
 import type { StarTripInputState } from './input'
-import { updatePicoAnimation } from './playerAnimation'
-import type { PlayerAnimMode } from './playerAnimation'
+import { createPicoGroundGait, updatePicoAnimation } from './playerAnimation'
+import type { PicoGroundGaitMetrics, PlayerAnimMode } from './playerAnimation'
+import { PICO_MODEL_VERSION } from './playerModel'
 import type { PicoParts } from './playerModel'
 import {
   PLANET_RADIUS,
@@ -26,7 +27,16 @@ export type PlayerSnapshot = {
   modelForwardDotSurfaceUp: number
   grounded: boolean
   mode: PlayerAnimMode
+  speed: number
+  gait: {
+    effectiveLegLength: number
+    walkSpeed: number
+    runSpeed: number
+    walkStepLength: number
+    runStepLength: number
+  }
   picoAsset: {
+    version: string
     detailObjectNames: string[]
     detailObjectsPresent: boolean
     flameVisible: boolean
@@ -39,6 +49,7 @@ export class PlayerController {
   readonly group: THREE.Group
 
   private readonly parts: PicoParts
+  private readonly gait: PicoGroundGaitMetrics
   private readonly surfacePoint = normalFromLatLon(-18, 22).multiplyScalar(PLANET_RADIUS)
   private readonly lastForward = buildSurfaceFrame(this.surfacePoint.clone().normalize()).forward
   private turnVelocity = 0
@@ -52,6 +63,7 @@ export class PlayerController {
 
   constructor(parts: PicoParts) {
     this.parts = parts
+    this.gait = createPicoGroundGait(parts)
     this.group = parts.root
     this.syncTransform()
   }
@@ -103,9 +115,9 @@ export class PlayerController {
       }
     }
 
-    const baseSpeed = input.run ? 3.0 : 2.0
+    const baseSpeed = input.run ? this.gait.modes.run.speed : this.gait.modes.walk.speed
     const airSpeed = gliding ? 2.35 : 1.45
-    const turnStepSpeed = turning && this.grounded ? 0.85 : 0
+    const turnStepSpeed = turning && this.grounded ? this.gait.modes.walk.speed * 0.87 : 0
     const targetSpeed = moving ? (this.grounded ? baseSpeed : airSpeed) : turnStepSpeed
     this.currentSpeed += (targetSpeed - this.currentSpeed) * (1 - Math.exp(-dt * 12))
 
@@ -120,7 +132,7 @@ export class PlayerController {
       if (gliding) this.mode = 'glide'
       else if (jetActive) this.mode = 'jet'
       else this.mode = 'jump'
-    } else if (moving && this.currentSpeed > 2.45) {
+    } else if (moving && input.run && this.currentSpeed > (this.gait.modes.walk.speed + this.gait.modes.run.speed) / 2) {
       this.mode = 'run'
     } else if (moving || turning || this.currentSpeed > 0.12) {
       this.mode = 'walk'
@@ -135,6 +147,7 @@ export class PlayerController {
       elapsed: this.elapsed,
       delta: dt,
       jetActive,
+      gait: this.gait,
     })
   }
 
@@ -164,7 +177,16 @@ export class PlayerController {
       modelForwardDotSurfaceUp: modelForward.dot(up),
       grounded: this.grounded,
       mode: this.mode,
+      speed: this.currentSpeed,
+      gait: {
+        effectiveLegLength: this.gait.effectiveLegLength,
+        walkSpeed: this.gait.modes.walk.speed,
+        runSpeed: this.gait.modes.run.speed,
+        walkStepLength: this.gait.modes.walk.visualStepLength,
+        runStepLength: this.gait.modes.run.visualStepLength,
+      },
       picoAsset: {
+        version: PICO_MODEL_VERSION,
         detailObjectNames: this.parts.detailObjectNames,
         detailObjectsPresent: this.parts.detailObjectNames.every((name) => Boolean(this.parts.model.getObjectByName(name))),
         flameVisible: this.parts.flame?.visible === true,

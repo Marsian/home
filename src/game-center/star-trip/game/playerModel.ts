@@ -1,7 +1,9 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
-import picoModelUrl from '../assets/models/characters/pico/pico-v0.1.2-detail.glb?url'
+import picoModelUrl from '../assets/models/characters/pico/pico-v0.1.4-proportions.glb?url'
+
+export const PICO_MODEL_VERSION = 'pico-v0.1.4-proportions'
 
 export type PicoBaseTransform = {
   position: THREE.Vector3
@@ -152,6 +154,12 @@ function getWingTopPivot(model: THREE.Group, wing: THREE.Object3D, side: 'L' | '
   return new THREE.Vector3(side === 'L' ? bounds.max.x : bounds.min.x, bounds.max.y, center.z)
 }
 
+function getLegTopPivot(model: THREE.Group, leg: THREE.Object3D) {
+  const bounds = getObjectBoundsInModel(model, leg)
+  const center = bounds.getCenter(new THREE.Vector3())
+  return new THREE.Vector3(center.x, bounds.max.y, center.z)
+}
+
 function createJetFlame(nozzleBounds: THREE.Box3, side: 'L' | 'R') {
   const center = nozzleBounds.getCenter(new THREE.Vector3())
   const flame = new THREE.Group()
@@ -233,8 +241,8 @@ export async function createPicoModel(): Promise<PicoParts> {
 
   const leftWing = wrapWithPivot(model, leftWingMesh, 'Pico_Wing_L_Pivot', getWingTopPivot(model, leftWingMesh, 'L'))
   const rightWing = wrapWithPivot(model, rightWingMesh, 'Pico_Wing_R_Pivot', getWingTopPivot(model, rightWingMesh, 'R'))
-  const leftLeg = wrapWithPivot(model, leftLegMesh, 'Pico_LegFoot_L_Pivot', new THREE.Vector3(-0.09, 0.42, 0))
-  const rightLeg = wrapWithPivot(model, rightLegMesh, 'Pico_LegFoot_R_Pivot', new THREE.Vector3(0.09, 0.42, 0))
+  const leftLeg = wrapWithPivot(model, leftLegMesh, 'Pico_LegFoot_L_Pivot', getLegTopPivot(model, leftLegMesh))
+  const rightLeg = wrapWithPivot(model, rightLegMesh, 'Pico_LegFoot_R_Pivot', getLegTopPivot(model, rightLegMesh))
 
   const flame = createJetpackFlames(model, leftJetNozzle, rightJetNozzle)
 
