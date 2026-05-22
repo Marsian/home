@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
-import picoModelUrl from '../assets/models/characters/pico/pico-v0.1.1-blockout.glb?url'
+import picoModelUrl from '../assets/models/characters/pico/pico-v0.1.2-detail.glb?url'
 
 export type PicoBaseTransform = {
   position: THREE.Vector3
@@ -18,7 +18,11 @@ export type PicoParts = {
   rightWing: THREE.Object3D | null
   leftLeg: THREE.Object3D | null
   rightLeg: THREE.Object3D | null
+  jetpack: THREE.Object3D | null
+  leftJetNozzle: THREE.Object3D | null
+  rightJetNozzle: THREE.Object3D | null
   flame: THREE.Object3D | null
+  detailObjectNames: string[]
   baseTransforms: Map<THREE.Object3D, PicoBaseTransform>
 }
 
@@ -27,13 +31,26 @@ const targetHeight = 1.36
 
 const materialPalette: Record<string, number> = {
   Pico_Beak_Gold: 0xffc21f,
-  Pico_Body_Tunic_Blue: 0x1d66b3,
-  Pico_Body_Tunic_Light_Blue_Hem: 0x58a6dc,
+  Pico_Body_Tunic_Blue: 0xc7b7ff,
+  Pico_Body_Tunic_Light_Blue_Hem: 0xff6f9f,
   Pico_Eye_Black: 0x050506,
   Pico_Eye_White: 0xfff7eb,
-  Pico_Feather_Indigo: 0x33305f,
-  Pico_Mat_Limb_Indigo: 0x2a2858,
+  Pico_Feather_Indigo: 0x0e5ea8,
+  Pico_Foot_OrangeYellow: 0xe7a33a,
+  Pico_Jetpack_BlueGray: 0x7f9aa3,
+  Pico_Jetpack_Nozzle_Dark: 0x202c35,
+  Pico_Mat_Limb_Indigo: 0x1679c4,
 }
+
+const picoDetailObjectNames = [
+  'Pico_Jetpack_Main_shell_lowpoly',
+  'Pico_Jetpack_Nozzle_L',
+  'Pico_Jetpack_Nozzle_R',
+  'Pico_Tail_Upturned_3feather',
+  'Pico_Crest_Back_Tuft_01',
+  'Pico_Crest_Back_Tuft_02',
+  'Pico_Crest_Back_Tuft_03',
+]
 
 function getRequiredObject(root: THREE.Object3D, name: string) {
   const object = root.getObjectByName(name)
@@ -135,6 +152,48 @@ function getWingTopPivot(model: THREE.Group, wing: THREE.Object3D, side: 'L' | '
   return new THREE.Vector3(side === 'L' ? bounds.max.x : bounds.min.x, bounds.max.y, center.z)
 }
 
+function createJetFlame(nozzleBounds: THREE.Box3, side: 'L' | 'R') {
+  const center = nozzleBounds.getCenter(new THREE.Vector3())
+  const flame = new THREE.Group()
+  flame.name = `Pico_JetFlame_${side}`
+
+  const outwardZ = center.z >= 0 ? 1 : -1
+  const rearZ = outwardZ > 0 ? nozzleBounds.max.z : nozzleBounds.min.z
+  const flameMaterial = new THREE.MeshBasicMaterial({
+    color: side === 'L' ? 0xffd95f : 0xff9d35,
+    transparent: true,
+    opacity: 0.86,
+  })
+  const core = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.42, 6), flameMaterial)
+  core.name = `Pico_JetFlame_${side}_Core`
+  core.position.set(center.x, center.y, rearZ + outwardZ * 0.19)
+  core.rotation.x = outwardZ > 0 ? Math.PI / 2 : -Math.PI / 2
+
+  const glow = new THREE.Mesh(
+    new THREE.SphereGeometry(0.055, 8, 6),
+    new THREE.MeshBasicMaterial({
+      color: 0xfff07a,
+      transparent: true,
+      opacity: 0.82,
+    }),
+  )
+  glow.name = `Pico_JetFlame_${side}_Glow`
+  glow.position.set(center.x, center.y, rearZ + outwardZ * 0.03)
+
+  flame.add(core, glow)
+  return flame
+}
+
+function createJetpackFlames(model: THREE.Group, leftNozzle: THREE.Object3D, rightNozzle: THREE.Object3D) {
+  const flameGroup = new THREE.Group()
+  flameGroup.name = 'Pico_Jetpack_Flames'
+  flameGroup.visible = false
+  flameGroup.add(createJetFlame(getObjectBoundsInModel(model, leftNozzle), 'L'))
+  flameGroup.add(createJetFlame(getObjectBoundsInModel(model, rightNozzle), 'R'))
+  model.add(flameGroup)
+  return flameGroup
+}
+
 export async function createPicoModel(): Promise<PicoParts> {
   const gltf = await loader.loadAsync(picoModelUrl).catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error)
@@ -167,21 +226,17 @@ export async function createPicoModel(): Promise<PicoParts> {
   const rightWingMesh = getRequiredObject(model, 'Pico_Wing_R_whole_faceted_5bands')
   const leftLegMesh = getRequiredObject(model, 'Pico_LegFoot_L_whole_faceted_5bands')
   const rightLegMesh = getRequiredObject(model, 'Pico_LegFoot_R_whole_faceted_5bands')
+  const jetpack = getRequiredObject(model, 'Pico_Jetpack_Main_shell_lowpoly')
+  const leftJetNozzle = getRequiredObject(model, 'Pico_Jetpack_Nozzle_L')
+  const rightJetNozzle = getRequiredObject(model, 'Pico_Jetpack_Nozzle_R')
+  for (const objectName of picoDetailObjectNames) getRequiredObject(model, objectName)
 
   const leftWing = wrapWithPivot(model, leftWingMesh, 'Pico_Wing_L_Pivot', getWingTopPivot(model, leftWingMesh, 'L'))
   const rightWing = wrapWithPivot(model, rightWingMesh, 'Pico_Wing_R_Pivot', getWingTopPivot(model, rightWingMesh, 'R'))
   const leftLeg = wrapWithPivot(model, leftLegMesh, 'Pico_LegFoot_L_Pivot', new THREE.Vector3(-0.09, 0.42, 0))
   const rightLeg = wrapWithPivot(model, rightLegMesh, 'Pico_LegFoot_R_Pivot', new THREE.Vector3(0.09, 0.42, 0))
 
-  const flame = new THREE.Mesh(
-    new THREE.ConeGeometry(0.07, 0.26, 6),
-    new THREE.MeshBasicMaterial({ color: 0xffd95f, transparent: true, opacity: 0.78 }),
-  )
-  flame.name = 'Pico_Debug_JetFlame'
-  flame.position.set(0, 0.48, -0.28)
-  flame.rotation.x = -Math.PI / 2
-  flame.visible = false
-  root.add(flame)
+  const flame = createJetpackFlames(model, leftJetNozzle, rightJetNozzle)
 
   return {
     root,
@@ -192,7 +247,11 @@ export async function createPicoModel(): Promise<PicoParts> {
     rightWing,
     leftLeg,
     rightLeg,
+    jetpack,
+    leftJetNozzle,
+    rightJetNozzle,
     flame,
+    detailObjectNames: picoDetailObjectNames,
     baseTransforms: captureBaseTransforms([model, body, head, leftWing, rightWing, leftLeg, rightLeg, flame]),
   }
 }

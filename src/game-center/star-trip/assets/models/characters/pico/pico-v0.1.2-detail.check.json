@@ -1,0 +1,442 @@
+{
+  "asset_dir": "/Users/transwarp/Documents/Github/home/src/game-center/star-trip/assets/models/characters/pico",
+  "source_blend": "/Users/transwarp/Documents/Github/home/src/game-center/star-trip/assets/models/characters/pico/pico-v0.1.1-blockout.blend",
+  "blend": "/Users/transwarp/Documents/Github/home/src/game-center/star-trip/assets/models/characters/pico/pico-v0.1.2-detail.blend",
+  "glb": "/Users/transwarp/Documents/Github/home/src/game-center/star-trip/assets/models/characters/pico/pico-v0.1.2-detail.glb",
+  "export_scope": "Selected objects whose names start with Pico_ and type is MESH or ARMATURE.",
+  "object_count": 20,
+  "mesh_count": 19,
+  "armature_count": 1,
+  "materials": [
+    "Pico_Beak_Gold",
+    "Pico_Body_Tunic_Blue",
+    "Pico_Body_Tunic_Light_Blue_Hem",
+    "Pico_Eye_Black",
+    "Pico_Eye_White",
+    "Pico_Feather_Indigo",
+    "Pico_Foot_OrangeYellow",
+    "Pico_Jetpack_BlueGray",
+    "Pico_Jetpack_Nozzle_Dark",
+    "Pico_Mat_Limb_Indigo"
+  ],
+  "required_new_objects": {
+    "Pico_Jetpack_Main_shell_lowpoly": true,
+    "Pico_Jetpack_Nozzle_L": true,
+    "Pico_Jetpack_Nozzle_R": true,
+    "Pico_Tail_Upturned_3feather": true,
+    "Pico_Crest_Back_Tuft_01": true,
+    "Pico_Crest_Back_Tuft_02": true,
+    "Pico_Crest_Back_Tuft_03": true
+  },
+  "stale_objects": [],
+  "objects": [
+    {
+      "name": "Pico_Armature_Placeholder_WholeLimbs_v6",
+      "type": "ARMATURE",
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "dimensions": [
+        1.14,
+        0.233,
+        1.7
+      ],
+      "materials": [],
+      "bones": [
+        "Root",
+        "Body",
+        "Head",
+        "Wing_L_01",
+        "Wing_L_02",
+        "Wing_L_03",
+        "Wing_L_04",
+        "Wing_L_05",
+        "Wing_R_01",
+        "Wing_R_02",
+        "Wing_R_03",
+        "Wing_R_04",
+        "Wing_R_05",
+        "Leg_L",
+        "Foot_L",
+        "Leg_R",
+        "Foot_R"
+      ]
+    },
+    {
+      "name": "Pico_Beak_pointed_pyramid_lowered",
+      "type": "MESH",
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "dimensions": [
+        0.34,
+        0.385,
+        0.1932
+      ],
+      "materials": [
+        "Pico_Beak_Gold"
+      ],
+      "vertices": 5,
+      "faces": 5
+    },
+    {
+      "name": "Pico_Crest_Back_Tuft_01",
+      "type": "MESH",
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "dimensions": [
+        0.117,
+        0.1347,
+        0.2228
+      ],
+      "materials": [
+        "Pico_Feather_Indigo"
+      ],
+      "vertices": 4,
+      "faces": 4
+    },
+    {
+      "name": "Pico_Crest_Back_Tuft_02",
+      "type": "MESH",
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "dimensions": [
+        0.1275,
+        0.1753,
+        0.2398
+      ],
+      "materials": [
+        "Pico_Feather_Indigo"
+      ],
+      "vertices": 4,
+      "faces": 4
+    },
+    {
+      "name": "Pico_Crest_Back_Tuft_03",
+      "type": "MESH",
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "dimensions": [
+        0.1247,
+        0.1728,
+        0.1817
+      ],
+      "materials": [
+        "Pico_Feather_Indigo"
+      ],
+      "vertices": 4,
+      "faces": 4
+    },
+    {
+      "name": "Pico_Eye_L_true_side_disc_pupil",
+      "type": "MESH",
+      "location": [
+        -0.442,
+        -0.105,
+        1.745
+      ],
+      "dimensions": [
+        0.1165,
+        0.1271,
+        0.02
+      ],
+      "materials": [
+        "Pico_Eye_Black"
+      ],
+      "vertices": 44,
+      "faces": 24
+    },
+    {
+      "name": "Pico_Eye_L_true_side_disc_white",
+      "type": "MESH",
+      "location": [
+        -0.43,
+        -0.105,
+        1.755
+      ],
+      "dimensions": [
+        0.2916,
+        0.3149,
+        0.018
+      ],
+      "materials": [
+        "Pico_Eye_White"
+      ],
+      "vertices": 56,
+      "faces": 30
+    },
+    {
+      "name": "Pico_Eye_R_true_side_disc_pupil",
+      "type": "MESH",
+      "location": [
+        0.442,
+        -0.105,
+        1.745
+      ],
+      "dimensions": [
+        0.1165,
+        0.1271,
+        0.02
+      ],
+      "materials": [
+        "Pico_Eye_Black"
+      ],
+      "vertices": 44,
+      "faces": 24
+    },
+    {
+      "name": "Pico_Eye_R_true_side_disc_white",
+      "type": "MESH",
+      "location": [
+        0.43,
+        -0.105,
+        1.755
+      ],
+      "dimensions": [
+        0.2916,
+        0.3149,
+        0.018
+      ],
+      "materials": [
+        "Pico_Eye_White"
+      ],
+      "vertices": 56,
+      "faces": 30
+    },
+    {
+      "name": "Pico_Head_faceted_large_reference_ratio",
+      "type": "MESH",
+      "location": [
+        0.0,
+        -0.02,
+        1.72
+      ],
+      "dimensions": [
+        0.875,
+        0.84,
+        0.78
+      ],
+      "materials": [
+        "Pico_Feather_Indigo"
+      ],
+      "vertices": 42,
+      "faces": 80
+    },
+    {
+      "name": "Pico_Jetpack_Main_shell_lowpoly",
+      "type": "MESH",
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "dimensions": [
+        0.3326,
+        0.1626,
+        0.48
+      ],
+      "materials": [
+        "Pico_Jetpack_BlueGray"
+      ],
+      "vertices": 40,
+      "faces": 34
+    },
+    {
+      "name": "Pico_Jetpack_Nozzle_L",
+      "type": "MESH",
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "dimensions": [
+        0.09,
+        0.1308,
+        0.1627
+      ],
+      "materials": [
+        "Pico_Jetpack_Nozzle_Dark"
+      ],
+      "vertices": 12,
+      "faces": 8
+    },
+    {
+      "name": "Pico_Jetpack_Nozzle_R",
+      "type": "MESH",
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "dimensions": [
+        0.09,
+        0.1308,
+        0.1627
+      ],
+      "materials": [
+        "Pico_Jetpack_Nozzle_Dark"
+      ],
+      "vertices": 12,
+      "faces": 8
+    },
+    {
+      "name": "Pico_LegFoot_L_whole_faceted_5bands",
+      "type": "MESH",
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "dimensions": [
+        0.138,
+        0.221,
+        0.525
+      ],
+      "materials": [
+        "Pico_Mat_Limb_Indigo",
+        "Pico_Foot_OrangeYellow"
+      ],
+      "vertices": 32,
+      "faces": 30
+    },
+    {
+      "name": "Pico_LegFoot_R_whole_faceted_5bands",
+      "type": "MESH",
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "dimensions": [
+        0.138,
+        0.221,
+        0.525
+      ],
+      "materials": [
+        "Pico_Mat_Limb_Indigo",
+        "Pico_Foot_OrangeYellow"
+      ],
+      "vertices": 32,
+      "faces": 30
+    },
+    {
+      "name": "Pico_Tail_Upturned_3feather",
+      "type": "MESH",
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "dimensions": [
+        0.2156,
+        0.1472,
+        0.2838
+      ],
+      "materials": [
+        "Pico_Mat_Limb_Indigo"
+      ],
+      "vertices": 24,
+      "faces": 18
+    },
+    {
+      "name": "Pico_Torso_light_blue_bottom_band",
+      "type": "MESH",
+      "location": [
+        0.0,
+        0.0,
+        0.505
+      ],
+      "dimensions": [
+        0.3,
+        0.22,
+        0.045
+      ],
+      "materials": [
+        "Pico_Body_Tunic_Light_Blue_Hem"
+      ],
+      "vertices": 8,
+      "faces": 6
+    },
+    {
+      "name": "Pico_Torso_tall_head_connected_blue_lowpoly",
+      "type": "MESH",
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "dimensions": [
+        0.66,
+        0.4777,
+        0.88
+      ],
+      "materials": [
+        "Pico_Body_Tunic_Blue"
+      ],
+      "vertices": 84,
+      "faces": 72
+    },
+    {
+      "name": "Pico_Wing_L_whole_faceted_5bands",
+      "type": "MESH",
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "dimensions": [
+        0.335,
+        0.216,
+        0.536
+      ],
+      "materials": [
+        "Pico_Mat_Limb_Indigo"
+      ],
+      "vertices": 24,
+      "faces": 22
+    },
+    {
+      "name": "Pico_Wing_R_whole_faceted_5bands",
+      "type": "MESH",
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "dimensions": [
+        0.335,
+        0.216,
+        0.536
+      ],
+      "materials": [
+        "Pico_Mat_Limb_Indigo"
+      ],
+      "vertices": 24,
+      "faces": 22
+    }
+  ],
+  "visual_artifacts": {
+    "contact_sheet": "/Users/transwarp/Documents/Github/home/output/star-trip/pico-v0.1.2-blender-contact-sheet.png",
+    "front": "/Users/transwarp/Documents/Github/home/output/star-trip/pico-v0.1.2-blender-front.png",
+    "side": "/Users/transwarp/Documents/Github/home/output/star-trip/pico-v0.1.2-blender-side.png",
+    "back": "/Users/transwarp/Documents/Github/home/output/star-trip/pico-v0.1.2-blender-back.png"
+  },
+  "notes": [
+    "v0.1.2 detail pass makes Pico bluer and adds jetpack, tail, and three rear crest tufts.",
+    "Red scarf intentionally omitted for this version.",
+    "Existing core object names are preserved for runtime pivots."
+  ]
+}

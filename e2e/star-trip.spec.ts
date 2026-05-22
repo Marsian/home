@@ -61,11 +61,22 @@ test('star trip renders inside a game panel with no visible HUD', async ({ page 
   attachNoErrorGuards(page, runtimeErrors)
   await page.goto('/games/star-trip?e2e=1')
   await waitForStarTripReady(page)
+  const snapshot = await getStarTripSnapshot(page)
 
   const playfield = page.locator('[data-testid="star-trip-playfield"]')
   const canvas = page.locator('[data-testid="star-trip-canvas"]')
   await expect(playfield).toBeVisible()
   await expect(canvas).toBeVisible()
+  expect(snapshot?.player?.picoAsset?.detailObjectsPresent).toBe(true)
+  expect(snapshot?.player?.picoAsset?.detailObjectNames).toEqual(
+    expect.arrayContaining([
+      'Pico_Jetpack_Main_shell_lowpoly',
+      'Pico_Tail_Upturned_3feather',
+      'Pico_Crest_Back_Tuft_01',
+      'Pico_Crest_Back_Tuft_02',
+      'Pico_Crest_Back_Tuft_03',
+    ]),
+  )
 
   const layout = await playfield.evaluate((el) => {
     const r = el.getBoundingClientRect()
@@ -146,7 +157,7 @@ test('star trip left and right keys turn Pico instead of strafing', async ({ pag
 
   const before = await getStarTripSnapshot(page)
   await page.keyboard.down('ArrowRight')
-  await page.waitForTimeout(420)
+  await page.waitForTimeout(520)
   await page.keyboard.up('ArrowRight')
   const afterTurn = await getStarTripSnapshot(page)
   const turnOnlyDistance = Math.hypot(

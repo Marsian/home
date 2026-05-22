@@ -26,7 +26,14 @@ export type PlayerSnapshot = {
   modelForwardDotSurfaceUp: number
   grounded: boolean
   mode: PlayerAnimMode
+  picoAsset: {
+    detailObjectNames: string[]
+    detailObjectsPresent: boolean
+    flameVisible: boolean
+  }
 }
+
+const MIN_GLIDE_ALTITUDE = 0.35
 
 export class PlayerController {
   readonly group: THREE.Group
@@ -81,11 +88,10 @@ export class PlayerController {
         jetActive = true
         this.jetTimeLeft = Math.max(0, this.jetTimeLeft - dt)
         this.verticalVelocity += 5.9 * dt
-      } else if (input.jumpHeld && this.verticalVelocity < 0.7) {
-        gliding = true
       }
+      gliding = forwardInput > 0.01 && this.altitude > MIN_GLIDE_ALTITUDE
 
-      const gravity = jetActive ? 5.1 : gliding ? 2.2 : 7.7
+      const gravity = gliding ? 2.2 : jetActive ? 5.1 : 7.7
       this.verticalVelocity -= gravity * dt
       if (gliding) this.verticalVelocity = Math.max(this.verticalVelocity, -1.05)
       this.altitude += this.verticalVelocity * dt
@@ -111,8 +117,8 @@ export class PlayerController {
     }
 
     if (!this.grounded) {
-      if (jetActive) this.mode = 'jet'
-      else if (gliding) this.mode = 'glide'
+      if (gliding) this.mode = 'glide'
+      else if (jetActive) this.mode = 'jet'
       else this.mode = 'jump'
     } else if (moving && this.currentSpeed > 2.45) {
       this.mode = 'run'
@@ -127,6 +133,7 @@ export class PlayerController {
       mode: this.mode,
       speed: this.currentSpeed,
       elapsed: this.elapsed,
+      delta: dt,
       jetActive,
     })
   }
@@ -157,6 +164,11 @@ export class PlayerController {
       modelForwardDotSurfaceUp: modelForward.dot(up),
       grounded: this.grounded,
       mode: this.mode,
+      picoAsset: {
+        detailObjectNames: this.parts.detailObjectNames,
+        detailObjectsPresent: this.parts.detailObjectNames.every((name) => Boolean(this.parts.model.getObjectByName(name))),
+        flameVisible: this.parts.flame?.visible === true,
+      },
     }
   }
 
