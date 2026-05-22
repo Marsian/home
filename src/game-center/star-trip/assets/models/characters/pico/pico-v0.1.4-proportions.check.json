@@ -23,11 +23,16 @@
   "stale_objects": [],
   "proportion_changes": {
     "torso_height_before": 0.88,
-    "torso_height_after": 0.7832,
-    "torso_height_delta_percent": -11.0,
+    "torso_height_after": 0.7568,
+    "torso_height_delta_percent": -14.0,
     "leg_height_before": 0.525,
-    "leg_height_after": 0.6142,
-    "leg_height_delta_percent": 16.99,
+    "leg_height_after": 0.6457,
+    "leg_height_delta_percent": 22.99,
+    "leg_gap_before": 0.086,
+    "leg_gap_after": 0.156,
+    "leg_gap_delta": 0.07,
+    "left_leg_center_x_after": -0.147,
+    "right_leg_center_x_after": 0.147,
     "leg_torso_overlap_left": 0.035,
     "leg_torso_overlap_right": 0.035,
     "tail_reaches_lower_torso": true,
@@ -142,7 +147,7 @@
       "min": [
         -0.33,
         -0.2389,
-        0.5768
+        0.6032
       ],
       "max": [
         0.33,
@@ -152,19 +157,19 @@
       "dimensions": [
         0.66,
         0.4777,
-        0.7832
+        0.7568
       ]
     },
     "hem": {
       "min": [
         -0.15,
         -0.11,
-        0.5793
+        0.6057
       ],
       "max": [
         0.15,
         0.11,
-        0.6243
+        0.6507
       ],
       "dimensions": [
         0.3,
@@ -174,48 +179,48 @@
     },
     "left_leg": {
       "min": [
-        -0.181,
+        -0.216,
         -0.155,
-        -0.0025
+        -0.0076
       ],
       "max": [
-        -0.043,
+        -0.078,
         0.066,
-        0.6118
+        0.6382
       ],
       "dimensions": [
         0.138,
         0.221,
-        0.6142
+        0.6457
       ]
     },
     "right_leg": {
       "min": [
-        0.043,
+        0.078,
         -0.155,
-        -0.0025
+        -0.0076
       ],
       "max": [
-        0.181,
+        0.216,
         0.066,
-        0.6118
+        0.6382
       ],
       "dimensions": [
         0.138,
         0.221,
-        0.6142
+        0.6457
       ]
     },
     "tail": {
       "min": [
         -0.1078,
         0.1933,
-        0.3239
+        0.3489
       ],
       "max": [
         0.1078,
         0.3405,
-        0.6077
+        0.6327
       ],
       "dimensions": [
         0.2156,
@@ -253,7 +258,7 @@
       "dimensions": [
         1.14,
         0.208,
-        1.7624
+        1.7675
       ],
       "materials": [],
       "bones": [
@@ -515,7 +520,7 @@
       "dimensions": [
         0.138,
         0.221,
-        0.6142
+        0.6457
       ],
       "materials": [
         "Pico_Mat_Limb_Indigo",
@@ -535,7 +540,7 @@
       "dimensions": [
         0.138,
         0.221,
-        0.6142
+        0.6457
       ],
       "materials": [
         "Pico_Mat_Limb_Indigo",
@@ -593,7 +598,7 @@
       "dimensions": [
         0.66,
         0.4777,
-        0.7832
+        0.7568
       ],
       "materials": [
         "Pico_Body_Tunic_Blue"
@@ -647,8 +652,9 @@
     "back": "/Users/transwarp/Documents/Github/home/output/star-trip/pico-v0.1.4-blender-back.png"
   },
   "notes": [
-    "v0.1.4 shortens Pico torso about 11% and lengthens legs about 17%.",
-    "Leg tops overlap the shortened torso lower edge; tail root is moved to the new lower rear torso.",
+    "v0.1.4 shortens Pico torso about 14% and lengthens legs about 23%.",
+    "Legs are shifted outward toward the hips while keeping leg tops overlapped into the shortened torso.",
+    "Tail root is moved to the new lower rear torso.",
     "Core object names are preserved for runtime pivots and e2e checks."
   ]
 }

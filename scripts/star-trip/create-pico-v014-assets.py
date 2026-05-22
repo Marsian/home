@@ -28,10 +28,11 @@ TARGET_GLB = ASSET_DIR / "pico-v0.1.4-proportions.glb"
 TARGET_CHECK = ASSET_DIR / "pico-v0.1.4-proportions.check.json"
 CONTACT_SHEET = OUTPUT_DIR / "pico-v0.1.4-blender-contact-sheet.png"
 
-TORSO_SCALE_Z = 0.89
-LEG_SCALE_Z = 1.17
+TORSO_SCALE_Z = 0.86
+LEG_SCALE_Z = 1.23
+LEG_OUTWARD_X_OFFSET = 0.035
 LEG_TORSO_OVERLAP = 0.035
-TAIL_ROOT_LIFT = 0.07
+TAIL_ROOT_LIFT = 0.095
 TAIL_BACK_EMBED = 0.01
 
 CORE_OBJECTS = {
@@ -105,7 +106,14 @@ def translate_mesh(obj: bpy.types.Object, delta: Vector) -> None:
     obj.data.update()
 
 
-def update_armature(new_torso_min: float, new_torso_max: float, leg_min: float, leg_max: float) -> None:
+def update_armature(
+    new_torso_min: float,
+    new_torso_max: float,
+    leg_min: float,
+    leg_max: float,
+    left_leg_center_x: float,
+    right_leg_center_x: float,
+) -> None:
     armature = next((obj for obj in bpy.context.scene.objects if obj.name.startswith("Pico_Armature_Placeholder_")), None)
     if armature is None or armature.type != "ARMATURE":
         return
@@ -123,7 +131,7 @@ def update_armature(new_torso_min: float, new_torso_max: float, leg_min: float, 
         if "Body" in bones:
             bones["Body"].head = (0, 0, new_torso_min)
             bones["Body"].tail = (0, 0, new_torso_max)
-        for side, x in (("L", -0.09), ("R", 0.09)):
+        for side, x in (("L", left_leg_center_x), ("R", right_leg_center_x)):
             leg_name = f"Leg_{side}"
             foot_name = f"Foot_{side}"
             knee_z = leg_min + (leg_max - leg_min) * 0.36
@@ -135,7 +143,7 @@ def update_armature(new_torso_min: float, new_torso_max: float, leg_min: float, 
                 bones[foot_name].tail = (x, -0.13, leg_min)
 
         bpy.ops.object.mode_set(mode="OBJECT")
-    armature["design_note"] = "v0.1.4 placeholder bones realigned to shorter torso and longer legs."
+    armature["design_note"] = "v0.1.4 placeholder bones realigned to shorter torso, longer legs, and wider hip stance."
 
 
 def look_at(obj: bpy.types.Object, target: tuple[float, float, float]) -> None:
@@ -242,7 +250,7 @@ def main() -> None:
     new_torso_max = old_torso_max
     new_torso_min = new_torso_max - old_torso_height * TORSO_SCALE_Z
     remap_mesh_z(torso, new_torso_min, new_torso_max)
-    torso["design_note"] = "v0.1.4 torso shortened about 11% from the lower edge while preserving head connection."
+    torso["design_note"] = "v0.1.4 torso shortened about 14% from the lower edge while preserving head connection."
 
     remap_mesh_z(hem, new_torso_min + 0.0025, new_torso_min + 0.0475)
     hem["design_note"] = "v0.1.4 hem moved to the shortened torso bottom edge."
@@ -253,12 +261,19 @@ def main() -> None:
     new_leg_min = new_leg_max - old_leg_height * LEG_SCALE_Z
     for leg in (left_leg, right_leg):
         remap_mesh_z(leg, new_leg_min, new_leg_max)
-        leg["design_note"] = "v0.1.4 leg/foot lengthened about 17% and overlapped into the shortened torso."
+        leg["design_note"] = "v0.1.4 leg/foot lengthened about 23%, widened toward the hips, and overlapped into the shortened torso."
+
+    translate_mesh(left_leg, Vector((-LEG_OUTWARD_X_OFFSET, 0, 0)))
+    translate_mesh(right_leg, Vector((LEG_OUTWARD_X_OFFSET, 0, 0)))
 
     translate_mesh(tail, Vector((0, TAIL_BACK_EMBED, TAIL_ROOT_LIFT)))
     tail["design_note"] = "v0.1.4 tail root lifted and embedded into the new lower rear torso connection."
 
-    update_armature(new_torso_min, new_torso_max, new_leg_min, new_leg_max)
+    left_leg_bounds = bounds(left_leg)
+    right_leg_bounds = bounds(right_leg)
+    left_leg_center_x = (left_leg_bounds["min"][0] + left_leg_bounds["max"][0]) / 2
+    right_leg_center_x = (right_leg_bounds["min"][0] + right_leg_bounds["max"][0]) / 2
+    update_armature(new_torso_min, new_torso_max, new_leg_min, new_leg_max, left_leg_center_x, right_leg_center_x)
     bpy.ops.wm.save_as_mainfile(filepath=str(TARGET_BLEND))
 
     bpy.ops.object.select_all(action="DESELECT")
@@ -279,6 +294,10 @@ def main() -> None:
     torso_min = after["torso"]["min"][2]
     left_leg_max = after["left_leg"]["max"][2]
     right_leg_max = after["right_leg"]["max"][2]
+    leg_gap_before = before["right_leg"]["min"][0] - before["left_leg"]["max"][0]
+    leg_gap_after = after["right_leg"]["min"][0] - after["left_leg"]["max"][0]
+    left_leg_center_after = (after["left_leg"]["min"][0] + after["left_leg"]["max"][0]) / 2
+    right_leg_center_after = (after["right_leg"]["min"][0] + after["right_leg"]["max"][0]) / 2
     tail_max_z = after["tail"]["max"][2]
     tail_min_y = after["tail"]["min"][1]
     torso_back_y = after["torso"]["max"][1]
@@ -320,6 +339,11 @@ def main() -> None:
             "leg_height_before": round(leg_height_before, 4),
             "leg_height_after": round(leg_height_after, 4),
             "leg_height_delta_percent": round((leg_height_after / leg_height_before - 1) * 100, 2),
+            "leg_gap_before": round(leg_gap_before, 4),
+            "leg_gap_after": round(leg_gap_after, 4),
+            "leg_gap_delta": round(leg_gap_after - leg_gap_before, 4),
+            "left_leg_center_x_after": round(left_leg_center_after, 4),
+            "right_leg_center_x_after": round(right_leg_center_after, 4),
             "leg_torso_overlap_left": round(left_leg_max - torso_min, 4),
             "leg_torso_overlap_right": round(right_leg_max - torso_min, 4),
             "tail_reaches_lower_torso": tail_max_z >= torso_min,
@@ -335,8 +359,9 @@ def main() -> None:
             "back": str(render_paths[2]),
         },
         "notes": [
-            "v0.1.4 shortens Pico torso about 11% and lengthens legs about 17%.",
-            "Leg tops overlap the shortened torso lower edge; tail root is moved to the new lower rear torso.",
+            "v0.1.4 shortens Pico torso about 14% and lengthens legs about 23%.",
+            "Legs are shifted outward toward the hips while keeping leg tops overlapped into the shortened torso.",
+            "Tail root is moved to the new lower rear torso.",
             "Core object names are preserved for runtime pivots and e2e checks.",
         ],
     }
