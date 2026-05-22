@@ -56,6 +56,10 @@ async function getCanvasPixelSummary(page: Page) {
   })
 }
 
+async function setPixelationLevel(page: Page, level: number) {
+  await page.locator('[data-testid="star-trip-pixelation-slider"]').fill(String(level))
+}
+
 test('star trip renders inside a game panel with no visible HUD', async ({ page }) => {
   const runtimeErrors: string[] = []
   attachNoErrorGuards(page, runtimeErrors)
@@ -94,12 +98,88 @@ test('star trip renders inside a game panel with no visible HUD', async ({ page 
   expect(layout.height).toBeLessThan(layout.viewportHeight)
   expect(layout.text.trim()).toBe('')
 
+  await expect(page.locator('[data-testid="star-trip-settings-button"]')).toBeVisible()
+  await expect(page.locator('[data-testid="star-trip-settings-panel"]')).toHaveCount(0)
   await expect(page.getByText('Reach the mountain tower')).toHaveCount(0)
   await expect(page.getByText('Signal')).toHaveCount(0)
 
   const pixels = await getCanvasPixelSummary(page)
   expect(pixels.opaque).toBeGreaterThan(12)
   expect(pixels.unique).toBeGreaterThan(2)
+  expect(runtimeErrors).toEqual([])
+})
+
+test('star trip settings panel can maximize pixelation', async ({ page }) => {
+  const runtimeErrors: string[] = []
+  attachNoErrorGuards(page, runtimeErrors)
+  await page.goto('/games/star-trip?e2e=1')
+  await waitForStarTripReady(page)
+
+  await page.locator('[data-testid="star-trip-settings-button"]').click()
+  await expect(page.locator('[data-testid="star-trip-settings-panel"]')).toBeVisible()
+  await setPixelationLevel(page, 3)
+  await expect(page.locator('[data-testid="star-trip-pixelation-value"]')).toHaveText('3px')
+
+  await expect
+    .poll(async () => {
+      const snapshot = await getStarTripSnapshot(page)
+      return snapshot?.renderSettings?.pixelationLevel
+    })
+    .toBe(3)
+
+  const snapshot = await getStarTripSnapshot(page)
+  expect(snapshot?.pixelation?.enabled).toBe(true)
+  expect(snapshot?.pixelation?.blockSize).toBe(3)
+  expect(snapshot?.pixelation?.targetWidth).toBeGreaterThan(0)
+  expect(snapshot?.pixelation?.targetHeight).toBeGreaterThan(0)
+  expect(snapshot?.pixelation?.targetWidth).toBeLessThan(snapshot?.canvas?.width ?? 0)
+  expect(snapshot?.pixelation?.targetHeight).toBeLessThan(snapshot?.canvas?.height ?? 0)
+  expect(runtimeErrors).toEqual([])
+})
+
+test('star trip settings panel can fully disable pixelation', async ({ page }) => {
+  const runtimeErrors: string[] = []
+  attachNoErrorGuards(page, runtimeErrors)
+  await page.goto('/games/star-trip?e2e=1')
+  await waitForStarTripReady(page)
+
+  await page.locator('[data-testid="star-trip-settings-button"]').click()
+  await setPixelationLevel(page, 0)
+  await expect(page.locator('[data-testid="star-trip-pixelation-value"]')).toHaveText('0px')
+
+  await expect
+    .poll(async () => {
+      const snapshot = await getStarTripSnapshot(page)
+      return snapshot?.pixelation?.enabled
+    })
+    .toBe(false)
+
+  const snapshot = await getStarTripSnapshot(page)
+  expect(snapshot?.renderSettings?.pixelationLevel).toBe(0)
+  expect(snapshot?.pixelation?.targetWidth).toBe(0)
+  expect(snapshot?.pixelation?.targetHeight).toBe(0)
+  expect(runtimeErrors).toEqual([])
+})
+
+test('star trip restores pixelation settings after refresh', async ({ page }) => {
+  const runtimeErrors: string[] = []
+  attachNoErrorGuards(page, runtimeErrors)
+  await page.goto('/games/star-trip?e2e=1')
+  await waitForStarTripReady(page)
+
+  await page.locator('[data-testid="star-trip-settings-button"]').click()
+  await setPixelationLevel(page, 1)
+  await expect(page.locator('[data-testid="star-trip-pixelation-value"]')).toHaveText('1px')
+  await page.reload()
+  await waitForStarTripReady(page)
+
+  const snapshot = await getStarTripSnapshot(page)
+  expect(snapshot?.renderSettings?.pixelationLevel).toBe(1)
+  expect(snapshot?.pixelation?.enabled).toBe(true)
+  expect(snapshot?.pixelation?.blockSize).toBe(1)
+
+  await page.locator('[data-testid="star-trip-settings-button"]').click()
+  await expect(page.locator('[data-testid="star-trip-pixelation-value"]')).toHaveText('1px')
   expect(runtimeErrors).toEqual([])
 })
 
