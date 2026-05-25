@@ -1,0 +1,1029 @@
+{
+  "version": "world-v0.1.5",
+  "asset_prefix": "ST015_",
+  "source_blend": "/Users/transwarp/Documents/Github/home/src/game-center/star-trip/assets/models/world/v0.1.5/world-v0.1.5.blend",
+  "glb": "/Users/transwarp/Documents/Github/home/src/game-center/star-trip/assets/models/world/v0.1.5/world-v0.1.5.glb",
+  "reference_manifest": "/Users/transwarp/Documents/Github/home/src/game-center/star-trip/assets/models/world/v0.1.5/world-v0.1.5-reference-manifest.json",
+  "contact_sheet": "/Users/transwarp/Documents/Github/home/output/star-trip/world-v0.1.5-contact-sheet.png",
+  "asset_count": 24,
+  "materials_count": 29,
+  "total_vertices": 2077,
+  "total_faces": 2144,
+  "categories": {
+    "nature": 5,
+    "landmark": 13,
+    "terrain": 6
+  },
+  "reference_checks": {
+    "all_assets_have_reference": true,
+    "all_references_have_source_url": true,
+    "critical_landmarks_have_multiple_reference_intent": true,
+    "copyright_boundary": "Reference fidelity only; no extracted A Short Hike assets, textures, levels, or unique arrangements."
+  },
+  "checks": {
+    "all_assets_named_with_prefix": true,
+    "all_assets_have_mesh_faces": true,
+    "all_contact_origins_at_root": true,
+    "final_asset_source": "procedural Blender MCP modeling from reference manifest"
+  },
+  "assets": [
+    {
+      "id": "ST015_beach_arc",
+      "category": "terrain",
+      "bounds": {
+        "min": [
+          -1.1803,
+          -0.4756,
+          -0.0053
+        ],
+        "max": [
+          1.1803,
+          0.4756,
+          0.1701
+        ],
+        "dimensions": [
+          2.3607,
+          0.9512,
+          0.1754
+        ],
+        "vertices": 68,
+        "faces": 66,
+        "materials": [
+          "ST015_Mat_Grass_Dark_4e986e",
+          "ST015_Mat_Sand_e9c88d",
+          "ST015_Mat_Water_Edge_a4d9dc"
+        ]
+      },
+      "origin": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "A Short Hike screenshot gallery",
+        "sourceUrl": "https://www.mobygames.com/game/windows/a-short-hike/screenshots/gameShotId%2C1007374/",
+        "referenceObject": "Meteor Lake beach",
+        "targetFidelity": "broad warm sand arc with small pebble/grass edge accents",
+        "originalizationRule": "Miniature planet beach patch."
+      }
+    },
+    {
+      "id": "ST015_beacon_lighthouse",
+      "category": "landmark",
+      "bounds": {
+        "min": [
+          -0.22,
+          -0.22,
+          0.0
+        ],
+        "max": [
+          0.22,
+          0.22,
+          1.28
+        ],
+        "dimensions": [
+          0.44,
+          0.44,
+          1.28
+        ],
+        "vertices": 101,
+        "faces": 81,
+        "materials": [
+          "ST015_Mat_Blue_Gray_4f7f98",
+          "ST015_Mat_Cream_fff3d3",
+          "ST015_Mat_Moon_Water_69a6c6",
+          "ST015_Mat_Signal_Gold_ffd95f",
+          "ST015_Mat_Travel_Red_e55d55",
+          "ST015_Mat_Wood_Dark_5f4637"
+        ]
+      },
+      "origin": [
+        3.1,
+        0.0,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "A Short Hike screenshot gallery",
+        "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+        "referenceObject": "Top of the lighthouse / binocular lighthouse view",
+        "targetFidelity": "tapered lighthouse, bands, door, window slots, gallery ring, beacon cap",
+        "originalizationRule": "Small Star Trip lighthouse, not exact A Short Hike lighthouse."
+      }
+    },
+    {
+      "id": "ST015_campfire_ring",
+      "category": "landmark",
+      "bounds": {
+        "min": [
+          -0.3782,
+          -0.2752,
+          0.0048
+        ],
+        "max": [
+          0.3782,
+          0.2752,
+          0.28
+        ],
+        "dimensions": [
+          0.7563,
+          0.5504,
+          0.2753
+        ],
+        "vertices": 152,
+        "faces": 207,
+        "materials": [
+          "ST015_Mat_Rock_7a7f87",
+          "ST015_Mat_Scorch_38423b",
+          "ST015_Mat_Signal_Gold_ffd95f",
+          "ST015_Mat_Travel_Red_e55d55",
+          "ST015_Mat_Wood_916545",
+          "ST015_Mat_Wood_Dark_5f4637"
+        ]
+      },
+      "origin": [
+        6.2,
+        0.0,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "A Short Hike screenshot gallery",
+        "sourceUrl": "https://www.mobygames.com/game/windows/a-short-hike/screenshots/gameShotId%2C1007374/",
+        "referenceObject": "The beach at Meteor Lake with subtly animated campfires",
+        "targetFidelity": "stone ring, crossed logs, multi-part flame, ash/scorch base",
+        "originalizationRule": "Generic cozy beach campfire."
+      }
+    },
+    {
+      "id": "ST015_climbable_slope",
+      "category": "terrain",
+      "bounds": {
+        "min": [
+          -0.32,
+          -0.2714,
+          0.0225
+        ],
+        "max": [
+          0.316,
+          0.22,
+          0.3075
+        ],
+        "dimensions": [
+          0.636,
+          0.4914,
+          0.285
+        ],
+        "vertices": 32,
+        "faces": 24,
+        "materials": [
+          "ST015_Mat_Grass_Light_91d19d",
+          "ST015_Mat_Rock_Light_9aa0a2"
+        ]
+      },
+      "origin": [
+        9.3,
+        0.0,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "A Short Hike screenshot gallery",
+        "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+        "referenceObject": "Here you can learn to climb",
+        "targetFidelity": "sloped green terrain block with embedded rock ledge cues",
+        "originalizationRule": "Spherical planet slope module."
+      }
+    },
+    {
+      "id": "ST015_fishing_kid_shore_shed",
+      "category": "landmark",
+      "bounds": {
+        "min": [
+          -0.6969,
+          -0.6969,
+          0.0259
+        ],
+        "max": [
+          0.6969,
+          0.6969,
+          0.96
+        ],
+        "dimensions": [
+          1.3938,
+          1.3938,
+          0.9341
+        ],
+        "vertices": 115,
+        "faces": 84,
+        "materials": [
+          "ST015_Mat_Blue_Gray_4f7f98",
+          "ST015_Mat_Cream_fff3d3",
+          "ST015_Mat_Moon_Water_69a6c6",
+          "ST015_Mat_Rock_Light_9aa0a2",
+          "ST015_Mat_Wood_916545",
+          "ST015_Mat_Wood_Dark_5f4637"
+        ]
+      },
+      "origin": [
+        12.4,
+        0.0,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "A Short Hike screenshot gallery",
+        "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+        "referenceObject": "lake fishing scene and small lakeshore activity area",
+        "targetFidelity": "shed plus fishing pole, bucket/crate accents, clear lakeshore NPC utility",
+        "originalizationRule": "Original Star Trip fishing shed."
+      }
+    },
+    {
+      "id": "ST015_low_rock",
+      "category": "nature",
+      "bounds": {
+        "min": [
+          -0.3309,
+          -0.196,
+          -0.0188
+        ],
+        "max": [
+          0.3309,
+          0.196,
+          0.2788
+        ],
+        "dimensions": [
+          0.6618,
+          0.392,
+          0.2976
+        ],
+        "vertices": 39,
+        "faces": 44,
+        "materials": [
+          "ST015_Mat_Rock_7a7f87",
+          "ST015_Mat_Rock_Light_9aa0a2",
+          "ST015_Mat_Scorch_38423b"
+        ]
+      },
+      "origin": [
+        15.5,
+        0.0,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "A Short Hike screenshot gallery",
+        "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+        "referenceObject": "small path rock",
+        "targetFidelity": "faceted low dome with color face variation and shadow base",
+        "originalizationRule": "Generic Star Trip rock variant."
+      }
+    },
+    {
+      "id": "ST015_moon_bay_pool",
+      "category": "terrain",
+      "bounds": {
+        "min": [
+          -1.0032,
+          -0.5776,
+          0.008
+        ],
+        "max": [
+          1.0032,
+          0.5776,
+          0.014
+        ],
+        "dimensions": [
+          2.0064,
+          1.1552,
+          0.006
+        ],
+        "vertices": 62,
+        "faces": 60,
+        "materials": [
+          "ST015_Mat_Moon_Water_69a6c6",
+          "ST015_Mat_Water_Edge_a4d9dc"
+        ]
+      },
+      "origin": [
+        18.6,
+        0.0,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "A Short Hike screenshot gallery",
+        "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+        "referenceObject": "View to Meteor Lake / lake fishing water",
+        "targetFidelity": "water body with layered blue surface and separate pale shoreline edge",
+        "originalizationRule": "Compact moon-bay pool for spherical Star Trip planet."
+      }
+    },
+    {
+      "id": "ST015_pale_water_edge",
+      "category": "terrain",
+      "bounds": {
+        "min": [
+          -1.107,
+          -0.656,
+          0.008
+        ],
+        "max": [
+          1.107,
+          0.656,
+          0.036
+        ],
+        "dimensions": [
+          2.214,
+          1.312,
+          0.028
+        ],
+        "vertices": 105,
+        "faces": 152,
+        "materials": [
+          "ST015_Mat_Sand_e9c88d",
+          "ST015_Mat_Water_Edge_a4d9dc"
+        ]
+      },
+      "origin": [
+        21.7,
+        0.0,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "A Short Hike screenshot gallery",
+        "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+        "referenceObject": "Meteor Lake shoreline highlight",
+        "targetFidelity": "thin pale ring/shore patch that makes water shape readable",
+        "originalizationRule": "Modular Star Trip shoreline overlay."
+      }
+    },
+    {
+      "id": "ST015_pebble_cluster",
+      "category": "nature",
+      "bounds": {
+        "min": [
+          -0.2983,
+          -0.1095,
+          -0.022
+        ],
+        "max": [
+          0.3183,
+          0.1178,
+          0.1144
+        ],
+        "dimensions": [
+          0.6166,
+          0.2274,
+          0.1364
+        ],
+        "vertices": 60,
+        "faces": 100,
+        "materials": [
+          "ST015_Mat_Rock_Dark_596166",
+          "ST015_Mat_Rock_Light_9aa0a2"
+        ]
+      },
+      "origin": [
+        24.8,
+        0.0,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "A Short Hike screenshot gallery",
+        "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+        "referenceObject": "path-side rocks and mountain ledge stones",
+        "targetFidelity": "several angular stones with different sizes and highlights",
+        "originalizationRule": "Use original stone cluster arrangement."
+      }
+    },
+    {
+      "id": "ST015_rocket_main_hull",
+      "category": "landmark",
+      "bounds": {
+        "min": [
+          -0.89,
+          -0.258,
+          0.0059
+        ],
+        "max": [
+          0.95,
+          0.245,
+          0.5889
+        ],
+        "dimensions": [
+          1.84,
+          0.503,
+          0.583
+        ],
+        "vertices": 188,
+        "faces": 128,
+        "materials": [
+          "ST015_Mat_Blue_Gray_4f7f98",
+          "ST015_Mat_Cream_fff3d3",
+          "ST015_Mat_Moon_Water_69a6c6",
+          "ST015_Mat_Travel_Red_e55d55",
+          "ST015_Mat_Wood_Dark_5f4637"
+        ]
+      },
+      "origin": [
+        27.9,
+        0.0,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "NASA public reference",
+        "sourceUrl": "https://www.nasa.gov/image-article/testing-the-first-u-s-crewed-launch-vehicle-mercury-redstone/",
+        "referenceObject": "Mercury-Redstone style rocket cylinder, capsule, fins, banding",
+        "targetFidelity": "multi-part rocket hull with capsule, window, fins, panel bands, nozzle, crash tilt",
+        "originalizationRule": "Original Star Trip courier rocket; no NASA markings."
+      }
+    },
+    {
+      "id": "ST015_rocket_side_fin_debris",
+      "category": "landmark",
+      "bounds": {
+        "min": [
+          -0.3159,
+          -0.2532,
+          0.0625
+        ],
+        "max": [
+          0.2454,
+          0.177,
+          0.16
+        ],
+        "dimensions": [
+          0.5613,
+          0.4302,
+          0.0975
+        ],
+        "vertices": 32,
+        "faces": 24,
+        "materials": [
+          "ST015_Mat_Blue_Gray_4f7f98",
+          "ST015_Mat_Cream_fff3d3",
+          "ST015_Mat_Travel_Red_e55d55"
+        ]
+      },
+      "origin": [
+        0.0,
+        -2.9,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "NASA public reference",
+        "sourceUrl": "https://www.nasa.gov/image-article/testing-the-first-u-s-crewed-launch-vehicle-mercury-redstone/",
+        "referenceObject": "rocket fins and broken panel debris",
+        "targetFidelity": "several fin/panel fragments with shared rocket colors and broken edges",
+        "originalizationRule": "Original crash debris."
+      }
+    },
+    {
+      "id": "ST015_rope_bridge",
+      "category": "landmark",
+      "bounds": {
+        "min": [
+          -0.625,
+          -0.536,
+          0.01
+        ],
+        "max": [
+          0.625,
+          0.536,
+          0.3539
+        ],
+        "dimensions": [
+          1.25,
+          1.072,
+          0.3439
+        ],
+        "vertices": 144,
+        "faces": 102,
+        "materials": [
+          "ST015_Mat_Wood_916545",
+          "ST015_Mat_Wood_Dark_5f4637"
+        ]
+      },
+      "origin": [
+        3.1,
+        -2.9,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "A Short Hike screenshot gallery",
+        "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+        "referenceObject": "Crossing a bridge",
+        "targetFidelity": "individual planks, posts, rope rails, readable crossing direction and low-poly wood detail",
+        "originalizationRule": "Use Star Trip bridge proportions and placement."
+      }
+    },
+    {
+      "id": "ST015_round_canopy_tree",
+      "category": "nature",
+      "bounds": {
+        "min": [
+          -0.4708,
+          -0.441,
+          0.005
+        ],
+        "max": [
+          0.4708,
+          0.441,
+          1.247
+        ],
+        "dimensions": [
+          0.9415,
+          0.882,
+          1.242
+        ],
+        "vertices": 108,
+        "faces": 149,
+        "materials": [
+          "ST015_Mat_Leaf_A_2f9a70",
+          "ST015_Mat_Leaf_B_47ad78",
+          "ST015_Mat_Leaf_C_5aa86d",
+          "ST015_Mat_Wood_916545",
+          "ST015_Mat_Wood_Dark_5f4637"
+        ]
+      },
+      "origin": [
+        6.2,
+        -2.9,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "Wikimedia A Short Hike screenshot",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/Category:Screenshots_of_A_Short_Hike",
+        "referenceObject": "rounded forest canopy tree",
+        "targetFidelity": "multi-lobed canopy, visible trunk/root base, readable handmade silhouette",
+        "originalizationRule": "Use original green palette and canopy proportions."
+      }
+    },
+    {
+      "id": "ST015_scorch_mark_base",
+      "category": "landmark",
+      "bounds": {
+        "min": [
+          -0.952,
+          -0.5576,
+          0.008
+        ],
+        "max": [
+          0.952,
+          0.5576,
+          0.0503
+        ],
+        "dimensions": [
+          1.904,
+          1.1152,
+          0.0423
+        ],
+        "vertices": 116,
+        "faces": 162,
+        "materials": [
+          "ST015_Mat_Rock_Dark_596166",
+          "ST015_Mat_Scorch_38423b"
+        ]
+      },
+      "origin": [
+        9.3,
+        -2.9,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "NASA public reference",
+        "sourceUrl": "https://www.nasa.gov/image-article/mercury-redstone-3-flight-simulation-test/",
+        "referenceObject": "rocket launch scorch/smoke ground mark",
+        "targetFidelity": "layered dark translucent ground scorch with uneven edge",
+        "originalizationRule": "Stylized Star Trip crash mark."
+      }
+    },
+    {
+      "id": "ST015_short_grass_a",
+      "category": "nature",
+      "bounds": {
+        "min": [
+          -0.1177,
+          -0.1602,
+          -0.0055
+        ],
+        "max": [
+          0.1435,
+          0.1764,
+          0.2166
+        ],
+        "dimensions": [
+          0.2612,
+          0.3366,
+          0.222
+        ],
+        "vertices": 28,
+        "faces": 28,
+        "materials": [
+          "ST015_Mat_Grass_74bf91"
+        ]
+      },
+      "origin": [
+        12.4,
+        -2.9,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "A Short Hike screenshot gallery",
+        "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+        "referenceObject": "trail-edge grass tufts",
+        "targetFidelity": "clustered blade group with varied heights and angles, not a single primitive",
+        "originalizationRule": "Generic Star Trip grass cluster."
+      }
+    },
+    {
+      "id": "ST015_signal_dish",
+      "category": "landmark",
+      "bounds": {
+        "min": [
+          -0.1116,
+          -0.49,
+          0.0
+        ],
+        "max": [
+          0.4558,
+          0.43,
+          1.1236
+        ],
+        "dimensions": [
+          0.5674,
+          0.92,
+          1.1236
+        ],
+        "vertices": 49,
+        "faces": 50,
+        "materials": [
+          "ST015_Mat_Blue_Gray_4f7f98",
+          "ST015_Mat_Cream_fff3d3",
+          "ST015_Mat_Signal_Gold_ffd95f",
+          "ST015_Mat_Water_Edge_a4d9dc"
+        ]
+      },
+      "origin": [
+        15.5,
+        -2.9,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "Wikimedia CC0 radio tower reference",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Radio_tower_in_Dumbarton,_Virginia.jpg",
+        "referenceObject": "communication dish/antenna attachment",
+        "targetFidelity": "stand, parabolic dish, rear support rods, readable signal function",
+        "originalizationRule": "Star Trip support dish."
+      }
+    },
+    {
+      "id": "ST015_star_pine",
+      "category": "nature",
+      "bounds": {
+        "min": [
+          -0.4875,
+          -0.4505,
+          0.0
+        ],
+        "max": [
+          0.4875,
+          0.5,
+          1.615
+        ],
+        "dimensions": [
+          0.9749,
+          0.9505,
+          1.615
+        ],
+        "vertices": 64,
+        "faces": 68,
+        "materials": [
+          "ST015_Mat_Grass_Light_91d19d",
+          "ST015_Mat_Leaf_A_2f9a70",
+          "ST015_Mat_Leaf_B_47ad78",
+          "ST015_Mat_Signal_Gold_ffd95f",
+          "ST015_Mat_Wood_916545"
+        ]
+      },
+      "origin": [
+        18.6,
+        -2.9,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "Wikimedia A Short Hike screenshot",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/Category:Screenshots_of_A_Short_Hike",
+        "referenceObject": "conifer forest tree mass",
+        "targetFidelity": "layered conic boughs, short trunk, faceted low-poly silhouette, several asymmetric branch masses",
+        "originalizationRule": "Keep Star Trip star-tip accent and palette; do not copy exact tree placement."
+      }
+    },
+    {
+      "id": "ST015_summit_comm_tower",
+      "category": "landmark",
+      "bounds": {
+        "min": [
+          -0.2428,
+          -0.46,
+          0.0
+        ],
+        "max": [
+          0.4776,
+          0.38,
+          2.1584
+        ],
+        "dimensions": [
+          0.7204,
+          0.84,
+          2.1584
+        ],
+        "vertices": 144,
+        "faces": 111,
+        "materials": [
+          "ST015_Mat_Blue_Gray_4f7f98",
+          "ST015_Mat_Cream_fff3d3",
+          "ST015_Mat_Rock_Light_9aa0a2",
+          "ST015_Mat_Signal_Gold_ffd95f",
+          "ST015_Mat_Water_Edge_a4d9dc"
+        ]
+      },
+      "origin": [
+        21.7,
+        -2.9,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "Wikimedia CC0 radio tower reference",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Radio_tower_in_Dumbarton,_Virginia.jpg",
+        "referenceObject": "communication tower mast with braces and antenna equipment",
+        "targetFidelity": "tall mast, cross braces, base, dish, antenna rods, warm beacon",
+        "originalizationRule": "Original sci-fi summit communication tower."
+      }
+    },
+    {
+      "id": "ST015_summit_round_peak",
+      "category": "terrain",
+      "bounds": {
+        "min": [
+          -0.856,
+          -0.6624,
+          -0.0664
+        ],
+        "max": [
+          0.856,
+          0.6624,
+          0.8264
+        ],
+        "dimensions": [
+          1.7119,
+          1.3248,
+          0.8928
+        ],
+        "vertices": 73,
+        "faces": 118,
+        "materials": [
+          "ST015_Mat_Grass_Dark_4e986e",
+          "ST015_Mat_Grass_Light_91d19d",
+          "ST015_Mat_Rock_Light_9aa0a2"
+        ]
+      },
+      "origin": [
+        24.8,
+        -2.9,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "Steam / A Short Hike screenshot gallery",
+        "sourceUrl": "https://store.steampowered.com/app/1055540/A_Short_Hike/",
+        "referenceObject": "peaceful mountainside landscapes of Hawk Peak",
+        "targetFidelity": "large rounded mountain cap with layered rock/grass color blocks",
+        "originalizationRule": "Miniature Star Trip summit, not Hawk Peak map layout."
+      }
+    },
+    {
+      "id": "ST015_tiny_pier",
+      "category": "landmark",
+      "bounds": {
+        "min": [
+          -0.6042,
+          -0.448,
+          0.01
+        ],
+        "max": [
+          0.6042,
+          0.448,
+          0.35
+        ],
+        "dimensions": [
+          1.2085,
+          0.896,
+          0.34
+        ],
+        "vertices": 96,
+        "faces": 68,
+        "materials": [
+          "ST015_Mat_Wood_916545",
+          "ST015_Mat_Wood_Dark_5f4637"
+        ]
+      },
+      "origin": [
+        27.9,
+        -2.9,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "A Short Hike screenshot gallery",
+        "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+        "referenceObject": "learning to fish at the lake / lakeside fishing spot",
+        "targetFidelity": "short dock planks, posts, rope, water-facing orientation",
+        "originalizationRule": "Star Trip moon-bay pier proportions."
+      }
+    },
+    {
+      "id": "ST015_tower_keeper_cabin",
+      "category": "landmark",
+      "bounds": {
+        "min": [
+          -0.792,
+          -0.792,
+          0.04
+        ],
+        "max": [
+          0.792,
+          0.792,
+          1.1
+        ],
+        "dimensions": [
+          1.5839,
+          1.5839,
+          1.06
+        ],
+        "vertices": 81,
+        "faces": 61,
+        "materials": [
+          "ST015_Mat_Cream_fff3d3",
+          "ST015_Mat_Moon_Water_69a6c6",
+          "ST015_Mat_Rock_Dark_596166",
+          "ST015_Mat_Rock_Light_9aa0a2",
+          "ST015_Mat_Travel_Red_e55d55",
+          "ST015_Mat_Wood_916545",
+          "ST015_Mat_Wood_Dark_5f4637"
+        ]
+      },
+      "origin": [
+        0.0,
+        -5.8,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "A Short Hike screenshot gallery",
+        "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+        "referenceObject": "starting area cabin / ranger structure",
+        "targetFidelity": "body, raised base, thick roof/eaves, chimney, door, windows, step, warm low-poly cabin read",
+        "originalizationRule": "Original cabin proportions for Star Trip tower keeper."
+      }
+    },
+    {
+      "id": "ST015_utility_storage_shed",
+      "category": "landmark",
+      "bounds": {
+        "min": [
+          -0.6177,
+          -0.6177,
+          0.04
+        ],
+        "max": [
+          0.6177,
+          0.6177,
+          0.96
+        ],
+        "dimensions": [
+          1.2355,
+          1.2355,
+          0.92
+        ],
+        "vertices": 69,
+        "faces": 53,
+        "materials": [
+          "ST015_Mat_Blue_Gray_4f7f98",
+          "ST015_Mat_Moon_Water_69a6c6",
+          "ST015_Mat_Rock_Light_9aa0a2",
+          "ST015_Mat_Wood_916545",
+          "ST015_Mat_Wood_Dark_5f4637"
+        ]
+      },
+      "origin": [
+        3.1,
+        -5.8,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "A Short Hike screenshot gallery",
+        "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+        "referenceObject": "empty house / small utility structure",
+        "targetFidelity": "small house with separate roof planes, door, two window blocks, foundation, compact silhouette",
+        "originalizationRule": "Original storage shed, not an exact house copy."
+      }
+    },
+    {
+      "id": "ST015_warm_dirt_path",
+      "category": "terrain",
+      "bounds": {
+        "min": [
+          -0.8194,
+          -0.2038,
+          0.008
+        ],
+        "max": [
+          0.8194,
+          0.2038,
+          0.041
+        ],
+        "dimensions": [
+          1.6387,
+          0.4076,
+          0.033
+        ],
+        "vertices": 67,
+        "faces": 98,
+        "materials": [
+          "ST015_Mat_Rock_Light_9aa0a2",
+          "ST015_Mat_Warm_Soil_c59a63"
+        ]
+      },
+      "origin": [
+        6.2,
+        -5.8,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "A Short Hike screenshot gallery",
+        "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+        "referenceObject": "Hawk Peak trail / signposted hiking path",
+        "targetFidelity": "warm path patch with layered edge stones and visible route direction",
+        "originalizationRule": "Star Trip path segment, no copied sign text."
+      }
+    },
+    {
+      "id": "ST015_wooden_way_sign",
+      "category": "landmark",
+      "bounds": {
+        "min": [
+          -0.27,
+          -0.0572,
+          0.0
+        ],
+        "max": [
+          0.32,
+          0.035,
+          0.68
+        ],
+        "dimensions": [
+          0.59,
+          0.0922,
+          0.68
+        ],
+        "vertices": 84,
+        "faces": 106,
+        "materials": [
+          "ST015_Mat_Rock_Dark_596166",
+          "ST015_Mat_Wood_916545",
+          "ST015_Mat_Wood_Dark_5f4637"
+        ]
+      },
+      "origin": [
+        9.3,
+        -5.8,
+        0.0
+      ],
+      "local_up": "+Y after glTF export from Blender +Z",
+      "reference": {
+        "referenceType": "A Short Hike screenshot gallery",
+        "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+        "referenceObject": "Hawk Peak Trail sign / hiking route markers",
+        "targetFidelity": "post, multiple arrow boards, nail caps, readable trail-sign silhouette",
+        "originalizationRule": "No copied wording; Star Trip sign boards stay blank."
+      }
+    }
+  ]
+}

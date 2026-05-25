@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 
-export const PLANET_RADIUS = 13.6
+export const PLANET_RADIUS = 40.8
 export const PLAYER_SURFACE_OFFSET = 0.04
 
 const yAxis = new THREE.Vector3(0, 1, 0)

@@ -8,5 +8,6 @@
 - [v0.1.2-pico-concept-detail.md](./v0.1.2-pico-concept-detail.md)：V0.1.2 Pico 概念细节迭代，记录喷气背包、尾巴、羽冠、配色、运行时动作和滑翔/喷火语义。
 - [v0.1.3-render-pixelation-settings.md](./v0.1.3-render-pixelation-settings.md)：V0.1.3 像素化渲染与配置面板，记录 A Short Hike 式低分辨率输出、0-3px 固定档位和右上角配置入口。
 - [v0.1.4-pico-proportions-gait.md](./v0.1.4-pico-proportions-gait.md)：V0.1.4 Pico 比例与步态校准，记录躯干/腿/尾巴连接调整、新 GLB 资产、walk/run 速度公式和连续相位衔接修正。
+- [v0.1.5-reference-world-kit.md](./v0.1.5-reference-world-kit.md)：V0.1.5 reference-backed 星球素材包，记录 24 个精简素材、Blender MCP 生成管线、3 倍星球半径、GLB 运行时加载和验收结果。
 
 后续版本开发文档可以放在本 README 同级，例如 `v0.1-movement-demo.md`，或新建 `versions/` 目录，避免和最初的 concept baseline 混淆。

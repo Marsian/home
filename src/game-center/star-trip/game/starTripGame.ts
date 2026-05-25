@@ -2,9 +2,10 @@ import * as THREE from 'three'
 
 import { CameraRig } from './cameraRig'
 import { InputController } from './input'
+import { PLANET_RADIUS } from './planetMath'
 import { createPicoModel } from './playerModel'
 import { PlayerController } from './playerController'
-import { createSpawnEnvironment } from './spawnEnvironment'
+import { createSpawnEnvironment, type StarTripEnvironmentSummary } from './spawnEnvironment'
 
 export const STAR_TRIP_DEFAULT_PIXELATION_LEVEL = 2
 export const STAR_TRIP_MAX_PIXELATION_LEVEL = 3
@@ -26,6 +27,8 @@ type StarTripE2EApi = {
     camera: ReturnType<CameraRig['getSnapshot']>
     canvas: { width: number; height: number }
     renderSettings: StarTripRenderSettings
+    planetRadius: number
+    environment: StarTripEnvironmentSummary
     pixelation: {
       enabled: boolean
       blockSize: number
@@ -67,7 +70,7 @@ function createStars() {
     const theta = i * 2.399963
     const y = 1 - (i / 179) * 2
     const radius = Math.sqrt(Math.max(0, 1 - y * y))
-    const distance = 38 + (i % 9) * 0.72
+    const distance = 118 + (i % 9) * 2.4
     positions.push(Math.cos(theta) * radius * distance, y * distance, Math.sin(theta) * radius * distance)
   }
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
@@ -100,10 +103,10 @@ export async function createStarTripGame(host: HTMLElement, options: CreateStarT
 
   const scene = new THREE.Scene()
   scene.background = new THREE.Color(0x123b3c)
-  scene.fog = new THREE.Fog(0x123b3c, 28, 62)
+  scene.fog = new THREE.Fog(0x123b3c, 75, 170)
 
-  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 120)
-  camera.position.set(-7.6, 13.2, 16.4)
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 220)
+  camera.position.set(-18, 36, 54)
 
   const renderer = new THREE.WebGLRenderer({
     antialias: false,
@@ -147,8 +150,8 @@ export async function createStarTripGame(host: HTMLElement, options: CreateStarT
   rim.position.set(-7, 4, -6)
   scene.add(hemi, sun, rim)
 
-  const environment = createSpawnEnvironment()
-  scene.add(environment)
+  const environment = await createSpawnEnvironment()
+  scene.add(environment.root)
 
   const stars = createStars()
   scene.add(stars)
@@ -255,6 +258,8 @@ export async function createStarTripGame(host: HTMLElement, options: CreateStarT
             height: renderer.domElement.clientHeight,
           },
           renderSettings: { ...renderSettings },
+          planetRadius: PLANET_RADIUS,
+          environment: environment.summary,
           pixelation: {
             enabled: renderSettings.pixelationLevel > 0,
             blockSize: pixelBlockSizeForLevel(renderSettings.pixelationLevel),

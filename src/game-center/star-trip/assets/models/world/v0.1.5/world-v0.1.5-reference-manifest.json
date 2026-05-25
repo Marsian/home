@@ -1,0 +1,211 @@
+{
+  "version": "world-v0.1.5",
+  "intent": "Reduced, reference-backed Star Trip world kit. Every generated model maps to an object or scene type explicitly found in public A Short Hike screenshot pages, except the rocket and communication tower, which use public NASA/Wikimedia references and are modeled with A Short Hike-level low-poly density.",
+  "legalBoundary": "Use screenshots and public-domain references for visual study only. Do not extract, copy, or reproduce protected A Short Hike assets, textures, map layouts, characters, or unique object arrangements.",
+  "sources": {
+    "mobyGamesScreenshots": "https://www.mobygames.com/game/a-short-hike/screenshots",
+    "wikimediaScreenshots": "https://commons.wikimedia.org/wiki/Category:Screenshots_of_A_Short_Hike",
+    "steamStoreScreenshots": "https://store.steampowered.com/app/1055540/A_Short_Hike/",
+    "nasaRocketReference": "https://www.nasa.gov/image-article/testing-the-first-u-s-crewed-launch-vehicle-mercury-redstone/",
+    "wikimediaRadioTowerReference": "https://commons.wikimedia.org/wiki/File:Radio_tower_in_Dumbarton,_Virginia.jpg"
+  },
+  "requirements": {
+    "scope": "Only assets with an explicit found reference object are generated.",
+    "targetFidelityFields": ["silhouette", "part count", "color blocking", "poly density", "in-game readability"],
+    "modelingRule": "Fewer assets, more parts per model. Each model should read as finished low-poly game art before pixelation, not a primitive placeholder."
+  },
+  "assets": [
+    {
+      "assetId": "ST015_star_pine",
+      "referenceType": "Wikimedia A Short Hike screenshot",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/Category:Screenshots_of_A_Short_Hike",
+      "referenceObject": "conifer forest tree mass",
+      "targetFidelity": "layered conic boughs, short trunk, faceted low-poly silhouette, several asymmetric branch masses",
+      "originalizationRule": "Keep Star Trip star-tip accent and palette; do not copy exact tree placement."
+    },
+    {
+      "assetId": "ST015_round_canopy_tree",
+      "referenceType": "Wikimedia A Short Hike screenshot",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/Category:Screenshots_of_A_Short_Hike",
+      "referenceObject": "rounded forest canopy tree",
+      "targetFidelity": "multi-lobed canopy, visible trunk/root base, readable handmade silhouette",
+      "originalizationRule": "Use original green palette and canopy proportions."
+    },
+    {
+      "assetId": "ST015_short_grass_a",
+      "referenceType": "A Short Hike screenshot gallery",
+      "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+      "referenceObject": "trail-edge grass tufts",
+      "targetFidelity": "clustered blade group with varied heights and angles, not a single primitive",
+      "originalizationRule": "Generic Star Trip grass cluster."
+    },
+    {
+      "assetId": "ST015_pebble_cluster",
+      "referenceType": "A Short Hike screenshot gallery",
+      "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+      "referenceObject": "path-side rocks and mountain ledge stones",
+      "targetFidelity": "several angular stones with different sizes and highlights",
+      "originalizationRule": "Use original stone cluster arrangement."
+    },
+    {
+      "assetId": "ST015_low_rock",
+      "referenceType": "A Short Hike screenshot gallery",
+      "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+      "referenceObject": "small path rock",
+      "targetFidelity": "faceted low dome with color face variation and shadow base",
+      "originalizationRule": "Generic Star Trip rock variant."
+    },
+    {
+      "assetId": "ST015_tower_keeper_cabin",
+      "referenceType": "A Short Hike screenshot gallery",
+      "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+      "referenceObject": "starting area cabin / ranger structure",
+      "targetFidelity": "body, raised base, thick roof/eaves, chimney, door, windows, step, warm low-poly cabin read",
+      "originalizationRule": "Original cabin proportions for Star Trip tower keeper."
+    },
+    {
+      "assetId": "ST015_utility_storage_shed",
+      "referenceType": "A Short Hike screenshot gallery",
+      "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+      "referenceObject": "empty house / small utility structure",
+      "targetFidelity": "small house with separate roof planes, door, two window blocks, foundation, compact silhouette",
+      "originalizationRule": "Original storage shed, not an exact house copy."
+    },
+    {
+      "assetId": "ST015_rope_bridge",
+      "referenceType": "A Short Hike screenshot gallery",
+      "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+      "referenceObject": "Crossing a bridge",
+      "targetFidelity": "individual planks, posts, rope rails, readable crossing direction and low-poly wood detail",
+      "originalizationRule": "Use Star Trip bridge proportions and placement."
+    },
+    {
+      "assetId": "ST015_tiny_pier",
+      "referenceType": "A Short Hike screenshot gallery",
+      "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+      "referenceObject": "learning to fish at the lake / lakeside fishing spot",
+      "targetFidelity": "short dock planks, posts, rope, water-facing orientation",
+      "originalizationRule": "Star Trip moon-bay pier proportions."
+    },
+    {
+      "assetId": "ST015_fishing_kid_shore_shed",
+      "referenceType": "A Short Hike screenshot gallery",
+      "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+      "referenceObject": "lake fishing scene and small lakeshore activity area",
+      "targetFidelity": "shed plus fishing pole, bucket/crate accents, clear lakeshore NPC utility",
+      "originalizationRule": "Original Star Trip fishing shed."
+    },
+    {
+      "assetId": "ST015_beacon_lighthouse",
+      "referenceType": "A Short Hike screenshot gallery",
+      "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+      "referenceObject": "Top of the lighthouse / binocular lighthouse view",
+      "targetFidelity": "tapered lighthouse, bands, door, window slots, gallery ring, beacon cap",
+      "originalizationRule": "Small Star Trip lighthouse, not exact A Short Hike lighthouse."
+    },
+    {
+      "assetId": "ST015_campfire_ring",
+      "referenceType": "A Short Hike screenshot gallery",
+      "sourceUrl": "https://www.mobygames.com/game/windows/a-short-hike/screenshots/gameShotId%2C1007374/",
+      "referenceObject": "The beach at Meteor Lake with subtly animated campfires",
+      "targetFidelity": "stone ring, crossed logs, multi-part flame, ash/scorch base",
+      "originalizationRule": "Generic cozy beach campfire."
+    },
+    {
+      "assetId": "ST015_moon_bay_pool",
+      "referenceType": "A Short Hike screenshot gallery",
+      "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+      "referenceObject": "View to Meteor Lake / lake fishing water",
+      "targetFidelity": "water body with layered blue surface and separate pale shoreline edge",
+      "originalizationRule": "Compact moon-bay pool for spherical Star Trip planet."
+    },
+    {
+      "assetId": "ST015_pale_water_edge",
+      "referenceType": "A Short Hike screenshot gallery",
+      "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+      "referenceObject": "Meteor Lake shoreline highlight",
+      "targetFidelity": "thin pale ring/shore patch that makes water shape readable",
+      "originalizationRule": "Modular Star Trip shoreline overlay."
+    },
+    {
+      "assetId": "ST015_beach_arc",
+      "referenceType": "A Short Hike screenshot gallery",
+      "sourceUrl": "https://www.mobygames.com/game/windows/a-short-hike/screenshots/gameShotId%2C1007374/",
+      "referenceObject": "Meteor Lake beach",
+      "targetFidelity": "broad warm sand arc with small pebble/grass edge accents",
+      "originalizationRule": "Miniature planet beach patch."
+    },
+    {
+      "assetId": "ST015_warm_dirt_path",
+      "referenceType": "A Short Hike screenshot gallery",
+      "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+      "referenceObject": "Hawk Peak trail / signposted hiking path",
+      "targetFidelity": "warm path patch with layered edge stones and visible route direction",
+      "originalizationRule": "Star Trip path segment, no copied sign text."
+    },
+    {
+      "assetId": "ST015_climbable_slope",
+      "referenceType": "A Short Hike screenshot gallery",
+      "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+      "referenceObject": "Here you can learn to climb",
+      "targetFidelity": "sloped green terrain block with embedded rock ledge cues",
+      "originalizationRule": "Spherical planet slope module."
+    },
+    {
+      "assetId": "ST015_summit_round_peak",
+      "referenceType": "Steam / A Short Hike screenshot gallery",
+      "sourceUrl": "https://store.steampowered.com/app/1055540/A_Short_Hike/",
+      "referenceObject": "peaceful mountainside landscapes of Hawk Peak",
+      "targetFidelity": "large rounded mountain cap with layered rock/grass color blocks",
+      "originalizationRule": "Miniature Star Trip summit, not Hawk Peak map layout."
+    },
+    {
+      "assetId": "ST015_wooden_way_sign",
+      "referenceType": "A Short Hike screenshot gallery",
+      "sourceUrl": "https://www.mobygames.com/game/a-short-hike/screenshots",
+      "referenceObject": "Hawk Peak Trail sign / hiking route markers",
+      "targetFidelity": "post, multiple arrow boards, nail caps, readable trail-sign silhouette",
+      "originalizationRule": "No copied wording; Star Trip sign boards stay blank."
+    },
+    {
+      "assetId": "ST015_rocket_main_hull",
+      "referenceType": "NASA public reference",
+      "sourceUrl": "https://www.nasa.gov/image-article/testing-the-first-u-s-crewed-launch-vehicle-mercury-redstone/",
+      "referenceObject": "Mercury-Redstone style rocket cylinder, capsule, fins, banding",
+      "targetFidelity": "multi-part rocket hull with capsule, window, fins, panel bands, nozzle, crash tilt",
+      "originalizationRule": "Original Star Trip courier rocket; no NASA markings."
+    },
+    {
+      "assetId": "ST015_rocket_side_fin_debris",
+      "referenceType": "NASA public reference",
+      "sourceUrl": "https://www.nasa.gov/image-article/testing-the-first-u-s-crewed-launch-vehicle-mercury-redstone/",
+      "referenceObject": "rocket fins and broken panel debris",
+      "targetFidelity": "several fin/panel fragments with shared rocket colors and broken edges",
+      "originalizationRule": "Original crash debris."
+    },
+    {
+      "assetId": "ST015_scorch_mark_base",
+      "referenceType": "NASA public reference",
+      "sourceUrl": "https://www.nasa.gov/image-article/mercury-redstone-3-flight-simulation-test/",
+      "referenceObject": "rocket launch scorch/smoke ground mark",
+      "targetFidelity": "layered dark translucent ground scorch with uneven edge",
+      "originalizationRule": "Stylized Star Trip crash mark."
+    },
+    {
+      "assetId": "ST015_summit_comm_tower",
+      "referenceType": "Wikimedia CC0 radio tower reference",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Radio_tower_in_Dumbarton,_Virginia.jpg",
+      "referenceObject": "communication tower mast with braces and antenna equipment",
+      "targetFidelity": "tall mast, cross braces, base, dish, antenna rods, warm beacon",
+      "originalizationRule": "Original sci-fi summit communication tower."
+    },
+    {
+      "assetId": "ST015_signal_dish",
+      "referenceType": "Wikimedia CC0 radio tower reference",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Radio_tower_in_Dumbarton,_Virginia.jpg",
+      "referenceObject": "communication dish/antenna attachment",
+      "targetFidelity": "stand, parabolic dish, rear support rods, readable signal function",
+      "originalizationRule": "Star Trip support dish."
+    }
+  ]
+}

@@ -72,6 +72,28 @@ test('star trip renders inside a game panel with no visible HUD', async ({ page 
   await expect(playfield).toBeVisible()
   await expect(canvas).toBeVisible()
   expect(snapshot?.player?.picoAsset?.version).toBe('pico-v0.1.4-proportions')
+  expect(snapshot?.planetRadius).toBe(40.8)
+  expect(snapshot?.environment?.version).toBe('world-v0.1.5')
+  expect(snapshot?.environment?.assetDefinitions).toBe(24)
+  expect(snapshot?.environment?.referenceManifestAssets).toBe(24)
+  expect(snapshot?.environment?.placements).toBeGreaterThan(30)
+  expect(snapshot?.environment?.missingAssetIds).toEqual([])
+  expect(snapshot?.environment?.referenceChecks?.allAssetsHaveReference).toBe(true)
+  expect(snapshot?.environment?.referenceChecks?.allReferencesHaveSourceUrl).toBe(true)
+  expect(snapshot?.environment?.placementChecks?.allRadialDistancesValid).toBe(true)
+  expect(snapshot?.environment?.placementChecks?.allUpAligned).toBe(true)
+  expect(snapshot?.environment?.keyLandmarksPresent).toEqual(
+    expect.arrayContaining([
+      'ST015_rocket_main_hull',
+      'ST015_tower_keeper_cabin',
+      'ST015_rope_bridge',
+      'ST015_beacon_lighthouse',
+      'ST015_summit_comm_tower',
+      'ST015_moon_bay_pool',
+    ]),
+  )
+  expect(snapshot?.environment?.regions?.['crash-grass-slope']).toBeGreaterThan(6)
+  expect(snapshot?.environment?.regions?.['summit-comm-tower']).toBeGreaterThan(4)
   expect(snapshot?.player?.picoAsset?.detailObjectsPresent).toBe(true)
   expect(snapshot?.player?.picoAsset?.detailObjectNames).toEqual(
     expect.arrayContaining([
