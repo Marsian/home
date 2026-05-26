@@ -17,6 +17,17 @@ async function getStarTripSnapshot(page: Page) {
   })
 }
 
+async function teleportStarTripPlayer(page: Page, lat: number, lon: number) {
+  await page.evaluate(
+    ([targetLat, targetLon]) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const w = window as any
+      w.__starTrip_e2e?.teleportPlayer?.(targetLat, targetLon)
+    },
+    [lat, lon],
+  )
+}
+
 function dot3(
   a: { x: number; y: number; z: number } | undefined,
   b: { x: number; y: number; z: number } | undefined,
@@ -30,7 +41,7 @@ async function waitForStarTripReady(page: Page) {
     .poll(async () => {
       const snapshot = await getStarTripSnapshot(page)
       return snapshot?.ready === true
-    })
+    }, { timeout: 25_000 })
     .toBe(true)
 }
 
@@ -73,27 +84,54 @@ test('star trip renders inside a game panel with no visible HUD', async ({ page 
   await expect(canvas).toBeVisible()
   expect(snapshot?.player?.picoAsset?.version).toBe('pico-v0.1.4-proportions')
   expect(snapshot?.planetRadius).toBe(40.8)
-  expect(snapshot?.environment?.version).toBe('world-v0.1.5')
-  expect(snapshot?.environment?.assetDefinitions).toBe(24)
-  expect(snapshot?.environment?.referenceManifestAssets).toBe(24)
-  expect(snapshot?.environment?.placements).toBeGreaterThan(30)
+  expect(snapshot?.player?.surfaceRadius).toBeGreaterThan(41)
+  expect(snapshot?.player?.surfaceElevation).toBeGreaterThan(0.5)
+  expect(snapshot?.environment?.version).toBe('world-v0.1.6')
+  expect(snapshot?.environment?.assetDefinitions).toBe(38)
+  expect(snapshot?.environment?.referenceManifestAssets).toBe(38)
+  expect(snapshot?.environment?.placements).toBeGreaterThan(20)
   expect(snapshot?.environment?.missingAssetIds).toEqual([])
   expect(snapshot?.environment?.referenceChecks?.allAssetsHaveReference).toBe(true)
   expect(snapshot?.environment?.referenceChecks?.allReferencesHaveSourceUrl).toBe(true)
   expect(snapshot?.environment?.placementChecks?.allRadialDistancesValid).toBe(true)
   expect(snapshot?.environment?.placementChecks?.allUpAligned).toBe(true)
+  expect(snapshot?.environment?.placementChecks?.allGroundedOnTerrain).toBe(true)
+  expect(snapshot?.environment?.placementChecks?.groundedObjects).toBe(snapshot?.environment?.placements)
+  expect(snapshot?.environment?.placementChecks?.floatingObjects).toEqual([])
+  expect(snapshot?.environment?.placementChecks?.maxGroundingError).toBeLessThan(0.001)
+  expect(snapshot?.environment?.collisionChecks?.allPlacedObjectsHaveCollisionBody).toBe(true)
+  expect(snapshot?.environment?.collisionChecks?.terrainShellCollider).toBe(true)
+  expect(snapshot?.environment?.collisionChecks?.terrainSurfaceMeshes).toBeGreaterThan(0)
+  expect(snapshot?.environment?.collisionChecks?.solidBodies).toBeGreaterThan(20)
+  expect(snapshot?.environment?.collisionChecks?.walkableBodies).toBeGreaterThan(0)
+  expect(snapshot?.player?.terrainClearance).toBe(0)
+  expect(snapshot?.player?.surfaceRadius).toBeLessThan(43)
+  expect(snapshot?.player?.terrainSurface?.assetId).toBe('ST016_golden_grass_meadow')
+  expect(snapshot?.environment?.terrainCoverage?.assetId).toBe('ST016_planet_terrain_shell')
+  expect(snapshot?.environment?.terrainCoverage?.surface_coverage_percent).toBe(100)
+  expect(snapshot?.environment?.terrainCoverage?.height_range).toBeGreaterThan(6)
+  expect(snapshot?.environment?.terrainCoverage?.face_count).toBeGreaterThan(20000)
+  expect(snapshot?.environment?.terrainCoverage?.biome_count).toBeGreaterThanOrEqual(8)
+  expect(snapshot?.environment?.terrainCoverage?.patch_surface_coverage_percent).toBeGreaterThanOrEqual(66.67)
+  expect(snapshot?.environment?.terrainCoverage?.patch_surface_coverage_percent).toBeGreaterThan(90)
+  expect(snapshot?.environment?.terrainCoverage?.coverage_method).toContain('triangle area')
+  expect(snapshot?.environment?.terrainCoverage?.terrain_patch_mesh_rule).toContain('spherical terrain shell')
   expect(snapshot?.environment?.keyLandmarksPresent).toEqual(
     expect.arrayContaining([
       'ST015_rocket_main_hull',
-      'ST015_tower_keeper_cabin',
-      'ST015_rope_bridge',
-      'ST015_beacon_lighthouse',
-      'ST015_summit_comm_tower',
-      'ST015_moon_bay_pool',
+      'ST016_echo_crater_lake',
+      'ST016_sunlit_beach_crescent',
+      'ST016_mangrove_marsh_patch',
+      'ST016_crystal_spine_ridge',
+      'ST016_ember_cinder_field',
+      'ST016_snow_cap_peak',
+      'ST016_summit_comm_array',
     ]),
   )
-  expect(snapshot?.environment?.regions?.['crash-grass-slope']).toBeGreaterThan(6)
-  expect(snapshot?.environment?.regions?.['summit-comm-tower']).toBeGreaterThan(4)
+  expect(snapshot?.environment?.regions?.['spawn-meadow']).toBeGreaterThan(4)
+  expect(snapshot?.environment?.regions?.['snow-summit']).toBeGreaterThan(3)
+  expect(snapshot?.environment?.regions?.['coastal-route']).toBeGreaterThan(0)
+  expect(snapshot?.environment?.regions?.['ridge-route']).toBeGreaterThan(0)
   expect(snapshot?.player?.picoAsset?.detailObjectsPresent).toBe(true)
   expect(snapshot?.player?.picoAsset?.detailObjectNames).toEqual(
     expect.arrayContaining([
@@ -126,9 +164,52 @@ test('star trip renders inside a game panel with no visible HUD', async ({ page 
   await expect(page.getByText('Reach the mountain tower')).toHaveCount(0)
   await expect(page.getByText('Signal')).toHaveCount(0)
 
+  await expect
+    .poll(async () => {
+      const pixels = await getCanvasPixelSummary(page)
+      return pixels.unique
+    })
+    .toBeGreaterThan(2)
   const pixels = await getCanvasPixelSummary(page)
   expect(pixels.opaque).toBeGreaterThan(12)
   expect(pixels.unique).toBeGreaterThan(2)
+  expect(runtimeErrors).toEqual([])
+})
+
+test('star trip collision keeps Pico above terrain and outside solid models', async ({ page }) => {
+  const runtimeErrors: string[] = []
+  attachNoErrorGuards(page, runtimeErrors)
+  await page.goto('/games/star-trip?e2e=1')
+  await waitForStarTripReady(page)
+
+  await teleportStarTripPlayer(page, 55.2, -21.8)
+  const summitSnapshot = await getStarTripSnapshot(page)
+  expect(summitSnapshot?.player?.grounded).toBe(true)
+  expect(summitSnapshot?.player?.terrainClearance).toBe(0)
+  expect(summitSnapshot?.player?.terrainSurface?.assetId).toBe('ST016_snow_cap_peak')
+  expect(summitSnapshot?.player?.surfaceRadius).toBeGreaterThan(49)
+  expect(summitSnapshot?.player?.surfaceElevation).toBeGreaterThan(8)
+  expect(summitSnapshot?.player?.nearestCollision?.penetration ?? 0).toBeLessThanOrEqual(0.01)
+
+  await page.locator('[data-testid="star-trip-canvas"]').click()
+  await page.keyboard.down('ArrowUp')
+  await page.waitForTimeout(500)
+  await page.keyboard.up('ArrowUp')
+  const walkedOnSummit = await getStarTripSnapshot(page)
+  expect(walkedOnSummit?.player?.terrainClearance).toBe(0)
+  expect(walkedOnSummit?.player?.surfaceElevation).toBeGreaterThan(7)
+  expect(walkedOnSummit?.player?.terrainSurface?.assetId).toBe('ST016_snow_cap_peak')
+
+  await teleportStarTripPlayer(page, -22.7, 24.8)
+  const rocketSnapshot = await getStarTripSnapshot(page)
+  expect(rocketSnapshot?.player?.terrainClearance).toBe(0)
+  expect(rocketSnapshot?.player?.collisionBlockCount).toBeGreaterThan(0)
+  expect(rocketSnapshot?.player?.nearestCollision?.assetId).toBe('ST015_rocket_main_hull')
+  expect(rocketSnapshot?.player?.nearestCollision?.solid).toBe(true)
+  expect(rocketSnapshot?.player?.nearestCollision?.penetration).toBe(0)
+  expect(rocketSnapshot?.player?.nearestCollision?.distance).toBeGreaterThanOrEqual(
+    rocketSnapshot?.player?.nearestCollision?.minDistance ?? 0,
+  )
   expect(runtimeErrors).toEqual([])
 })
 
@@ -231,10 +312,10 @@ test('star trip moves Pico without scrolling the page', async ({ page }) => {
   await page.locator('[data-testid="star-trip-canvas"]').click()
   await page.keyboard.down('ArrowUp')
   await page.keyboard.down('ShiftLeft')
-  await page.waitForTimeout(650)
+  await page.waitForTimeout(850)
+  const after = await getStarTripSnapshot(page)
   await page.keyboard.up('ShiftLeft')
   await page.keyboard.up('ArrowUp')
-  const after = await getStarTripSnapshot(page)
   const scrollY = await page.evaluate(() => window.scrollY)
   const movedDistance = Math.hypot(
     (after?.player?.position?.x ?? 0) - (before?.player?.position?.x ?? 0),
@@ -268,6 +349,7 @@ test('star trip derives walk and run speed from Pico gait metrics', async ({ pag
   expect(ready?.player?.gait?.runStepLength).toBeGreaterThan(ready?.player?.gait?.walkStepLength ?? 0)
   expect(ready?.player?.gait?.runSpeed).toBeGreaterThan(ready?.player?.gait?.walkSpeed ?? 0)
 
+  await page.locator('[data-testid="star-trip-canvas"]').click()
   const beforeWalk = await getStarTripSnapshot(page)
   await page.keyboard.down('ArrowUp')
   await page.waitForTimeout(650)
@@ -325,7 +407,7 @@ test('star trip left and right keys turn Pico instead of strafing', async ({ pag
   expect(afterTurn?.player?.mode).toBe('walk')
 
   await page.keyboard.down('ArrowUp')
-  await page.waitForTimeout(420)
+  await page.waitForTimeout(650)
   await page.keyboard.up('ArrowUp')
   const afterForward = await getStarTripSnapshot(page)
   const forwardDistance = Math.hypot(

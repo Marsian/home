@@ -21,6 +21,7 @@ export type StarTripGame = {
 }
 
 type StarTripE2EApi = {
+  teleportPlayer: (lat: number, lon: number) => void
   getSnapshot: () => {
     ready: boolean
     player: ReturnType<PlayerController['getSnapshot']>
@@ -180,7 +181,7 @@ export async function createStarTripGame(host: HTMLElement, options: CreateStarT
   scene.add(pico.root)
 
   const input = new InputController()
-  const player = new PlayerController(pico)
+  const player = new PlayerController(pico, environment.collisionBodies, environment.terrainSurfaces)
   const cameraRig = new CameraRig(camera, host)
   let ready = false
   let cssWidth = 1
@@ -247,6 +248,10 @@ export async function createStarTripGame(host: HTMLElement, options: CreateStarT
 
   if (e2eEnabled) {
     e2eApi = {
+      teleportPlayer: (lat: number, lon: number) => {
+        player.teleportToLatLon(lat, lon)
+        cameraRig.update(player.getPosition(), player.getUp(), 1 / 60)
+      },
       getSnapshot: () => {
         const playerPosition = player.getPosition().clone().project(camera)
         return {

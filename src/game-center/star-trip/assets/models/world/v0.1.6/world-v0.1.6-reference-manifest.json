@@ -1,0 +1,299 @@
+{
+  "version": "world-v0.1.6",
+  "sources": {
+    "a-short-hike": {
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "designUse": "tiny open world, rewarding off-route exploration, readable low-poly pixelated terrain"
+    },
+    "botw-topography": {
+      "sourceUrl": "https://www.gamedeveloper.com/design/breath-of-the-wild-open-world-analysis-gravity-to-go-forward",
+      "designUse": "triangular landforms, valleys as guidance, climb-or-circumvent choices"
+    },
+    "botw-open-air": {
+      "sourceUrl": "https://www.nintendo.com/en-gb/News/2017/March/Go-behind-the-scenes-with-the-making-of-The-Legend-of-Zelda-Breath-of-the-Wild-1206592.html",
+      "designUse": "open-air landmark sightlines and systemic traversal readability"
+    }
+  },
+  "assets": [
+    {
+      "assetId": "ST016_planet_terrain_shell",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://www.gamedeveloper.com/design/breath-of-the-wild-open-world-analysis-gravity-to-go-forward",
+      "referenceObject": "complete spherical terrain mesh with biome material coverage and radial elevation",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_snow_cap_peak",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://www.gamedeveloper.com/design/breath-of-the-wild-open-world-analysis-gravity-to-go-forward",
+      "referenceObject": "snowline summit and final goal shelf",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_icy_switchback_slope",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://www.gamedeveloper.com/design/breath-of-the-wild-open-world-analysis-gravity-to-go-forward",
+      "referenceObject": "hard northern route with ledges",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_crystal_spine_ridge",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "triangular ridge that blocks and reveals",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_echo_crater_lake",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "central low basin water anchor",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_lagoon_water_edge",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://www.gamedeveloper.com/design/breath-of-the-wild-open-world-analysis-gravity-to-go-forward",
+      "referenceObject": "readable wet shore ring",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_sunlit_beach_crescent",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "expected sand by water",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_tidepool_stepping_stones",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://www.gamedeveloper.com/design/breath-of-the-wild-open-world-analysis-gravity-to-go-forward",
+      "referenceObject": "coastal shortcut puzzle beats",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_mangrove_marsh_patch",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://www.gamedeveloper.com/design/breath-of-the-wild-open-world-analysis-gravity-to-go-forward",
+      "referenceObject": "soft wetland detour",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_coral_shelf_reef",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://www.gamedeveloper.com/design/breath-of-the-wild-open-world-analysis-gravity-to-go-forward",
+      "referenceObject": "alien reef color patch",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_ember_cinder_field",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://www.gamedeveloper.com/design/breath-of-the-wild-open-world-analysis-gravity-to-go-forward",
+      "referenceObject": "warm volcanic hazard side",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_basalt_triangle_wall",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://www.gamedeveloper.com/design/breath-of-the-wild-open-world-analysis-gravity-to-go-forward",
+      "referenceObject": "BOTW-like climb-or-go-around obstacle",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_golden_grass_meadow",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://www.gamedeveloper.com/design/breath-of-the-wild-open-world-analysis-gravity-to-go-forward",
+      "referenceObject": "safe spawn meadow",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_mushroom_grove_floor",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "fantasy forest floor",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_moon_dune_patch",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://www.gamedeveloper.com/design/breath-of-the-wild-open-world-analysis-gravity-to-go-forward",
+      "referenceObject": "dry lowland contrast",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_starlit_path_segment",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://www.gamedeveloper.com/design/breath-of-the-wild-open-world-analysis-gravity-to-go-forward",
+      "referenceObject": "main route breadcrumb",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_hidden_path_segment",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://www.gamedeveloper.com/design/breath-of-the-wild-open-world-analysis-gravity-to-go-forward",
+      "referenceObject": "off-route breadcrumb",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_glider_launch_knoll",
+      "referenceType": "design-informed procedural terrain",
+      "sourceUrl": "https://www.gamedeveloper.com/design/breath-of-the-wild-open-world-analysis-gravity-to-go-forward",
+      "referenceObject": "height reward and downhill option",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_cave_mouth_arch",
+      "referenceType": "design-informed procedural landmark",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "secret tunnel entrance",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_summit_comm_array",
+      "referenceType": "design-informed procedural landmark",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "final objective visible from afar",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_warm_camp_lantern",
+      "referenceType": "design-informed procedural landmark",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "rest stop and route confirmation",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_broken_probe_beacon",
+      "referenceType": "design-informed procedural landmark",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "spawn narrative landmark",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_rope_bridge_span",
+      "referenceType": "design-informed procedural landmark",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "mid-route gate over water",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_snow_waymarker",
+      "referenceType": "design-informed procedural landmark",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "cold route confirmation",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_beach_signal_buoy",
+      "referenceType": "design-informed procedural landmark",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "coastal route cue",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_crystal_observatory",
+      "referenceType": "design-informed procedural landmark",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "side objective on ridge",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_volcano_heat_vent",
+      "referenceType": "design-informed procedural landmark",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "hazard/landmark combo",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_star_pine_cluster",
+      "referenceType": "design-informed procedural nature",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "cold highland trees",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_round_canopy_cluster",
+      "referenceType": "design-informed procedural nature",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "temperate grove",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_alien_mushroom_cluster",
+      "referenceType": "design-informed procedural nature",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "alien but readable fungi",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_blue_crystal_cluster",
+      "referenceType": "design-informed procedural nature",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "visual lure and traversal landmark",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_marsh_reed_cluster",
+      "referenceType": "design-informed procedural nature",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "wetland dressing",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_snow_rock_cluster",
+      "referenceType": "design-informed procedural nature",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "cold rocky cover",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_beach_grass_tufts",
+      "referenceType": "design-informed procedural nature",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "sand/grass transition",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    },
+    {
+      "assetId": "ST016_cinder_rock_cluster",
+      "referenceType": "design-informed procedural nature",
+      "sourceUrl": "https://blog.playstation.com/2021/08/05/crafting-a-tiny-open-world-a-look-behind-the-scenes-at-the-creation-of-a-short-hike/",
+      "referenceObject": "volcanic dressing",
+      "targetFidelity": "A Short Hike-like low-poly silhouette, flat-color materials, readable at pixelated distance",
+      "originalizationRule": "Original Star Trip geography and alien dressing; no extracted meshes, textures, layouts, or copyrighted map reproduction."
+    }
+  ]
+}

@@ -1,8 +1,12 @@
-import worldAssetCheck from '../assets/models/world/v0.1.5/world-v0.1.5.check.json'
-import worldReferenceManifest from '../assets/models/world/v0.1.5/world-v0.1.5-reference-manifest.json'
-import worldModelUrl from '../assets/models/world/v0.1.5/world-v0.1.5.glb?url'
+import worldAssetCheck from '../assets/models/world/v0.1.6/world-v0.1.6.check.json'
+import worldReferenceManifest from '../assets/models/world/v0.1.6/world-v0.1.6-reference-manifest.json'
+import worldModelUrl from '../assets/models/world/v0.1.6/world-v0.1.6.glb?url'
+import legacyWorldAssetCheck from '../assets/models/world/v0.1.5/world-v0.1.5.check.json'
+import legacyWorldModelUrl from '../assets/models/world/v0.1.5/world-v0.1.5.glb?url'
 
-export const STAR_TRIP_WORLD_ASSET_VERSION = 'world-v0.1.5'
+export const STAR_TRIP_WORLD_ASSET_VERSION = 'world-v0.1.6'
+export const STAR_TRIP_WORLD_ASSET_PREFIX = 'ST016_'
+export const STAR_TRIP_TERRAIN_SHELL_ID = 'ST016_planet_terrain_shell'
 
 export type StarTripAssetCategory = 'nature' | 'landmark' | 'terrain'
 
@@ -23,7 +27,18 @@ export type StarTripAssetDefinition = {
   }
 }
 
-export type StarTripRegion = 'crash-grass-slope' | 'moon-bay' | 'starport-village' | 'summit-comm-tower' | 'beach-cove'
+export type StarTripRegion =
+  | 'spawn-meadow'
+  | 'crater-lake'
+  | 'beach-reef'
+  | 'marsh-cave'
+  | 'moon-dunes'
+  | 'crystal-ridge'
+  | 'ember-field'
+  | 'snow-summit'
+  | 'main-route'
+  | 'coastal-route'
+  | 'ridge-route'
 
 export type StarTripPlacement = {
   assetId: string
@@ -33,6 +48,24 @@ export type StarTripPlacement = {
   yawDeg: number
   radiusOffset: number
   region: StarTripRegion
+}
+
+export type StarTripTerrainCoverage = {
+  assetId: string
+  vertex_count: number
+  face_count: number
+  mesh_type: string
+  subdivisions: number
+  surface_coverage_percent: number
+  radius_min: number
+  radius_max: number
+  height_range: number
+  biome_face_counts: Record<string, number>
+  biome_count: number
+  material_slots: string[]
+  patch_surface_coverage_percent?: number
+  terrain_patch_mesh_rule?: string
+  large_patch_count?: number
 }
 
 type AssetCheckEntry = {
@@ -58,34 +91,50 @@ const manifestReferences = new Map(
 )
 
 function tagsForAsset(id: string, category: StarTripAssetCategory) {
-  const tags = new Set<string>([category, 'reference-backed'])
-  if (id.includes('water') || id.includes('pool') || id.includes('pier')) tags.add('water')
-  if (id.includes('sand') || id.includes('beach') || id.includes('campfire')) tags.add('beach')
-  if (id.includes('tree') || id.includes('pine') || id.includes('grass')) tags.add('woodland')
-  if (id.includes('rock') || id.includes('pebble') || id.includes('peak') || id.includes('slope')) tags.add('rocky')
-  if (id.includes('rocket') || id.includes('scorch')) tags.add('crash-site')
-  if (id.includes('tower') || id.includes('dish') || id.includes('lighthouse')) tags.add('signal')
-  if (id.includes('shed') || id.includes('cabin')) tags.add('settlement')
+  const tags = new Set<string>([category, 'reference-backed', 'v0.1.6-map'])
+  if (id.includes('water') || id.includes('lake') || id.includes('tidepool')) tags.add('water')
+  if (id.includes('beach') || id.includes('sand') || id.includes('dune') || id.includes('reef')) tags.add('shore')
+  if (id.includes('snow') || id.includes('icy')) tags.add('cold')
+  if (id.includes('crystal')) tags.add('crystal-ridge')
+  if (id.includes('ember') || id.includes('cinder') || id.includes('volcano') || id.includes('basalt')) tags.add('hot')
+  if (id.includes('marsh') || id.includes('reed')) tags.add('wetland')
+  if (id.includes('meadow') || id.includes('canopy') || id.includes('mushroom') || id.includes('pine')) tags.add('woodland')
+  if (id.includes('path') || id.includes('switchback') || id.includes('bridge') || id.includes('cave')) tags.add('route')
+  if (id.includes('comm') || id.includes('beacon') || id.includes('observatory') || id.includes('waymarker')) tags.add('signal')
   return [...tags]
 }
 
 const assetChecks = worldAssetCheck.assets as unknown as AssetCheckEntry[]
+const legacyRocketAssetIds = new Set(['ST015_rocket_main_hull', 'ST015_rocket_side_fin_debris', 'ST015_scorch_mark_base'])
+const legacyRocketAssetChecks = (legacyWorldAssetCheck.assets as unknown as AssetCheckEntry[]).filter((asset) =>
+  legacyRocketAssetIds.has(asset.id),
+)
+const terrainPatchCoverage = worldAssetCheck.terrain_patch_coverage as Partial<StarTripTerrainCoverage> | undefined
+export const STAR_TRIP_TERRAIN_COVERAGE = {
+  ...(worldAssetCheck.terrain_coverage as StarTripTerrainCoverage),
+  ...(terrainPatchCoverage ?? {}),
+} as StarTripTerrainCoverage
 
-export const starTripAssetDefinitions: StarTripAssetDefinition[] = assetChecks.map((asset) => {
+function assetDefinitionFromCheck(asset: AssetCheckEntry, glbUrl: string) {
   const [width, height, depth] = asset.bounds.dimensions
   const reference = asset.reference ?? manifestReferences.get(asset.id)
-  if (!reference) throw new Error(`Missing Star Trip v0.1.5 reference metadata for ${asset.id}`)
+  if (!reference) throw new Error(`Missing Star Trip v0.1.6 reference metadata for ${asset.id}`)
   return {
     id: asset.id,
     category: asset.category,
-    glbUrl: worldModelUrl,
+    glbUrl,
     defaultScale: 1,
     biomeTags: tagsForAsset(asset.id, asset.category),
-    canInstance: asset.category === 'nature' || asset.category === 'terrain',
-    collisionRadius: Number(Math.max(width, depth, height * 0.35).toFixed(3)),
+    canInstance: asset.id !== STAR_TRIP_TERRAIN_SHELL_ID && (asset.category === 'nature' || asset.category === 'terrain'),
+    collisionRadius: Number((Math.max(width, depth, height * 0.35) * 0.5).toFixed(3)),
     reference,
   }
-})
+}
+
+export const starTripAssetDefinitions: StarTripAssetDefinition[] = [
+  ...assetChecks.map((asset) => assetDefinitionFromCheck(asset, worldModelUrl)),
+  ...legacyRocketAssetChecks.map((asset) => assetDefinitionFromCheck(asset, legacyWorldModelUrl)),
+]
 
 export const starTripAssetDefinitionById = new Map(starTripAssetDefinitions.map((definition) => [definition.id, definition]))
 
@@ -94,52 +143,88 @@ function place(region: StarTripRegion, assetId: string, lat: number, lon: number
 }
 
 export const starTripPlacements: StarTripPlacement[] = [
-  place('crash-grass-slope', 'ST015_scorch_mark_base', -22.7, 27.5, 2.15, 18, 0.018),
-  place('crash-grass-slope', 'ST015_rocket_main_hull', -22.6, 27.8, 1.65, -28, -0.08),
-  place('crash-grass-slope', 'ST015_rocket_side_fin_debris', -21.3, 25.3, 1.3, 54, 0.02),
-  place('crash-grass-slope', 'ST015_warm_dirt_path', -18.2, 22.2, 2.6, 24, 0.014),
-  place('crash-grass-slope', 'ST015_short_grass_a', -20.1, 24.3, 1.25, -8),
-  place('crash-grass-slope', 'ST015_pebble_cluster', -18.2, 28.2, 1.1, 22),
-  place('crash-grass-slope', 'ST015_star_pine', -12.2, 13.4, 1.3, -18),
-  place('crash-grass-slope', 'ST015_round_canopy_tree', -10, 17, 1.18, 32),
-  place('crash-grass-slope', 'ST015_low_rock', -14.7, 30.5, 1.2, -17),
+  place('spawn-meadow', 'ST016_golden_grass_meadow', -22, 22, 4.8, 18, 0.014),
+  place('spawn-meadow', 'ST015_scorch_mark_base', -23.6, 24.2, 2.35, -20, 0.014),
+  place('spawn-meadow', 'ST015_rocket_main_hull', -23.4, 24.8, 2.25, -22, 0.05),
+  place('spawn-meadow', 'ST015_rocket_side_fin_debris', -20.4, 30.4, 1.45, 18, 0.035),
+  place('spawn-meadow', 'ST016_round_canopy_cluster', -18.8, 18.4, 2.15, 26),
+  place('spawn-meadow', 'ST016_warm_camp_lantern', -18.2, 30.8, 1.6, -18, 0.028),
+  place('spawn-meadow', 'ST016_starlit_path_segment', -18.2, 30.2, 2.45, 28, 0.014),
+  place('spawn-meadow', 'ST016_glider_launch_knoll', -11.8, 28.2, 2.3, 8, 0.018),
+  place('spawn-meadow', 'ST016_golden_grass_meadow', -8, -8, 4.2, -12, 0.014),
 
-  place('moon-bay', 'ST015_pale_water_edge', -9.2, 45.8, 3.8, -8, 0.018),
-  place('moon-bay', 'ST015_moon_bay_pool', -9.2, 45.8, 3.25, -8, 0.026),
-  place('moon-bay', 'ST015_tiny_pier', -8.2, 49.7, 1.45, 74, 0.026),
-  place('moon-bay', 'ST015_fishing_kid_shore_shed', -6.6, 48.4, 1.45, 12, 0.03),
-  place('moon-bay', 'ST015_short_grass_a', -12, 43.5, 1.1, 16),
-  place('moon-bay', 'ST015_pebble_cluster', -12.4, 47.5, 1.05, -14),
-  place('moon-bay', 'ST015_round_canopy_tree', -13.8, 50, 1.2, 21),
+  place('crater-lake', 'ST016_echo_crater_lake', -8.2, 44.5, 4.6, -8, 0.024),
+  place('crater-lake', 'ST016_lagoon_water_edge', -8.4, 44.3, 4.95, -8, 0.014),
+  place('crater-lake', 'ST016_rope_bridge_span', -2.8, 53.4, 2.15, 82, 0.04),
+  place('crater-lake', 'ST016_round_canopy_cluster', -12.8, 41.2, 1.75, -28),
+  place('crater-lake', 'ST016_marsh_reed_cluster', -4.5, 48.8, 1.55, 12),
+  place('crater-lake', 'ST016_starlit_path_segment', -5.2, 52.4, 2.1, 55, 0.014),
+  place('crater-lake', 'ST016_mushroom_grove_floor', 12, 32, 3.6, 22, 0.016),
 
-  place('starport-village', 'ST015_tower_keeper_cabin', -1.6, 62, 1.6, -18, 0.03),
-  place('starport-village', 'ST015_utility_storage_shed', -6.1, 64.1, 1.35, 42, 0.03),
-  place('starport-village', 'ST015_wooden_way_sign', -7.2, 57.1, 1.25, 40, 0.03),
-  place('starport-village', 'ST015_rope_bridge', -2.0, 55.5, 1.75, 76, 0.03),
-  place('starport-village', 'ST015_warm_dirt_path', -4.1, 60.8, 2.2, 18, 0.014),
-  place('starport-village', 'ST015_short_grass_a', -6.4, 66.8, 1.15, -8),
-  place('starport-village', 'ST015_round_canopy_tree', -0.4, 65.2, 1.1, 33),
+  place('beach-reef', 'ST016_sunlit_beach_crescent', -23.6, 72.5, 4.25, 14, 0.014),
+  place('beach-reef', 'ST016_tidepool_stepping_stones', -27.8, 83.5, 2.6, -18, 0.02),
+  place('beach-reef', 'ST016_coral_shelf_reef', -30.5, 97.4, 3.1, -20, 0.018),
+  place('beach-reef', 'ST016_beach_signal_buoy', -24.2, 78.2, 1.55, 24, 0.04),
+  place('beach-reef', 'ST016_beach_grass_tufts', -20.2, 67.2, 1.55, 12),
+  place('beach-reef', 'ST016_hidden_path_segment', -18.5, 86.2, 1.95, 74, 0.014),
 
-  place('summit-comm-tower', 'ST015_summit_round_peak', -3, 58, 4.6, 0, 0.018),
-  place('summit-comm-tower', 'ST015_summit_comm_tower', -3, 58, 3.4, 28, 1.16),
-  place('summit-comm-tower', 'ST015_signal_dish', -0.7, 56.6, 1.7, 12, 0.04),
-  place('summit-comm-tower', 'ST015_climbable_slope', -2.3, 53.3, 2.3, 24, 0.018),
-  place('summit-comm-tower', 'ST015_low_rock', -5.4, 60.8, 1.35, -21, 0.02),
-  place('summit-comm-tower', 'ST015_wooden_way_sign', -4.7, 54.5, 1.15, 12, 0.03),
+  place('marsh-cave', 'ST016_mangrove_marsh_patch', 4.5, 96.5, 3.9, 20, 0.015),
+  place('marsh-cave', 'ST016_marsh_reed_cluster', 2.2, 90.4, 1.8, -8),
+  place('marsh-cave', 'ST016_cave_mouth_arch', 6.2, 78.8, 1.65, 42, 0.045),
+  place('marsh-cave', 'ST016_alien_mushroom_cluster', 9.5, 72.2, 1.65, -12),
+  place('marsh-cave', 'ST016_hidden_path_segment', 9.8, 66.8, 2.05, 38, 0.014),
 
-  place('beach-cove', 'ST015_beach_arc', -26, 58.2, 3.4, 16, 0.014),
-  place('beach-cove', 'ST015_campfire_ring', -27.2, 56.4, 1.25, 0, 0.025),
-  place('beach-cove', 'ST015_beacon_lighthouse', -24.4, 62.8, 1.35, -12, 0.035),
-  place('beach-cove', 'ST015_tiny_pier', -28.2, 58.9, 1.25, 64, 0.026),
-  place('beach-cove', 'ST015_pebble_cluster', -30.5, 56.1, 1.25, 28, 0.024),
-  place('beach-cove', 'ST015_short_grass_a', -24.5, 55.8, 1.0, 16),
+  place('moon-dunes', 'ST016_moon_dune_patch', 14.2, 151.5, 4.4, -10, 0.014),
+  place('moon-dunes', 'ST016_moon_dune_patch', -20, -176, 3.8, 34, 0.014),
+  place('moon-dunes', 'ST016_snow_rock_cluster', 16.5, 142.6, 1.4, 18),
+  place('moon-dunes', 'ST016_hidden_path_segment', 12.2, 132.4, 1.85, -34, 0.014),
+
+  place('crystal-ridge', 'ST016_crystal_spine_ridge', 24.5, -96.2, 3.55, -28, 0.018),
+  place('crystal-ridge', 'ST016_crystal_spine_ridge', 34, 82, 3.35, 36, 0.018),
+  place('crystal-ridge', 'ST016_blue_crystal_cluster', 20.4, -88.2, 2.25, 18),
+  place('crystal-ridge', 'ST016_crystal_observatory', 28.2, -76.5, 1.75, 18, 0.04),
+  place('crystal-ridge', 'ST016_basalt_triangle_wall', 18.2, -118.2, 2.8, -18, 0.022),
+  place('crystal-ridge', 'ST016_hidden_path_segment', 26.5, -60.6, 1.95, -42, 0.014),
+
+  place('ember-field', 'ST016_ember_cinder_field', 10.2, -151.4, 4.15, 12, 0.014),
+  place('ember-field', 'ST016_ember_cinder_field', -14, -118, 3.45, -18, 0.014),
+  place('ember-field', 'ST016_volcano_heat_vent', 12.4, -149.2, 1.7, 8, 0.04),
+  place('ember-field', 'ST016_cinder_rock_cluster', 7.2, -138.3, 1.9, -24),
+  place('ember-field', 'ST016_basalt_triangle_wall', 16.8, -128.8, 2.15, 21, 0.02),
+  place('ember-field', 'ST016_hidden_path_segment', 18.5, -114.2, 1.8, 42, 0.014),
+
+  place('snow-summit', 'ST016_snow_cap_peak', 55.2, -21.8, 5.4, 0, 0.02),
+  place('snow-summit', 'ST016_snow_cap_peak', 52, 126, 4.0, -28, 0.018),
+  place('snow-summit', 'ST016_icy_switchback_slope', 41.2, 3.8, 3.6, 30, 0.016),
+  place('snow-summit', 'ST016_summit_comm_array', 56.5, -20.5, 3.5, 25, 1.06),
+  place('snow-summit', 'ST016_snow_waymarker', 38.4, 9.5, 1.45, -18, 0.04),
+  place('snow-summit', 'ST016_star_pine_cluster', 43.6, -4.8, 1.9, 12),
+  place('snow-summit', 'ST016_snow_rock_cluster', 48.6, -34.2, 1.75, -28),
+  place('snow-summit', 'ST016_starlit_path_segment', 44.4, -0.4, 2.0, -25, 0.014),
+
+  place('main-route', 'ST016_starlit_path_segment', -14.6, 35.2, 1.85, 24, 0.014),
+  place('main-route', 'ST016_starlit_path_segment', 4.8, 58.4, 1.9, 38, 0.014),
+  place('main-route', 'ST016_starlit_path_segment', 18.8, 42.2, 1.8, -28, 0.014),
+  place('main-route', 'ST016_starlit_path_segment', 31.8, 18.4, 1.75, -24, 0.014),
+
+  place('coastal-route', 'ST016_hidden_path_segment', -14.2, 89.5, 1.6, 52, 0.014),
+  place('coastal-route', 'ST016_hidden_path_segment', -2.6, 76.2, 1.7, -18, 0.014),
+  place('coastal-route', 'ST016_hidden_path_segment', 18.2, 50.4, 1.7, -32, 0.014),
+  place('coastal-route', 'ST016_alien_mushroom_cluster', 16.5, 57.2, 1.3, 15),
+
+  place('ridge-route', 'ST016_hidden_path_segment', 4.4, -42.2, 1.65, -18, 0.014),
+  place('ridge-route', 'ST016_hidden_path_segment', 14.6, -68.6, 1.7, -22, 0.014),
+  place('ridge-route', 'ST016_hidden_path_segment', 31.4, -48.2, 1.65, 38, 0.014),
+  place('ridge-route', 'ST016_blue_crystal_cluster', 33.6, -44.6, 1.45, 25),
 ]
 
 export const STAR_TRIP_CRITICAL_LANDMARK_IDS = [
   'ST015_rocket_main_hull',
-  'ST015_tower_keeper_cabin',
-  'ST015_rope_bridge',
-  'ST015_moon_bay_pool',
-  'ST015_beacon_lighthouse',
-  'ST015_summit_comm_tower',
+  'ST016_echo_crater_lake',
+  'ST016_sunlit_beach_crescent',
+  'ST016_mangrove_marsh_patch',
+  'ST016_crystal_spine_ridge',
+  'ST016_ember_cinder_field',
+  'ST016_snow_cap_peak',
+  'ST016_summit_comm_array',
 ]

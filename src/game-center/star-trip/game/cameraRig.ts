@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 
-import { PLANET_RADIUS, projectToTangent, rotateAroundAxis, tangentBasis } from './planetMath'
+import { projectToTangent, rotateAroundAxis, tangentBasis, terrainRadiusAtNormal } from './planetMath'
 
 export type CameraSnapshot = {
   distance: number
@@ -50,7 +50,7 @@ export class CameraRig {
     this.target.copy(playerPosition).addScaledVector(playerUp, 1.05)
     this.desiredPosition.copy(this.target).add(horizontalBack).add(vertical)
 
-    const minSurfaceDistance = PLANET_RADIUS + 0.9
+    const minSurfaceDistance = terrainRadiusAtNormal(this.desiredPosition) + 1.2
     if (this.desiredPosition.length() < minSurfaceDistance) {
       this.desiredPosition.normalize().multiplyScalar(minSurfaceDistance)
     }
