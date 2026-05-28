@@ -228,17 +228,13 @@ export async function createStarTripGame(host: HTMLElement, options: CreateStarT
     const inputState = input.getState()
     player.update(dt, inputState, input.consumeJumpPressed())
     cameraRig.update(player.getPosition(), player.getUp(), dt)
+    environment.update(clock.elapsedTime, camera, player.getPosition())
     stars.rotation.y += dt * 0.012
-    if (renderSettings.pixelationLevel > 0) {
-      syncPixelRenderTarget()
-      renderer.setRenderTarget(pixelRenderTarget)
-      renderer.render(scene, camera)
-      renderer.setRenderTarget(null)
-      renderer.render(screenScene, screenCamera)
-    } else {
-      renderer.setRenderTarget(null)
-      renderer.render(scene, camera)
-    }
+    syncPixelRenderTarget()
+    renderer.setRenderTarget(pixelRenderTarget)
+    renderer.render(scene, camera)
+    renderer.setRenderTarget(null)
+    renderer.render(screenScene, screenCamera)
     ready = true
     raf = window.requestAnimationFrame(tick)
   }

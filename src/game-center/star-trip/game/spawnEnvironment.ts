@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
+import { createStarTripGrassPatch, type StarTripGrassPatchSummary } from './grassPatch'
 import { buildSurfaceFrame, normalFromLatLon, terrainRadiusAtLatLon } from './planetMath'
 import {
   STAR_TRIP_CRITICAL_LANDMARK_IDS,
@@ -47,6 +48,7 @@ export type StarTripEnvironmentSummary = {
     terrainShellCollider: boolean
   }
   terrainCoverage: typeof STAR_TRIP_TERRAIN_COVERAGE
+  grassPatch: StarTripGrassPatchSummary | null
 }
 
 export type StarTripCollisionBody = {
@@ -64,6 +66,7 @@ export type StarTripEnvironment = {
   summary: StarTripEnvironmentSummary
   collisionBodies: StarTripCollisionBody[]
   terrainSurfaces: THREE.Object3D[]
+  update: (time: number, camera: THREE.Camera, playerPosition: THREE.Vector3) => void
 }
 
 const loader = new GLTFLoader()
@@ -272,6 +275,7 @@ function placementSummary(
   collisionBodies: StarTripCollisionBody[],
   hasTerrainShell: boolean,
   terrainSurfaces: THREE.Object3D[],
+  grassPatch: StarTripGrassPatchSummary | null,
 ): StarTripEnvironmentSummary {
   const regions = Object.fromEntries(
     [...new Set(starTripPlacements.map((placement) => placement.region))].map((region) => [region, 0]),
@@ -342,6 +346,7 @@ function placementSummary(
       terrainShellCollider: hasTerrainShell,
     },
     terrainCoverage: STAR_TRIP_TERRAIN_COVERAGE,
+    grassPatch,
   }
 }
 
@@ -364,6 +369,7 @@ export async function createSpawnEnvironment(): Promise<StarTripEnvironment> {
   const collisionBodies: StarTripCollisionBody[] = []
   const terrainSurfaces: THREE.Object3D[] = []
   const terrainShell = templates.get(STAR_TRIP_TERRAIN_SHELL_ID)
+  let runtimeTerrainShell: THREE.Object3D | null = null
   let hasTerrainShell = false
   if (terrainShell) {
     const shell = terrainShell.clone(true)
@@ -372,6 +378,7 @@ export async function createSpawnEnvironment(): Promise<StarTripEnvironment> {
     shell.userData.terrainCoverage = STAR_TRIP_TERRAIN_COVERAGE
     shell.userData.collider = 'terrain-shell-heightfield'
     hasTerrainShell = true
+    runtimeTerrainShell = shell
     root.add(shell)
     shell.updateMatrixWorld(true)
     addTerrainSurfaceMeshes(shell, terrainSurfaces)
@@ -399,11 +406,14 @@ export async function createSpawnEnvironment(): Promise<StarTripEnvironment> {
   faceTowerTowardSpawn(root)
   createPathDots(root, terrainSurfaces)
   root.add(createDistantGoalMarker(terrainSurfaces))
+  const grassPatch = await createStarTripGrassPatch(runtimeTerrainShell)
+  root.add(grassPatch.root)
 
   return {
     root,
-    summary: placementSummary(placedObjects, missingAssetIds, collisionBodies, hasTerrainShell, terrainSurfaces),
+    summary: placementSummary(placedObjects, missingAssetIds, collisionBodies, hasTerrainShell, terrainSurfaces, grassPatch.summary),
     collisionBodies,
     terrainSurfaces,
+    update: grassPatch.update,
   }
 }

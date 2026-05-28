@@ -116,6 +116,10 @@ test('star trip renders inside a game panel with no visible HUD', async ({ page 
   expect(snapshot?.environment?.terrainCoverage?.patch_surface_coverage_percent).toBeGreaterThan(90)
   expect(snapshot?.environment?.terrainCoverage?.coverage_method).toContain('triangle area')
   expect(snapshot?.environment?.terrainCoverage?.terrain_patch_mesh_rule).toContain('spherical terrain shell')
+  expect(snapshot?.environment?.grassPatch?.version).toBe('grass-v0.1.7')
+  expect(snapshot?.environment?.grassPatch?.proceduralGround).toBe(true)
+  expect(snapshot?.environment?.grassPatch?.bladeInstances).toBeGreaterThan(5000)
+  expect(snapshot?.environment?.grassPatch?.accentInstances).toBeLessThan(100)
   expect(snapshot?.environment?.keyLandmarksPresent).toEqual(
     expect.arrayContaining([
       'ST015_rocket_main_hull',
